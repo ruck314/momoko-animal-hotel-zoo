@@ -833,7 +833,13 @@
 
   Momoko.prototype.draw = function (c, camX, camY) {
     var sx = Math.round(this.x - camX);
-    var sy = Math.round(this.y - camY);
+    /* Walk-bob: a small vertical bounce while she's actually moving so
+       the corridor walk reads as cozy. Uses the animation timer so the
+       bob phase is tied to the leg-kick cycle. */
+    var spd = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    var bob = spd > 0.4 ? Math.abs(Math.sin(this.animTimer * 0.5 +
+                                            this.animFrame * Math.PI / 2)) * 1.6 : 0;
+    var sy = Math.round(this.y - camY - bob);
     var cust = window.Game.customization || {};
 
     c.save();
@@ -5035,7 +5041,13 @@
   Animal.prototype.interact = function () {
     this.talking = true;
     this.talkTimer = 360;
-    this.currentText = Game.i18n.t(this.species + 'Sound');
+    /* Prefer the cozy dialogue line (which already includes the sound
+       in its text) and fall back to the bare sound if a translation
+       slot is missing for the species. */
+    var dialogueKey = 'animalDialogue_' + this.species;
+    var dialogue = Game.i18n.t(dialogueKey);
+    var fallback = Game.i18n.t(this.species + 'Sound');
+    this.currentText = (dialogue && dialogue !== dialogueKey) ? dialogue : fallback;
     if (Game.audio && Game.audio.play) Game.audio.play(this.species);
     /* Stamp the guest ledger (side quest) */
     if (Game.engine && Game.engine.stampGuest) Game.engine.stampGuest(this.species);

@@ -164,6 +164,10 @@
       { type: 'wallPainting', x: 1900, y: 200, art: 'savanna' },
       { type: 'neonSign',     x: 100,  y: 200, text: 'SAFARI', color: '#ffaa44' },
 
+      /* Mid-corridor lounge that breaks up the long hallway. */
+      { type: 'commonArea', x: 1300, y: 440, w: 220, theme: 'safari',
+        label: 'SAFARI LOUNGE' },
+
       { type: 'roomDoorFrame', x: 320,  y: 388, color: '#cc8844' }, /* elephant */
       { type: 'roomDoorFrame', x: 600,  y: 388, color: '#dd9944' }, /* lion */
       { type: 'roomDoorFrame', x: 880,  y: 388, color: '#aa6644' }, /* tiger */
@@ -232,6 +236,10 @@
       { type: 'wallPainting', x: 600,  y: 200, art: 'forest' },
       { type: 'wallPainting', x: 1900, y: 200, art: 'forest' },
       { type: 'neonSign',     x: 100,  y: 200, text: 'WILD', color: '#88ff88' },
+
+      /* Mid-corridor forest glade. */
+      { type: 'commonArea', x: 1300, y: 440, w: 220, theme: 'forest',
+        label: 'FOREST GLADE' },
 
       { type: 'roomDoorFrame', x: 320,  y: 388, color: '#5a5a8a' }, /* wolf */
       { type: 'roomDoorFrame', x: 600,  y: 388, color: '#8a6a3a' }, /* eagle */
@@ -302,6 +310,10 @@
       { type: 'wallPainting', x: 600,  y: 200, art: 'sea'    },
       { type: 'wallPainting', x: 2200, y: 200, art: 'rainbow'},
       { type: 'neonSign',     x: 100,  y: 200, text: 'MAGIC', color: '#ff66cc' },
+
+      /* Mid-corridor magic garden. */
+      { type: 'commonArea', x: 1300, y: 440, w: 220, theme: 'magic',
+        label: 'MAGIC GARDEN' },
 
       { type: 'roomDoorFrame', x: 320,  y: 388, color: '#ffeecc' }, /* bunny */
       { type: 'roomDoorFrame', x: 600,  y: 388, color: '#ffaa88' }, /* cat */

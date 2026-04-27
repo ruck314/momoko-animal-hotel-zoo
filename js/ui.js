@@ -256,11 +256,12 @@
       c.restore();
     }
 
-    drawButton(c, Game.i18n.t('resume'), W / 2 - 10, 170, 220, 44);
-    drawButton(c, Game.i18n.t('language') + ': ' + Game.i18n.t('langLabel'), W / 2 - 10, 230, 220, 44);
+    drawButton(c, Game.i18n.t('resume'), W / 2 - 10, 150, 220, 38);
+    drawButton(c, '🎟️ ' + Game.i18n.t('ledgerOpen'), W / 2 - 10, 198, 220, 38);
+    drawButton(c, Game.i18n.t('language') + ': ' + Game.i18n.t('langLabel'), W / 2 - 10, 246, 220, 38);
     var muteLabel = Game.i18n.t(Game.audio.isMuted() ? 'soundOff' : 'soundOn');
-    drawButton(c, muteLabel, W / 2 - 10, 290, 220, 44);
-    drawButton(c, Game.i18n.t('quit'), W / 2 - 10, 350, 220, 44);
+    drawButton(c, muteLabel, W / 2 - 10, 294, 220, 38);
+    drawButton(c, Game.i18n.t('quit'), W / 2 - 10, 342, 220, 38);
 
     /* Version stamp – matches the title-screen stamp so we can tell at a
        glance which build is paused (handy for bug reports). */
@@ -276,10 +277,11 @@
   }
 
   function handlePauseClick(mx, my) {
-    if (hitButton(mx, my, W / 2 - 10, 170, 220, 44)) { Game.audio.play('select'); return 'resume'; }
-    if (hitButton(mx, my, W / 2 - 10, 230, 220, 44)) { Game.audio.play('select'); Game.i18n.toggleLanguage(); return null; }
-    if (hitButton(mx, my, W / 2 - 10, 290, 220, 44)) { Game.audio.toggleMute(); return null; }
-    if (hitButton(mx, my, W / 2 - 10, 350, 220, 44)) { Game.audio.play('select'); return 'quit'; }
+    if (hitButton(mx, my, W / 2 - 10, 150, 220, 38)) { Game.audio.play('select'); return 'resume'; }
+    if (hitButton(mx, my, W / 2 - 10, 198, 220, 38)) { Game.audio.play('select'); return 'ledger'; }
+    if (hitButton(mx, my, W / 2 - 10, 246, 220, 38)) { Game.audio.play('select'); Game.i18n.toggleLanguage(); return null; }
+    if (hitButton(mx, my, W / 2 - 10, 294, 220, 38)) { Game.audio.toggleMute(); return null; }
+    if (hitButton(mx, my, W / 2 - 10, 342, 220, 38)) { Game.audio.play('select'); return 'quit'; }
     return null;
   }
 
@@ -6179,11 +6181,16 @@
       }
     }
 
-    /* Momoko (also scaled up to match the bigger room scale) */
+    /* Momoko (also scaled up to match the bigger room scale).
+       Walk-bob: a tiny vertical bounce while moving keeps the cozy
+       aesthetic even though room walking is grid-coarse. */
     if (Game.entities && Game.entities.drawMomokoSprite) {
       var heroScale = 1.6;
       var hx = Math.round(roomState.px);
-      var hy = Math.round(roomState.py);
+      var moving = (roomState.frame !== 0) || (roomState.frameTimer > 0);
+      var bob = moving ? Math.abs(Math.sin(roomState.frame * Math.PI / 2 +
+                                           roomState.frameTimer * 0.4)) * 2 : 0;
+      var hy = Math.round(roomState.py - bob);
       c.save();
       c.translate(hx, hy);
       c.scale(roomState.facing === -1 ? -heroScale : heroScale, heroScale);
@@ -6214,6 +6221,18 @@
         c.font = 'bold 14px monospace';
         c.textAlign = 'center';
         c.fillText(Game.i18n.t('bedPrompt'), W / 2, 50);
+        c.textAlign = 'left';
+      }
+    }
+
+    /* Bookshelf prompt — only in the bedroom. */
+    if (species === 'bedroom') {
+      var bsCx2 = 280 + 55;
+      if (Math.abs(roomState.px - bsCx2) < 80) {
+        c.fillStyle = '#ffd24a';
+        c.font = 'bold 14px monospace';
+        c.textAlign = 'center';
+        c.fillText(Game.i18n.t('bookshelfPrompt'), W / 2, 50);
         c.textAlign = 'left';
       }
     }
@@ -6283,6 +6302,22 @@
       }
     }
 
+    /* Bookshelf interaction → story-time cutscene (bedroom only). The
+       bookshelf is painted in paintHabitat at (280, ROOM_FLOOR_TOP-110)
+       with width 110, so the proximity check uses a horizontal band
+       centered on the bookshelf foot. */
+    if (species === 'bedroom' && interact) {
+      var bsCx = 280 + 55; /* keep in sync with paintHabitat bookshelf */
+      var bspdx = roomState.px - bsCx;
+      if (Math.abs(bspdx) < 80) {
+        roomState.interactCooldown = 30;
+        if (Game.engine && Game.engine.enterBookshelfCutscene) {
+          Game.engine.enterBookshelfCutscene();
+        }
+        return;
+      }
+    }
+
     /* Animal idle update (so its bob loop runs even when not interacted) */
     if (roomState.animal) roomState.animal.update();
     if (roomState.bed)    roomState.bed.update();
@@ -6292,11 +6327,18 @@
     /* Tap exit door */
     if (mx >= 20 && mx <= 56 && my >= 320 && my <= 430) return 'exit';
     /* Tap bed (in bedroom) */
-    if (roomState.bed) {
+    if (roomState.bed && !roomState.bed.decorative) {
       var bx = roomState.bed.x, by = roomState.bed.y;
       if (mx >= bx && mx <= bx + roomState.bed.w &&
           my >= by && my <= by + roomState.bed.h) {
         return 'sleep';
+      }
+    }
+    /* Tap bookshelf (bedroom only) */
+    if (species === 'bedroom') {
+      var bsX = 280, bsY = ROOM_FLOOR_TOP - 110;
+      if (mx >= bsX && mx <= bsX + 110 && my >= bsY - 30 && my <= bsY + 110) {
+        return 'bookshelf';
       }
     }
     /* Tap animal — trigger interact */
@@ -6540,6 +6582,317 @@
        computed in drawLobbyIntro from the timer). */
   }
 
+  /* ============================================================
+   *  BOOKSHELF CUTSCENE — receptionist reads "Little Red Riding Hood"
+   *  (public domain — Perrault 1697 / Brothers Grimm 1812).
+   *
+   *  Scene layout: same cozy bedroom backdrop. The receptionist walks
+   *  in from the exit door on the left, sits next to Momoko (seated
+   *  on the floor by the bookshelf), and narrates the tale page by
+   *  page. The player advances pages with action / up / tap.
+   * ============================================================ */
+  var BOOK_PAGE_KEYS = [
+    'bookPage1', 'bookPage2', 'bookPage3',
+    'bookPage4', 'bookPage5', 'bookPage6'
+  ];
+
+  function getBookshelfPageCount() { return BOOK_PAGE_KEYS.length; }
+
+  function drawBookshelfCutscene(c, timer, page) {
+    c.save();
+
+    /* Bedroom backdrop (reuse the bedroom habitat painter so the room
+       art stays consistent with where the cutscene was triggered). */
+    paintHabitat(c, 'bedroom');
+    paintExitDoor(c);
+
+    /* Soft warm lamp glow over the seating area. */
+    c.save();
+    c.globalAlpha = 0.45;
+    var lampGrad = c.createRadialGradient(W / 2, ROOM_FLOOR_TOP + 50, 8,
+                                          W / 2, ROOM_FLOOR_TOP + 50, 240);
+    lampGrad.addColorStop(0, 'rgba(255,224,160,0.55)');
+    lampGrad.addColorStop(1, 'rgba(255,224,160,0)');
+    c.fillStyle = lampGrad;
+    c.fillRect(0, 0, W, H);
+    c.restore();
+
+    /* ---- Receptionist walks in from the exit door (left side) ----
+       Phase 1: timer 0..60   — walk from x=60 → reading spot (220)
+       Phase 2: timer >60     — sit next to Momoko and read */
+    var seatedX = 240;          /* receptionist sits here */
+    var momokoSeatX = 350;      /* Momoko sits to his right */
+    var seatY = ROOM_FLOOR_BOTTOM - 18;
+    var rxRaw, sitting;
+    if (timer < 60) {
+      var t = timer / 60;
+      rxRaw = 60 + (seatedX - 60) * t;
+      sitting = false;
+    } else {
+      rxRaw = seatedX;
+      sitting = true;
+    }
+    var rx = Math.round(rxRaw);
+
+    /* ---- Momoko, seated on the floor, listening ---- */
+    if (Game.entities && Game.entities.drawMomokoSprite) {
+      c.save();
+      var mScale = 1.6;
+      c.translate(momokoSeatX, seatY);
+      c.scale(-mScale, mScale); /* face left toward the receptionist */
+      c.translate(-14, -34);
+      Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, 0);
+      c.restore();
+      /* Tiny attentive sparkle while the story is told */
+      if (sitting) {
+        var sparkAlpha = 0.4 + 0.4 * Math.abs(Math.sin(timer * 0.12));
+        c.save();
+        c.globalAlpha = sparkAlpha;
+        c.fillStyle = '#ffd24a';
+        c.beginPath();
+        c.arc(momokoSeatX + 14, seatY - 60, 1.8, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+      }
+    }
+
+    /* ---- Receptionist sprite (walking, then seated) ----
+       The Receptionist drawer expects (x, y, camX, camY) and lifts feet
+       up by 60 internally — we want him standing on the floor. */
+    if (Game.entities && Game.entities.Receptionist) {
+      var bobR = sitting ? 0 : Math.abs(Math.sin(timer * 0.25)) * 2;
+      /* For the seated pose: scoot the sprite down a touch and keep it
+         left of Momoko. */
+      var rDrawX = rx - 32;
+      var rDrawY = sitting ? seatY - 30 : seatY - 64 - bobR;
+      var tmpRec = new Game.entities.Receptionist(rDrawX, rDrawY + 60);
+      tmpRec.draw(c, 0, 0);
+      /* If seated, draw a small open book in his hands. */
+      if (sitting) {
+        var bkX = rDrawX + 18, bkY = rDrawY + 50;
+        c.fillStyle = '#aa3344';
+        c.fillRect(bkX, bkY, 36, 22);
+        c.fillStyle = '#fff8e0';
+        c.fillRect(bkX + 2, bkY + 2, 32, 18);
+        c.strokeStyle = '#caa040';
+        c.lineWidth = 0.8;
+        c.beginPath();
+        c.moveTo(bkX + 18, bkY + 2); c.lineTo(bkX + 18, bkY + 20);
+        c.stroke();
+        /* Tiny squiggle "lines of text" */
+        c.fillStyle = '#5a3a18';
+        for (var bl = 0; bl < 4; bl++) {
+          c.fillRect(bkX + 4, bkY + 5 + bl * 3, 12, 1);
+          c.fillRect(bkX + 20, bkY + 5 + bl * 3, 12, 1);
+        }
+      }
+    }
+
+    /* ---- Title bar across the top ---- */
+    c.fillStyle = 'rgba(20, 12, 36, 0.7)';
+    c.fillRect(0, 0, W, 28);
+    c.fillStyle = '#ffd6a0';
+    c.font = 'bold 18px monospace';
+    c.textAlign = 'center';
+    c.fillText(Game.i18n.t('bookshelfTitle') + '  ' + Game.i18n.t('bookTitle'),
+               W / 2, 20);
+    c.textAlign = 'left';
+
+    /* ---- Story text panel near the bottom of the screen ---- */
+    var pad = 18;
+    var panelX = pad;
+    var panelW = W - pad * 2;
+    var panelH = 100;
+    var panelY = H - panelH - pad;
+    c.fillStyle = 'rgba(10, 8, 24, 0.88)';
+    roundRect(c, panelX, panelY, panelW, panelH, 12);
+    c.fill();
+    c.strokeStyle = '#caa040';
+    c.lineWidth = 2;
+    c.stroke();
+
+    /* Speaker name */
+    c.fillStyle = '#ffcc44';
+    c.font = 'bold 14px monospace';
+    c.textAlign = 'left';
+    c.fillText(Game.i18n.t('receptionistName') + ' —', panelX + 12, panelY + 22);
+
+    /* Body text — intro for the first ~60 frames, then story pages */
+    c.fillStyle = '#fff4d8';
+    c.font = '13px monospace';
+    var body;
+    if (timer < 60) {
+      body = Game.i18n.t('receptionistReadIntro');
+    } else {
+      var key = BOOK_PAGE_KEYS[Math.min(page, BOOK_PAGE_KEYS.length - 1)];
+      body = Game.i18n.t(key);
+    }
+    var lines = String(body).split('\n');
+    for (var ln = 0; ln < lines.length; ln++) {
+      c.fillText(lines[ln], panelX + 12, panelY + 46 + ln * 18);
+    }
+
+    /* Page indicator + advance hint (only after the lead-in) */
+    if (timer >= 60) {
+      var isLast = page >= BOOK_PAGE_KEYS.length - 1;
+      c.fillStyle = '#aab8d0';
+      c.font = '11px monospace';
+      c.textAlign = 'right';
+      c.fillText('Page ' + (page + 1) + ' / ' + BOOK_PAGE_KEYS.length,
+                 panelX + panelW - 12, panelY + 22);
+      c.fillStyle = '#88ddff';
+      c.textAlign = 'center';
+      c.fillText(Game.i18n.t(isLast ? 'bookEndHint' : 'bookSkipHint'),
+                 W / 2, panelY + panelH - 10);
+      c.textAlign = 'left';
+    }
+
+    c.restore();
+  }
+
+  /* ============================================================
+   *  GUEST PASSPORT (LEDGER) — full-screen overlay listing every
+   *  animal in the hotel with a stamped indicator for visited ones.
+   *  Sits over a paused PLAYING / ANIMAL_ROOM scene.
+   * ============================================================ */
+  /* Listed in floor order so the player can mentally map them. */
+  var LEDGER_SPECIES = [
+    'owl',
+    'elephant', 'lion', 'tiger', 'bear', 'giraffe', 'zebra', 'hippo', 'rhino',
+    'wolf', 'eagle', 'fox', 'panda', 'penguin', 'polarBear', 'gorilla',
+    'bunny', 'cat', 'dog', 'seaOtter', 'kangaroo', 'unicorn', 'alien', 'koala', 'frog',
+    'monkey'
+  ];
+
+  /* Ledger close-button rect (set in drawLedger, read in handleLedgerClick). */
+  var ledgerCloseRect = { x: 0, y: 0, w: 0, h: 0 };
+
+  function drawLedger(c) {
+    c.save();
+    /* Dim the underlying scene */
+    c.fillStyle = 'rgba(8, 4, 24, 0.86)';
+    c.fillRect(0, 0, W, H);
+
+    /* Paper / card background */
+    var pad = 28;
+    var cardX = pad, cardY = pad;
+    var cardW = W - pad * 2;
+    var cardH = H - pad * 2;
+    c.fillStyle = '#fff4d8';
+    roundRect(c, cardX, cardY, cardW, cardH, 12);
+    c.fill();
+    c.strokeStyle = '#caa040';
+    c.lineWidth = 3;
+    c.stroke();
+
+    /* Title row */
+    c.fillStyle = '#5a3018';
+    c.font = 'bold 22px monospace';
+    c.textAlign = 'left';
+    c.fillText(Game.i18n.t('ledgerTitle'), cardX + 18, cardY + 30);
+
+    var got = (Game.engine && Game.engine.getStampCount) ? Game.engine.getStampCount() : 0;
+    var tot = (Game.engine && Game.engine.getStampTotal) ? Game.engine.getStampTotal() : LEDGER_SPECIES.length;
+    var progress = Game.i18n.t('ledgerProgress')
+      .replace('%s', got).replace('%s', tot);
+    c.fillStyle = got >= tot ? '#3a8030' : '#7a5a18';
+    c.font = 'bold 14px monospace';
+    c.textAlign = 'right';
+    c.fillText(progress, cardX + cardW - 18, cardY + 30);
+
+    c.fillStyle = '#7a5a18';
+    c.font = '12px monospace';
+    c.textAlign = 'left';
+    c.fillText(Game.i18n.t('ledgerSubtitle'), cardX + 18, cardY + 50);
+
+    if (got >= tot) {
+      c.fillStyle = '#3a8030';
+      c.font = 'bold 14px monospace';
+      c.textAlign = 'center';
+      c.fillText(Game.i18n.t('ledgerComplete'), cardX + cardW / 2, cardY + 50);
+      c.textAlign = 'left';
+    }
+
+    /* Grid of species rows — 4 columns. */
+    var gridX = cardX + 18;
+    var gridY = cardY + 70;
+    var gridW = cardW - 36;
+    var cols = 4;
+    var rowH = 26;
+    var colW = Math.floor(gridW / cols);
+    var stamps = (Game.flags && Game.flags.stamps) || {};
+
+    for (var i = 0; i < LEDGER_SPECIES.length; i++) {
+      var sp = LEDGER_SPECIES[i];
+      var col = i % cols;
+      var row = Math.floor(i / cols);
+      var ix = gridX + col * colW;
+      var iy = gridY + row * rowH;
+      var stamped = !!stamps[sp];
+
+      /* Row background */
+      c.fillStyle = stamped ? '#e6f5d8' : '#f4ead4';
+      c.fillRect(ix, iy, colW - 6, rowH - 4);
+
+      /* Species name */
+      c.fillStyle = stamped ? '#3a8030' : '#7a5a18';
+      c.font = 'bold 11px monospace';
+      c.textAlign = 'left';
+      c.fillText(Game.i18n.t('animalName_' + sp), ix + 6, iy + 14);
+
+      /* Stamp / unvisited indicator */
+      c.font = 'bold 10px monospace';
+      c.textAlign = 'right';
+      if (stamped) {
+        /* Red rotated stamp-style label */
+        c.save();
+        c.translate(ix + colW - 14, iy + 14);
+        c.rotate(-0.18);
+        c.fillStyle = 'rgba(170, 24, 36, 0.92)';
+        c.fillText('★ ' + Game.i18n.t('ledgerStamped'), 0, 0);
+        c.restore();
+      } else {
+        c.fillStyle = '#aaa';
+        c.fillText(Game.i18n.t('ledgerUnvisited'), ix + colW - 14, iy + 14);
+      }
+    }
+
+    /* Hints + close button */
+    c.fillStyle = '#7a5a18';
+    c.font = '11px monospace';
+    c.textAlign = 'left';
+    c.fillText(Game.i18n.t('ledgerHint'), cardX + 18, cardY + cardH - 18);
+
+    var btnW = 120, btnH = 32;
+    var btnX = cardX + cardW - btnW - 18;
+    var btnY = cardY + cardH - btnH - 14;
+    ledgerCloseRect.x = btnX; ledgerCloseRect.y = btnY;
+    ledgerCloseRect.w = btnW; ledgerCloseRect.h = btnH;
+    c.fillStyle = '#ff99cc';
+    roundRect(c, btnX, btnY, btnW, btnH, 8);
+    c.fill();
+    c.strokeStyle = '#a85578';
+    c.lineWidth = 2;
+    c.stroke();
+    c.fillStyle = '#3a1428';
+    c.font = 'bold 14px monospace';
+    c.textAlign = 'center';
+    c.fillText(Game.i18n.t('ledgerClose'), btnX + btnW / 2, btnY + btnH / 2 + 5);
+    c.textAlign = 'left';
+
+    c.restore();
+  }
+
+  function handleLedgerClick(mx, my) {
+    if (mx >= ledgerCloseRect.x && mx <= ledgerCloseRect.x + ledgerCloseRect.w &&
+        my >= ledgerCloseRect.y && my <= ledgerCloseRect.y + ledgerCloseRect.h) {
+      return 'close';
+    }
+    /* Tap anywhere outside the close button still closes the passport
+       (matches the "tap-anywhere-to-dismiss" feel of other screens). */
+    return 'close';
+  }
+
   function drawLobbyIntro(c, timer, player, npcs) {
     /* The PLAYING-state world is still loaded; we paint it as the
        backdrop, then overlay the cutscene actors. */
@@ -6652,6 +7005,10 @@
     drawSleepCutscene: drawSleepCutscene,
     drawLobbyIntro: drawLobbyIntro,
     updateLobbyIntro: updateLobbyIntro,
+    drawBookshelfCutscene: drawBookshelfCutscene,
+    getBookshelfPageCount: getBookshelfPageCount,
+    drawLedger: drawLedger,
+    handleLedgerClick: handleLedgerClick,
   };
 
   /* Reusable version stamp — same position + style as the title screen

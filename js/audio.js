@@ -537,7 +537,27 @@
     1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,1,0,
   ];
 
-  function startMusic(type) {
+  /* Per-floor flavor for the lobby BGM. Each floor transposes the lead
+     by a few semitones, nudges tempo, and picks a complementary lead
+     waveform so the wings feel sonically distinct without needing a
+     whole new pattern.
+       semi  – semitones to transpose the melody (bass stays grounded)
+       wave  – override for the lead waveform
+       tempoMul – multiplier on the base tempo (1.0 = unchanged) */
+  var FLOOR_FLAVOR = [
+    /* Floor 0 (Lobby)   – default jazz lounge */
+    { semi:  0, wave: null,       tempoMul: 1.00, sparkle: false },
+    /* Floor 1 (Safari)  – brighter, slightly faster, square lead */
+    { semi:  4, wave: 'square',   tempoMul: 1.06, sparkle: false },
+    /* Floor 2 (Wild)    – a touch lower and more triangle-mellow */
+    { semi: -3, wave: 'triangle', tempoMul: 0.96, sparkle: false },
+    /* Floor 3 (Magic)   – ethereal: shimmery sine + sparkle drum */
+    { semi:  7, wave: 'sine',     tempoMul: 1.00, sparkle: true },
+  ];
+
+  function semiToRatio(semi) { return Math.pow(2, semi / 12); }
+
+  function startMusic(type, floorIndex) {
     stopMusic();
     if (!ctx || muted) return;
     var pattern, bass, drums, tempo;
@@ -548,6 +568,14 @@
     } else {
       pattern = bgmPattern; bass = bgmBass; drums = null; tempo = 88;
     }
+
+    /* Floor flavor only applies to the in-hotel BGM. */
+    var flavor = (type !== 'title' && type !== 'boss')
+      ? (FLOOR_FLAVOR[floorIndex || 0] || FLOOR_FLAVOR[0])
+      : { semi: 0, wave: null, tempoMul: 1.0, sparkle: false };
+    var pitchRatio = semiToRatio(flavor.semi);
+    tempo = Math.round(tempo * flavor.tempoMul);
+
     var beatDur = 60 / tempo;
     var noteIdx = 0;
 
@@ -562,7 +590,9 @@
 
         /* Melody */
         var melodyGain = type === 'title' ? 0.13 : 0.15;
-        playNote(note[0], note[1], beatDur * 0.8, melodyGain, musicGain, when);
+        var leadFreq = note[0] * pitchRatio;
+        var leadType = flavor.wave || note[1];
+        playNote(leadFreq, leadType, beatDur * 0.8, melodyGain, musicGain, when);
         /* Title gets a subtle second square an octave lower for width */
         if (type === 'title') {
           playNote(note[0] * 0.5, 'square', beatDur * 0.8, 0.06, musicGain, when);
@@ -574,6 +604,9 @@
           if (idx % 4 === 0) noise(0.04, musicGain, when);
         } else if (type === 'title' && drums && drums[idx]) {
           noise(0.035, musicGain, when);
+        } else if (flavor.sparkle && idx % 4 === 2) {
+          /* Magic floor: a tiny high-pitched twinkle on the upbeat. */
+          playNote(2093, 'triangle', 0.06, 0.05, musicGain, when);
         }
       }
       noteIdx = (noteIdx + 4) % pattern.length;
@@ -643,9 +676,9 @@
         case 'gorilla': gorillaSfx(); break;
       }
     },
-    startMusic: function (type) {
+    startMusic: function (type, floorIndex) {
       resume();
-      startMusic(type);
+      startMusic(type, floorIndex);
     },
     stopMusic: stopMusic,
     toggleMute: toggleMute,

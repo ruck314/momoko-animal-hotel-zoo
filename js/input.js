@@ -3,9 +3,9 @@
   'use strict';
   window.Game = window.Game || {};
 
-  var keys = { left: false, right: false, up: false, down: false, action: false, pause: false };
-  var justPressed = { action: false, pause: false };
-  var prevKeys = { action: false, pause: false };
+  var keys = { left: false, right: false, up: false, down: false, action: false, pause: false, ledger: false };
+  var justPressed = { action: false, pause: false, ledger: false };
+  var prevKeys = { action: false, pause: false, ledger: false };
 
   /* Touch state – each touch: { x, y, button } where button is a sticky binding
      so a finger that lands on a direction button keeps that button pressed
@@ -89,6 +89,7 @@
       case 'ArrowDown': case 'KeyS': keys.down = true; break;
       case 'Space': case 'KeyZ': keys.action = true; e.preventDefault(); break;
       case 'Escape': case 'KeyP': keys.pause = true; break;
+      case 'KeyB': keys.ledger = true; break;
     }
   }
 
@@ -100,6 +101,7 @@
       case 'ArrowDown': case 'KeyS': keys.down = false; break;
       case 'Space': case 'KeyZ': keys.action = false; break;
       case 'Escape': case 'KeyP': keys.pause = false; break;
+      case 'KeyB': keys.ledger = false; break;
     }
   }
 
@@ -245,8 +247,10 @@
     /* Detect just-pressed (rising edge) */
     justPressed.action = keys.action && !prevKeys.action;
     justPressed.pause = keys.pause && !prevKeys.pause;
+    justPressed.ledger = keys.ledger && !prevKeys.ledger;
     prevKeys.action = keys.action;
     prevKeys.pause = keys.pause;
+    prevKeys.ledger = keys.ledger;
   }
 
   /* Call at end of frame to clear keyboard-only states (touch states reset via processTouches) */

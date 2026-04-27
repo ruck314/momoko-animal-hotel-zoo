@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.2.0';
+  Game.VERSION = 'v0.3.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -51,6 +51,8 @@
     ANIMAL_ROOM: 'animalRoom',
     SLEEP_CUTSCENE: 'sleepCutscene',
     LOBBY_INTRO: 'lobbyIntro',
+    BOOKSHELF_CUTSCENE: 'bookshelfCutscene',
+    LEDGER: 'ledger',
   };
   var state = State.TITLE;
   var prevState = null;
@@ -120,6 +122,13 @@
   var lobbyIntroTimer = 0;
   /* Tracks the escort monkey's animation state during LOBBY_INTRO. */
   var lobbyIntroPhase = 'drop'; /* 'drop' | 'walk' | 'done' */
+  /* Bookshelf cutscene: timer + current page (0..N-1). The receptionist
+     walks in from the door, sits, then narrates pages of a public-domain
+     fairy tale. The player advances pages with the action button. */
+  var bookshelfTimer = 0;
+  var bookshelfPage = 0;
+  /* Where to return after closing the ledger (PLAYING vs ANIMAL_ROOM). */
+  var ledgerPrevState = null;
 
   /* Dialogue message queued during the playing-state render; drawn in
      canvas-space after the game viewport is painted so it can live in
@@ -406,6 +415,7 @@
 
       case State.PLAYING:
         if (jp.pause) { prevState = State.PLAYING; state = State.PAUSED; return; }
+        if (jp.ledger) { openLedger(); return; }
 
         /* Player */
         player.update(keys, level);
@@ -677,6 +687,7 @@
 
       case State.ANIMAL_ROOM:
         if (jp.pause) { exitAnimalRoom(); }
+        if (jp.ledger) { openLedger(); break; }
         if (Game.ui.updateAnimalRoom) Game.ui.updateAnimalRoom(keys, jp, Game.currentRoom);
         break;
 
@@ -702,6 +713,28 @@
           Game.flags.checkedIn = true;
           savePersistent();
         }
+        break;
+
+      case State.BOOKSHELF_CUTSCENE:
+        bookshelfTimer++;
+        /* Advance pages on action / up press, after a brief lead-in so
+           the receptionist can walk in. The total page count comes
+           from ui.js so the engine doesn't need to know the story. */
+        var bsAdvance = jp.action || jp.up;
+        if (bookshelfTimer > 60 && bsAdvance) {
+          var totalPages = (Game.ui && Game.ui.getBookshelfPageCount)
+            ? Game.ui.getBookshelfPageCount() : 6;
+          if (bookshelfPage < totalPages - 1) {
+            bookshelfPage++;
+          } else {
+            exitBookshelfCutscene();
+          }
+        }
+        if (jp.pause) exitBookshelfCutscene();
+        break;
+
+      case State.LEDGER:
+        if (jp.pause || jp.action || jp.up || jp.ledger) closeLedger();
         break;
     }
   }
@@ -807,6 +840,24 @@
         if (Game.ui.drawLobbyIntro) Game.ui.drawLobbyIntro(ctx, lobbyIntroTimer, player, npcs);
         break;
 
+      case State.BOOKSHELF_CUTSCENE:
+        if (Game.ui.drawBookshelfCutscene) {
+          Game.ui.drawBookshelfCutscene(ctx, bookshelfTimer, bookshelfPage);
+        }
+        break;
+
+      case State.LEDGER:
+        /* Render the underlying state first (so the ledger sits over it
+           like a paused overlay), then draw the passport on top. */
+        if (ledgerPrevState === State.ANIMAL_ROOM) {
+          if (Game.ui.drawAnimalRoomInterior) Game.ui.drawAnimalRoomInterior(ctx, Game.currentRoom, player);
+        } else {
+          renderGame();
+          if (Game.ui.drawQuestHUD) Game.ui.drawQuestHUD(ctx);
+        }
+        if (Game.ui.drawLedger) Game.ui.drawLedger(ctx);
+        break;
+
       case State.PAUSED:
         renderGame();
         Game.ui.drawPauseMenu(ctx);
@@ -848,7 +899,8 @@
         state === State.CAFE_INTERIOR ||
         state === State.SHOP_INTERIOR ||
         state === State.ANIMAL_ROOM ||
-        state === State.LOBBY_INTRO)) {
+        state === State.LOBBY_INTRO ||
+        state === State.BOOKSHELF_CUTSCENE)) {
       Game.input.drawTouchButtons(ctx);
     }
 
@@ -1068,6 +1120,44 @@
           ctx.fillText('!', ix, iy + Math.sin(Date.now() * 0.005) * 3);
         }
       }
+    }
+
+    /* Hanging room-name signs above each animal door so players don't
+       have to memorize colors. Rendered after the NPCs so the sign
+       sits over the door frame's top edge. */
+    for (var nm = 0; nm < npcs.length; nm++) {
+      if (npcs[nm].type !== 'animalDoor') continue;
+      var dnpc = npcs[nm].entity;
+      var sp = dnpc.species || (npcs[nm].data && npcs[nm].data.species);
+      if (!sp || sp === 'bedroom') continue;
+      var nx = dnpc.x - camera.x + dnpc.w / 2;
+      var ny = dnpc.y - camera.y - 24;
+      var label = (Game.i18n.t('animalName_' + sp) || sp).toUpperCase();
+      ctx.font = 'bold 9px monospace';
+      var tw = ctx.measureText(label).width;
+      var pw = Math.max(tw + 14, 44);
+      var ph = 14;
+      /* Sign rope */
+      ctx.strokeStyle = '#caa040';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(nx - 6, ny - ph / 2 - 4);
+      ctx.lineTo(nx - 6, ny - ph / 2);
+      ctx.moveTo(nx + 6, ny - ph / 2 - 4);
+      ctx.lineTo(nx + 6, ny - ph / 2);
+      ctx.stroke();
+      /* Sign body */
+      ctx.fillStyle = '#fff8e0';
+      ctx.fillRect(nx - pw / 2, ny - ph / 2, pw, ph);
+      ctx.strokeStyle = '#7a5018';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(nx - pw / 2, ny - ph / 2, pw, ph);
+      ctx.fillStyle = '#3a1f10';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, nx, ny + 0.5);
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
     }
 
     /* Bob submarine (drawn by npc loop above) */
@@ -2085,6 +2175,123 @@
         ctx.fillRect(dx - 4, dy - 4, 56, 60);
         ctx.fillStyle = '#3a2418';
         ctx.fillRect(dx, dy, 48, 52);
+      } else if (d.type === 'commonArea') {
+        /* A small floor lounge / themed garden landmark that breaks up
+           the long hallways. d.theme picks the visual treatment:
+           'safari' → palm + savanna pad,
+           'forest' → mossy log + ferns,
+           'magic'  → starry pedestal + sparkles. */
+        var caTheme = d.theme || 'safari';
+        var caW = d.w || 200;
+        /* Floor pad / rug */
+        var padCol = caTheme === 'safari' ? '#a07028'
+                   : caTheme === 'forest' ? '#3a5a28'
+                   :                        '#5a3aa0';
+        ctx.fillStyle = padCol;
+        ctx.fillRect(dx - caW / 2, dy - 4, caW, 4);
+        /* Rug border */
+        ctx.fillStyle = caTheme === 'safari' ? '#c89a4a'
+                      : caTheme === 'forest' ? '#5a8a38'
+                      :                        '#88aaff';
+        ctx.fillRect(dx - caW / 2, dy - 5, caW, 1.4);
+
+        if (caTheme === 'safari') {
+          /* Palm tree on the left */
+          ctx.fillStyle = '#7a4818';
+          ctx.fillRect(dx - 60, dy - 90, 8, 86);
+          ctx.fillStyle = '#3a7838';
+          for (var sf = 0; sf < 5; sf++) {
+            var sang = -Math.PI / 2 + (sf - 2) * 0.45;
+            ctx.beginPath();
+            ctx.ellipse(dx - 56 + Math.cos(sang) * 22,
+                        dy - 90 + Math.sin(sang) * 14,
+                        24, 8, sang, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          /* Coconuts */
+          ctx.fillStyle = '#5a3018';
+          ctx.beginPath(); ctx.arc(dx - 56, dy - 86, 3, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(dx - 50, dy - 84, 3, 0, Math.PI * 2); ctx.fill();
+          /* Lounge chair on the right */
+          ctx.fillStyle = '#caa040';
+          ctx.fillRect(dx + 20, dy - 22, 50, 4);
+          ctx.fillRect(dx + 20, dy - 22, 4, 22);
+          ctx.fillRect(dx + 66, dy - 22, 4, 22);
+          ctx.fillStyle = '#ff99cc';
+          ctx.fillRect(dx + 24, dy - 18, 42, 4);
+        } else if (caTheme === 'forest') {
+          /* Mossy fallen log */
+          ctx.fillStyle = '#5a3a18';
+          ctx.fillRect(dx - 60, dy - 16, 100, 14);
+          ctx.fillStyle = '#3a8030';
+          ctx.fillRect(dx - 60, dy - 18, 100, 4);
+          /* Log rings */
+          ctx.fillStyle = '#3a2010';
+          ctx.beginPath(); ctx.arc(dx - 60, dy - 9, 7, -Math.PI / 2, Math.PI / 2); ctx.fill();
+          ctx.fillStyle = '#5a3a18';
+          ctx.beginPath(); ctx.arc(dx - 60, dy - 9, 4, -Math.PI / 2, Math.PI / 2); ctx.fill();
+          /* Ferns */
+          ctx.strokeStyle = '#5a8a38'; ctx.lineWidth = 1.4;
+          for (var fn = 0; fn < 5; fn++) {
+            var fnx = dx + 50 + fn * 8;
+            ctx.beginPath();
+            ctx.moveTo(fnx, dy);
+            ctx.quadraticCurveTo(fnx + 4, dy - 14, fnx + 2, dy - 28);
+            ctx.stroke();
+          }
+          /* Mushrooms */
+          ctx.fillStyle = '#cc4444';
+          ctx.beginPath(); ctx.arc(dx - 30, dy - 4, 5, Math.PI, 2 * Math.PI); ctx.fill();
+          ctx.fillStyle = '#fff8e0';
+          ctx.beginPath(); ctx.arc(dx - 32, dy - 5, 1.2, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(dx - 28, dy - 6, 1.2, 0, Math.PI * 2); ctx.fill();
+        } else if (caTheme === 'magic') {
+          /* Crystal pedestal */
+          ctx.fillStyle = '#5a3aa0';
+          ctx.beginPath();
+          ctx.moveTo(dx - 18, dy - 4);
+          ctx.lineTo(dx + 18, dy - 4);
+          ctx.lineTo(dx + 14, dy - 38);
+          ctx.lineTo(dx - 14, dy - 38);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = '#88aaff';
+          ctx.beginPath();
+          ctx.moveTo(dx, dy - 80);
+          ctx.lineTo(dx - 10, dy - 50);
+          ctx.lineTo(dx, dy - 38);
+          ctx.lineTo(dx + 10, dy - 50);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = '#ffd24a';
+          ctx.beginPath(); ctx.arc(dx, dy - 60, 4, 0, Math.PI * 2); ctx.fill();
+          /* Sparkle dust */
+          for (var sk = 0; sk < 8; sk++) {
+            var sx = dx + Math.cos(Date.now() * 0.001 + sk) * (40 + sk * 3);
+            var sy = dy - 50 + Math.sin(Date.now() * 0.0013 + sk) * 14;
+            ctx.fillStyle = sk % 2 === 0 ? '#ffd24a' : '#ff99ee';
+            ctx.beginPath(); ctx.arc(sx, sy, 1.4, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+
+        /* Banner / nameplate above */
+        var caLabel = d.label || '';
+        if (caLabel) {
+          ctx.font = 'bold 12px monospace';
+          var ctw = ctx.measureText(caLabel).width;
+          var bw = ctw + 20, bh = 18;
+          ctx.fillStyle = '#fff8e0';
+          ctx.fillRect(dx - bw / 2, dy - 110, bw, bh);
+          ctx.strokeStyle = '#caa040';
+          ctx.lineWidth = 1.4;
+          ctx.strokeRect(dx - bw / 2, dy - 110, bw, bh);
+          ctx.fillStyle = '#5a3018';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(caLabel, dx, dy - 110 + bh / 2 + 0.5);
+          ctx.textBaseline = 'alphabetic';
+          ctx.textAlign = 'left';
+        }
       } else if (d.type === 'elevatorShaft') {
         /* Tall shaft column */
         ctx.fillStyle = '#1a1208';
@@ -2332,7 +2539,35 @@
       case State.PAUSED:
         var pAction = Game.ui.handlePauseClick(mx, my);
         if (pAction === 'resume') state = State.PLAYING;
+        else if (pAction === 'ledger') {
+          /* Open the passport from inside the pause menu — return to the
+             paused gameplay when the player closes it. */
+          ledgerPrevState = prevState || State.PLAYING;
+          state = State.LEDGER;
+        }
         else if (pAction === 'quit') { Game.audio.startMusic('title'); state = State.TITLE; }
+        break;
+
+      case State.LEDGER:
+        if (Game.ui.handleLedgerClick) {
+          var lAction = Game.ui.handleLedgerClick(mx, my);
+          if (lAction === 'close') closeLedger();
+        } else {
+          closeLedger();
+        }
+        break;
+
+      case State.BOOKSHELF_CUTSCENE:
+        /* Tap to advance after lead-in; same flow as keyboard. */
+        if (bookshelfTimer > 60) {
+          var totalPagesC = (Game.ui && Game.ui.getBookshelfPageCount)
+            ? Game.ui.getBookshelfPageCount() : 6;
+          if (bookshelfPage < totalPagesC - 1) {
+            bookshelfPage++;
+          } else {
+            exitBookshelfCutscene();
+          }
+        }
         break;
 
       case State.GAME_OVER:
@@ -2382,6 +2617,7 @@
           var arResult = Game.ui.handleAnimalRoomClick(mx, my, Game.currentRoom);
           if (arResult === 'exit') exitAnimalRoom();
           else if (arResult === 'sleep') enterSleepCutscene();
+          else if (arResult === 'bookshelf') enterBookshelfCutscene();
         }
         break;
 
@@ -2414,7 +2650,7 @@
     Game.audio.init();
     Game.audio.resume();
     beachReady = true;
-    Game.audio.startMusic('bgm');
+    Game.audio.startMusic('bgm', currentZone);
     state = State.PLAYING;
   }
 
@@ -2443,6 +2679,8 @@
     }
     beachReady = true;
     if (Game.audio && Game.audio.play) Game.audio.play('elevatorDing');
+    /* Re-cue the BGM with this floor's flavor (transpose / tempo / wave). */
+    if (Game.audio && Game.audio.startMusic) Game.audio.startMusic('bgm', currentZone);
     state = State.PLAYING;
   }
 
@@ -2513,6 +2751,37 @@
       ALL_STAMPED_FLAG = true;
       if (Game.audio && Game.audio.play) Game.audio.play('victory');
     }
+  }
+
+  /* ---- Hotel zoo: bookshelf cutscene (Little Red Riding Hood) ---- */
+  function enterBookshelfCutscene() {
+    bookshelfTimer = 0;
+    bookshelfPage = 0;
+    state = State.BOOKSHELF_CUTSCENE;
+    if (Game.audio && Game.audio.play) Game.audio.play('select');
+  }
+
+  function exitBookshelfCutscene() {
+    bookshelfTimer = 0;
+    bookshelfPage = 0;
+    /* Return to the bedroom interior so the player can keep exploring. */
+    Game.currentRoom = 'bedroom';
+    if (Game.ui && Game.ui.resetAnimalRoom) Game.ui.resetAnimalRoom('bedroom');
+    state = State.ANIMAL_ROOM;
+  }
+
+  /* ---- Hotel zoo: guest passport (ledger) overlay ---- */
+  function openLedger() {
+    if (state !== State.PLAYING && state !== State.ANIMAL_ROOM) return;
+    ledgerPrevState = state;
+    state = State.LEDGER;
+    if (Game.audio && Game.audio.play) Game.audio.play('select');
+  }
+
+  function closeLedger() {
+    state = ledgerPrevState || State.PLAYING;
+    ledgerPrevState = null;
+    if (Game.audio && Game.audio.play) Game.audio.play('select');
   }
 
   /* ---- Hotel zoo: lobby intro cutscene ---- */
@@ -2767,6 +3036,10 @@
     enterSleepCutscene: enterSleepCutscene,
     exitSleepCutscene: exitSleepCutscene,
     beginLobbyIntro: beginLobbyIntro,
+    enterBookshelfCutscene: enterBookshelfCutscene,
+    exitBookshelfCutscene: exitBookshelfCutscene,
+    openLedger: openLedger,
+    closeLedger: closeLedger,
     stampGuest: stampGuest,
     getStampCount: function () { return Game.flags.stampCount || 0; },
     getStampTotal: function () { return TOTAL_GUESTS; },
