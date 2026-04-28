@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.4.0';
+  Game.VERSION = 'v0.5.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -122,6 +122,9 @@
   var lobbyIntroTimer = 0;
   /* Tracks the escort monkey's animation state during LOBBY_INTRO. */
   var lobbyIntroPhase = 'drop'; /* 'drop' | 'walk' | 'done' */
+  /* Per-session guard so the auto-greeting only schedules once even if
+     the player walks in and out of PLAYING (e.g. opens the pause menu). */
+  var lobbyIntroAutoFired = false;
   /* Bookshelf cutscene: timer + current page (0..N-1). The receptionist
      walks in from the door, sits, then narrates pages of a public-domain
      fairy tale. The player advances pages with the action button. */
@@ -417,6 +420,15 @@
         if (jp.pause) { prevState = State.PLAYING; state = State.PAUSED; return; }
         if (jp.ledger) { openLedger(); return; }
 
+        /* First-arrival check-in: the chandelier monkey escorts Momoko to
+           the elevator the first time she's in the lobby. Plays once per
+           save so a player who heads straight for the elevator still sees
+           the welcome rather than skipping it. */
+        if (!Game.flags.checkedIn && !lobbyIntroAutoFired && currentZone === 0) {
+          lobbyIntroAutoFired = true;
+          setTimeout(beginLobbyIntro, 700);
+        }
+
         /* Player */
         player.update(keys, level);
 
@@ -711,6 +723,12 @@
         if (lobbyIntroTimer > 360) {
           state = State.PLAYING;
           Game.flags.checkedIn = true;
+          /* The escort is the player's actual meeting with the chandelier
+             monkey — stamp them here so the passport's 26th slot is
+             reachable in normal play (the monkeys hang well above
+             Momoko's interaction radius, so they can't be greeted from
+             the floor). */
+          stampGuest('monkey');
           savePersistent();
         }
         break;
@@ -851,6 +869,10 @@
         break;
 
       case State.LOBBY_INTRO:
+        /* Render the lobby behind the cutscene so the escort reads as
+           "monkey walking Momoko across the room" rather than a black
+           void with a floating sprite. */
+        renderGame();
         if (Game.ui.drawLobbyIntro) Game.ui.drawLobbyIntro(ctx, lobbyIntroTimer, player, npcs);
         break;
 
@@ -883,6 +905,9 @@
         break;
 
       case State.VICTORY:
+        /* Render the live lobby/floor underneath so the celebration
+           feels rooted in the place she just finished. */
+        renderGame();
         Game.ui.drawVictory(ctx);
         break;
 
@@ -1118,35 +1143,66 @@
     /* NPCs */
     for (var nc = 0; nc < npcs.length; nc++) {
       npcs[nc].entity.draw(ctx, camera.x, camera.y);
-      /* Interaction indicator */
+      /* Interaction indicator — a small bobbing "↑" card so kids who
+         can't read "!" still know the up arrow / Talk button does
+         something here. Shows whenever the player is inside the same
+         80px radius the interact handler uses. */
       var npc = npcs[nc].entity;
       if (!npc.talking) {
         var ndist = Math.sqrt(
           Math.pow(player.x - npc.x, 2) + Math.pow(player.y - npc.y, 2)
         );
         if (ndist < 80) {
-          /* Draw "!" indicator */
           var ix = npc.x - camera.x + npc.w / 2;
-          var iy = npc.y - camera.y - 14;
-          ctx.fillStyle = '#ffcc33';
-          ctx.font = 'bold 14px monospace';
+          var iy = npc.y - camera.y - 22;
+          var bob = Math.sin(Date.now() * 0.005) * 2;
+          var bw = 26, bh = 22;
+          ctx.save();
+          ctx.translate(0, bob);
+          /* Pill background */
+          ctx.fillStyle = '#fff8e0';
+          ctx.strokeStyle = '#caa040';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(ix - bw / 2, iy - bh / 2, bw, bh, 6);
+          else ctx.rect(ix - bw / 2, iy - bh / 2, bw, bh);
+          ctx.fill();
+          ctx.stroke();
+          /* Up arrow */
+          ctx.fillStyle = '#a8211f';
+          ctx.font = 'bold 16px monospace';
           ctx.textAlign = 'center';
-          ctx.fillText('!', ix, iy + Math.sin(Date.now() * 0.005) * 3);
+          ctx.textBaseline = 'middle';
+          ctx.fillText('↑', ix, iy + 1);
+          ctx.textBaseline = 'alphabetic';
+          ctx.restore();
         }
       }
     }
 
-    /* Hanging room-name signs above each animal door so players don't
-       have to memorize colors. Rendered after the NPCs so the sign
-       sits over the door frame's top edge. */
+    /* Hanging room-name signs above each animal door — and also small
+       wayfinding labels above stairs and the elevator so players can
+       tell the two transition points apart. Rendered after the NPCs so
+       the sign sits over the door frame's top edge. */
     for (var nm = 0; nm < npcs.length; nm++) {
-      if (npcs[nm].type !== 'animalDoor') continue;
+      var nmType = npcs[nm].type;
+      var isDoor = nmType === 'animalDoor';
+      var isStairs = nmType === 'stairs';
+      var isElevator = nmType === 'elevator';
+      if (!isDoor && !isStairs && !isElevator) continue;
       var dnpc = npcs[nm].entity;
       var sp = dnpc.species || (npcs[nm].data && npcs[nm].data.species);
-      if (!sp || sp === 'bedroom') continue;
+      if (isDoor && (!sp || sp === 'bedroom')) continue;
       var nx = dnpc.x - camera.x + dnpc.w / 2;
       var ny = dnpc.y - camera.y - 24;
-      var label = (Game.i18n.t('animalName_' + sp) || sp).toUpperCase();
+      var label;
+      if (isStairs) {
+        label = (Game.i18n.t('signStairs') || 'STAIRS').toUpperCase();
+      } else if (isElevator) {
+        label = (Game.i18n.t('signElevator') || 'ELEVATOR').toUpperCase();
+      } else {
+        label = (Game.i18n.t('animalName_' + sp) || sp).toUpperCase();
+      }
       ctx.font = 'bold 9px monospace';
       var tw = ctx.measureText(label).width;
       var pw = Math.max(tw + 14, 44);
@@ -2755,6 +2811,8 @@
   var TOTAL_GUESTS = 26;
   var ALL_STAMPED_FLAG = false;
   function stampGuest(species) {
+    /* The bedroom door is Momoko's own room, not a guest. */
+    if (!species || species === 'bedroom') return;
     if (!Game.flags.stamps) Game.flags.stamps = {};
     if (Game.flags.stamps[species]) return;
     Game.flags.stamps[species] = true;
@@ -2764,10 +2822,23 @@
     Game.flags.stampPulse = { species: species, t: 110 };
     if (Game.audio && Game.audio.play) Game.audio.play('select');
     savePersistent();
-    /* Celebrate when the ledger is complete. */
+    /* Roll into the victory cutscene the first time the ledger is
+       complete. We delay the transition so the postcard "Met the …!"
+       toast and any in-room dialogue can still play out. */
     if (Game.flags.stampCount >= TOTAL_GUESTS && !ALL_STAMPED_FLAG) {
       ALL_STAMPED_FLAG = true;
       if (Game.audio && Game.audio.play) Game.audio.play('victory');
+      setTimeout(triggerVictory, 1800);
+    }
+  }
+
+  function triggerVictory() {
+    /* Bring the player out of the animal-room close-up first so the
+       victory overlay sits on top of the lobby/floor, not a habitat. */
+    if (state === State.ANIMAL_ROOM) state = State.PLAYING;
+    if (state === State.PLAYING) {
+      if (Game.audio && Game.audio.stopMusic) Game.audio.stopMusic();
+      state = State.VICTORY;
     }
   }
 

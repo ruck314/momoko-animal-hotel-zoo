@@ -19,7 +19,7 @@
 
       /* ---- Intro / backstory ---- */
       introTitle: "Momoko's Hotel-Zoo Adventure",
-      introText: "Welcome to the Hotel Zoo!\nFind all 26 animal guests and tuck Momoko into bed.\n\nReady to check in?",
+      introText: "Welcome to the Hotel Zoo!\nGreet all 26 animal guests across four floors.\nWhen you're ready, tuck Momoko in for a cozy ZZZZ.\n\nReady to check in?",
       continueBtn: 'Continue',
 
       /* ---- HUD / gameplay ---- */
@@ -35,8 +35,15 @@
       tryAgain: 'Try Again',
       victory: 'Welcome!',
       savedOcean: "You've met every guest in the hotel!",
+      victoryTitle: 'Every Guest Greeted!',
+      victorySubtitle: "Momoko's Animal Hotel Zoo is full of friends.",
       playAgain: 'Play Again',
       thanks: 'Thank you for playing!',
+      /* ---- Wayfinding signs above stairs / elevator ---- */
+      signStairs: 'STAIRS',
+      signElevator: 'ELEVATOR',
+      /* ---- Ledger bonus row ---- */
+      ledgerBonusHeader: '★ Bonus Guest',
 
       /* ---- Rings-view cutscene (repurposed from beach) ---- */
       beachTitle: 'The Planet Rings!',
@@ -318,6 +325,7 @@
       animalName_polarBear:'Polar Bear',
       animalName_frog:     'Frog',
       animalName_gorilla:  'Gorilla',
+      animalName_bedroom:  "Momoko's Room",
 
       /* ---- Storybook-style habitat names (shown above each room).
          Falls back to "{Animal}'s Habitat" if a key is missing. ---- */
@@ -403,7 +411,7 @@
 
       /* ---- イントロ / ものがたり ---- */
       introTitle: 'モモコの どうぶつホテル ぼうけん',
-      introText: 'ようこそ どうぶつホテルズーへ！\n26ひきの おきゃくさんに あって モモコを ベッドへ つれていこう。\n\nチェックインの じゅんびは いい？',
+      introText: 'ようこそ どうぶつホテルズーへ！\n4かいの ホテルで 26ひきの おきゃくさんに あおう。\nじゅんびが できたら モモコを ベッドへ つれていって ZZZZ。\n\nチェックインの じゅんびは いい？',
       continueBtn: 'つぎへ',
 
       /* ---- HUD / ゲームプレイ ---- */
@@ -419,8 +427,15 @@
       tryAgain: 'もういちど',
       victory: 'ようこそ！',
       savedOcean: 'ホテルの どうぶつ みんなに あえたね！',
+      victoryTitle: 'みんなに あえたね！',
+      victorySubtitle: 'モモコの どうぶつホテルズーは おともだちで いっぱい。',
       playAgain: 'もういちど あそぶ',
       thanks: 'あそんでくれて ありがとう！',
+      /* ---- かいだん / エレベーター の ふだ ---- */
+      signStairs: 'かいだん',
+      signElevator: 'エレベーター',
+      /* ---- パスポート おまけ ---- */
+      ledgerBonusHeader: '★ おまけの おきゃくさん',
 
       /* ---- リングビュー ---- */
       beachTitle: 'ほしの わっか！',
@@ -702,6 +717,7 @@
       animalName_polarBear:'シロクマ',
       animalName_frog:     'カエル',
       animalName_gorilla:  'ゴリラ',
+      animalName_bedroom:  'モモコの おへや',
 
       /* ---- えほん風 おへやの なまえ ---- */
       habitatName_elephant: 'ぞうさんの みずあび',

@@ -276,9 +276,9 @@
     },
   };
 
-  /* ========== FLOOR 4 — PETS, SEA & MAGIC WING ========== */
+  /* ========== FLOOR 4 — MAGIC WING ========== */
   var FLOOR_4_PETS = {
-    name: 'Floor 4 — Pets, Sea & Magic Wing',
+    name: 'Floor 4 — Magic Wing',
     width: 3200,
     height: 480,
     waterSurface: 60,

@@ -503,27 +503,27 @@
     c.globalAlpha = 1;
 
     c.fillStyle = '#ffcc33';
-    c.font = 'bold 44px monospace';
+    c.font = 'bold 40px monospace';
     c.textAlign = 'center';
     c.shadowColor = '#ffaa00';
     c.shadowBlur = 20;
-    c.fillText(Game.i18n.t('victory'), W / 2, 130);
+    c.fillText(Game.i18n.t('victoryTitle'), W / 2, 120);
     c.shadowBlur = 0;
 
     c.fillStyle = '#88ddff';
-    c.font = '20px monospace';
-    c.fillText(Game.i18n.t('savedOcean'), W / 2, 180);
+    c.font = '18px monospace';
+    c.fillText(Game.i18n.t('victorySubtitle'), W / 2, 168);
 
     c.fillStyle = '#ccddee';
-    c.font = '16px monospace';
-    c.fillText(Game.i18n.t('thanks'), W / 2, 220);
+    c.font = '14px monospace';
+    c.fillText(Game.i18n.t('thanks'), W / 2, 200);
 
-    drawButton(c, Game.i18n.t('playAgain'), W / 2 - 90, 280, 180, 48);
+    drawButton(c, Game.i18n.t('playAgain'), W / 2 - 90, 250, 180, 44);
     c.restore();
   }
 
   function handleVictoryClick(mx, my) {
-    if (hitButton(mx, my, W / 2 - 90, 280, 180, 48)) {
+    if (hitButton(mx, my, W / 2 - 90, 250, 180, 44)) {
       Game.audio.play('select');
       victoryParticles = [];
       victoryTimer = 0;
@@ -5238,14 +5238,16 @@
       c.textAlign = 'left';
     }
 
-    /* Tiny pause hint for desktop (touch already has a visible pause btn). */
+    /* Pause hint for desktop (touch already has a visible pause btn).
+       Sized large enough to read at a glance — it's the only desktop
+       discoverability cue for the menu. */
     if (Game.input && !Game.input.isTouch()) {
       c.save();
-      c.fillStyle = 'rgba(255, 255, 255, 0.5)';
-      c.font = 'bold 10px monospace';
+      c.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      c.font = 'bold 13px monospace';
       c.textAlign = 'right';
       c.textBaseline = 'alphabetic';
-      c.fillText(Game.i18n.t('pauseHint') || 'PAUSE (P)', W - 8, H - 8);
+      c.fillText(Game.i18n.t('pauseHint') || 'PAUSE (P)', W - 10, H - 10);
       c.restore();
     }
     c.restore();
@@ -6844,7 +6846,9 @@
    *  animal in the hotel with a stamped indicator for visited ones.
    *  Sits over a paused PLAYING / ANIMAL_ROOM scene.
    * ============================================================ */
-  /* Listed in floor order so the player can mentally map them. */
+  /* Listed in floor order so the player can mentally map them. The
+     chandelier monkey is the 26th guest — Momoko meets them during the
+     lobby check-in escort, which is where the stamp is awarded. */
   var LEDGER_SPECIES = [
     'owl',
     'elephant', 'lion', 'tiger', 'bear', 'giraffe', 'zebra', 'hippo', 'rhino',
@@ -6983,13 +6987,11 @@
   }
 
   function drawLobbyIntro(c, timer, player, npcs) {
-    /* The PLAYING-state world is still loaded; we paint it as the
-       backdrop, then overlay the cutscene actors. */
-    /* We can't easily call the engine's renderGame from here, so we
-       paint a simple lobby tint over whatever was last rendered, then
-       draw the monkey at a tweened position over the player. */
+    /* The engine renders the live lobby underneath us before this
+       function is called, so we just lay a soft "spotlight" tint on
+       top and overlay the escort animation. */
     c.save();
-    c.fillStyle = 'rgba(10, 5, 20, 0.5)';
+    c.fillStyle = 'rgba(10, 5, 20, 0.32)';
     c.fillRect(0, 0, W, H);
 
     /* Phase 1 (0..120): monkey drops from chandelier to player */
@@ -7025,19 +7027,33 @@
       Game.entities.drawAnimalSprite(c, 'monkey', monkeySx - 22, monkeySy);
     }
 
-    /* Speech-bubble over the monkey */
+    /* Speech-bubble over the monkey. Sized off the actual text width
+       so longer translations (e.g. "Ook ook! Right this way to the
+       elevator!") don't spill past the bubble's edges, and clamped
+       inside the canvas so it never disappears off the left/right when
+       the monkey is near the player who is near a wall. */
     if (timer > 80) {
+      c.font = 'bold 12px monospace';
+      var msg = Game.i18n.t('monkeyEscort');
+      var twText = c.measureText(msg).width;
+      var tw = Math.min(W - 24, twText + 28);
+      var th = 32;
+      var tx = monkeySx - tw / 2;
+      if (tx < 12) tx = 12;
+      if (tx + tw > W - 12) tx = W - 12 - tw;
+      var ty = monkeySy - th - 28;
+      if (ty < 8) ty = 8;
       c.fillStyle = '#fff8e0';
       c.strokeStyle = '#5a3a18';
       c.lineWidth = 2;
-      var tx = monkeySx - 70, ty = monkeySy - 70, tw = 180, th = 36;
       roundRect(c, tx, ty, tw, th, 8);
       c.fill();
       c.stroke();
       c.fillStyle = '#1a1a1a';
-      c.font = 'bold 12px monospace';
       c.textAlign = 'center';
-      c.fillText(Game.i18n.t('monkeyEscort'), tx + tw / 2, ty + 22);
+      c.textBaseline = 'middle';
+      c.fillText(msg, tx + tw / 2, ty + th / 2);
+      c.textBaseline = 'alphabetic';
       c.textAlign = 'left';
     }
     c.restore();

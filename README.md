@@ -27,17 +27,18 @@ Open `index.html` in any modern browser. Works offline after first visit (PWA).
 - **Dual language** — English and Japanese
 - **All art generated in code** — no external image or audio files
 - **Web Audio chiptune** — every animal has its own procedural sound
-- **Four hotel floors** — Lobby, Safari Wing, Wild Wing, Pets-Sea-Magic Wing
-- **19 animal rooms** to visit
+- **Four hotel floors** — Lobby, Safari Wing, Wild Wing, Magic Wing
+- **26 animal guests** to greet (plus a bonus chandelier monkey)
 - **Lobby check-in cutscene** — a chandelier monkey escorts Momoko to the elevator
 - **Sleep cutscene** — interact with the bed in Momoko's room for a "ZZZZ"
+- **Guest Passport** — every greeting earns a stamp; fill the ledger for the victory screen
 
 ## Animals
 
-Floor 2 (Safari Wing): Elephant, Lion, Tiger, Bear, Giraffe, Zebra
-Floor 3 (Wild Wing): Wolf, Eagle, Fox, Owl, Panda, Penguin
-Floor 4 (Pets, Sea & Magic Wing): Bunny, Cat, Dog, Sea Otter, Kangaroo, Unicorn, Alien
-Lobby: Monkeys (chandelier escort), human Receptionist
+Floor 2 (Safari Wing): Elephant, Lion, Tiger, Bear, Giraffe, Zebra, Hippo, Rhino
+Floor 3 (Wild Wing): Wolf, Eagle, Fox, Panda, Penguin, Polar Bear, Gorilla
+Floor 4 (Magic Wing): Bunny, Cat, Dog, Sea Otter, Kangaroo, Unicorn, Alien, Koala, Frog
+Lobby: Owl (cozy reading-nook suite), Receptionist, Chandelier Monkey escort
 
 ## Tech Stack
 
