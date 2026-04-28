@@ -5056,7 +5056,22 @@
   Animal.prototype.draw = function (c, camX, camY) {
     var sx = Math.round(this.x - camX);
     var sy = Math.round(this.y - camY);
-    drawAnimalSprite(c, this.species, sx, sy);
+    /* Talking animals do an excited wiggle: scale-bounce + side-to-side
+       sway so each greeting feels like the animal *reacting* rather than
+       just standing there with a text bubble overlay. */
+    if (this.talking) {
+      var wigT = (360 - this.talkTimer) || 0;
+      var bounce = 1 + 0.10 * Math.abs(Math.sin(wigT * 0.32));
+      var sway = Math.sin(wigT * 0.22) * 4;
+      c.save();
+      c.translate(sx + this.w / 2 + sway, sy + this.h);
+      c.scale(bounce, bounce);
+      c.translate(-(this.w / 2), -this.h);
+      drawAnimalSprite(c, this.species, 0, 0);
+      c.restore();
+    } else {
+      drawAnimalSprite(c, this.species, sx, sy);
+    }
   };
 
   /* ========== ANIMAL DOOR (clone of HouseDoor with species-themed accent) ========== */
@@ -5104,18 +5119,47 @@
       : Game.i18n.t('animalName_' + this.species).toUpperCase();
     c.fillText(label, sx + 24, sy + 15);
     c.textAlign = 'left';
-    /* Bobbing speech-bubble icon over door */
+    /* Visited indicator: a bold gold "STAMPED" badge floating above the
+       door. Tells the player at a glance which doors they've already
+       opened, without needing to open the Passport. Replaces the pink
+       speech-bubble nudge for greeted guests. */
+    var stamped = !!(Game.flags && Game.flags.stamps && Game.flags.stamps[this.species]);
     var bob = Math.sin(this.timer * 0.08) * 2;
-    c.fillStyle = '#ff66cc';
-    var hcx = sx + 24, hcy = sy - 8 + bob;
-    c.beginPath();
-    c.arc(hcx - 2.4, hcy - 1, 2.4, 0, Math.PI * 2);
-    c.arc(hcx + 2.4, hcy - 1, 2.4, 0, Math.PI * 2);
-    c.moveTo(hcx - 4.4, hcy);
-    c.lineTo(hcx, hcy + 4.4);
-    c.lineTo(hcx + 4.4, hcy);
-    c.closePath();
-    c.fill();
+    var hcx = sx + 24, hcy = sy - 10 + bob;
+    if (stamped && this.species !== 'bedroom') {
+      c.save();
+      /* Tilted "STAMPED" rosette so it reads as a postage mark, not a
+         button. Sized large enough to read across the whole corridor. */
+      c.translate(hcx, hcy - 4);
+      c.rotate(-0.22);
+      /* Soft pink glow so the gold pops against any habitat backdrop. */
+      c.shadowColor = '#ff66cc';
+      c.shadowBlur = 8;
+      c.fillStyle = '#ffd24a';
+      c.beginPath();
+      c.arc(0, 0, 13, 0, Math.PI * 2);
+      c.fill();
+      c.shadowBlur = 0;
+      c.strokeStyle = '#fff8e0';
+      c.lineWidth = 2;
+      c.stroke();
+      c.fillStyle = '#3a2418';
+      c.font = 'bold 11px monospace';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('★', 0, 0);
+      c.restore();
+    } else if (this.species !== 'bedroom') {
+      c.fillStyle = '#ff66cc';
+      c.beginPath();
+      c.arc(hcx - 2.4, hcy - 1, 2.4, 0, Math.PI * 2);
+      c.arc(hcx + 2.4, hcy - 1, 2.4, 0, Math.PI * 2);
+      c.moveTo(hcx - 4.4, hcy);
+      c.lineTo(hcx, hcy + 4.4);
+      c.lineTo(hcx + 4.4, hcy);
+      c.closePath();
+      c.fill();
+    }
   };
 
   /* ========== RECEPTIONIST (human NPC at the front desk) ========== */

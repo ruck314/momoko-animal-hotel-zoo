@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.3.0';
+  Game.VERSION = 'v0.4.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -743,6 +743,18 @@
   function render() {
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
+    /* Toggle a body class so CSS can hide non-game chrome (the "Back to
+       Game Center" link) during immersive cutscenes. */
+    var inCutscene = (state === State.SLEEP_CUTSCENE ||
+                      state === State.LOBBY_INTRO ||
+                      state === State.BOOKSHELF_CUTSCENE ||
+                      state === State.ROCKET_ANIM ||
+                      state === State.INTRO ||
+                      state === State.VICTORY);
+    if (document.body.classList.toggle) {
+      document.body.classList.toggle('cutscene-mode', inCutscene);
+    }
+
     /* Paint side-strip backgrounds first so they sit underneath the pause
        button (which is drawn last, in canvas space). The game viewport in
        the middle is fully overwritten by the state renderer below, so it
@@ -772,7 +784,6 @@
       case State.PLAYING:
         renderGame();
         if (Game.ui.drawQuestHUD) Game.ui.drawQuestHUD(ctx);
-        if (Game.ui.drawVersionStamp) Game.ui.drawVersionStamp(ctx);
         /* Dialogue is deferred to canvas-space after the restore so it
            can live in the bottom bezel instead of covering gameplay. */
         pendingDialogue = null;
@@ -823,6 +834,9 @@
 
       case State.ANIMAL_ROOM:
         if (Game.ui.drawAnimalRoomInterior) Game.ui.drawAnimalRoomInterior(ctx, Game.currentRoom, player);
+        /* HUD here too, so the stamp celebration toast lands at the moment
+           the player greets a new animal. */
+        if (Game.ui.drawQuestHUD) Game.ui.drawQuestHUD(ctx);
         /* Surface dialogue from the in-room animal (if any) below the
            viewport in the bottom bezel — same flow as PLAYING. */
         pendingDialogue = null;
@@ -2745,6 +2759,10 @@
     if (Game.flags.stamps[species]) return;
     Game.flags.stamps[species] = true;
     Game.flags.stampCount = (Game.flags.stampCount || 0) + 1;
+    /* Trigger a brief celebration: HUD pulse + species toast.
+       drawQuestHUD reads Game.flags.stampPulse and decrements it. */
+    Game.flags.stampPulse = { species: species, t: 110 };
+    if (Game.audio && Game.audio.play) Game.audio.play('select');
     savePersistent();
     /* Celebrate when the ledger is complete. */
     if (Game.flags.stampCount >= TOTAL_GUESTS && !ALL_STAMPED_FLAG) {

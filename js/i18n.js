@@ -9,7 +9,7 @@
       titleSubtitle: '~ A Comfy Hotel-Zoo RPG ~',
       play: 'Play',
       howToPlay: 'How to Play',
-      instructions: 'Float: Arrow Keys / D-Pad\nTalk / Interact: Space / Talk Button\nVisit friends and explore the stars!',
+      instructions: 'Walk: Arrow Keys / D-Pad\nTalk to animals: Space / Talk Button\nFind all 26 guests in the hotel!',
       language: 'Language',
       langLabel: 'EN',
       rotateHint: 'Please rotate your device to landscape mode!',
@@ -19,13 +19,16 @@
 
       /* ---- Intro / backstory ---- */
       introTitle: "Momoko's Hotel-Zoo Adventure",
-      introText: "Welcome to the Animal Hotel Zoo!\nIt's a cozy hotel where every guest is a different animal.\n\nMomoko has just arrived with her little suitcase.\nA friendly receptionist will check her in.\nThen a chandelier monkey will swing down\nand show her the way to the elevator.\n\nFour floors. Nineteen animal rooms.\nWalk into each one and say hello — every guest\nhas their own special hello sound!\n\nWhen Momoko's tired, head back to her room\nand snuggle into bed for a comfy ZZZZ.\n\nReady to check in?",
+      introText: "Welcome to the Hotel Zoo!\nFind all 26 animal guests and tuck Momoko into bed.\n\nReady to check in?",
       continueBtn: 'Continue',
 
       /* ---- HUD / gameplay ---- */
       paused: 'Paused',
       resume: 'Resume',
       quit: 'Quit',
+      stampToastPrefix: 'Met the ',
+      stampToastSuffix: '!',
+      pauseHint: 'PAUSE (P)',
 
       /* ---- Game over / victory ---- */
       gameOver: 'Game Over',
@@ -316,6 +319,34 @@
       animalName_frog:     'Frog',
       animalName_gorilla:  'Gorilla',
 
+      /* ---- Storybook-style habitat names (shown above each room).
+         Falls back to "{Animal}'s Habitat" if a key is missing. ---- */
+      habitatName_elephant: "Elephant's Watering Hole",
+      habitatName_lion:     "Bashful Lion's Den",
+      habitatName_tiger:    "Tiger's Vine Garden",
+      habitatName_bear:     "Bear's Honey Hollow",
+      habitatName_giraffe:  "Giraffe's Tall Lookout",
+      habitatName_zebra:    "Zebra's Stripey Field",
+      habitatName_hippo:    "Hippo's Splashy River",
+      habitatName_rhino:    "Rhino's Sunny Plain",
+      habitatName_wolf:     "Wolf's Moonlit Ridge",
+      habitatName_eagle:    "Eagle's Cloud Perch",
+      habitatName_fox:      "Fox's Autumn Burrow",
+      habitatName_owl:      "Owl's Reading Nook",
+      habitatName_panda:    "Panda's Bamboo Spa",
+      habitatName_penguin:  "Penguin's Iceberg",
+      habitatName_polarBear:"Polar Penthouse",
+      habitatName_gorilla:  "Gorilla's Treehouse",
+      habitatName_bunny:    "Bunny's Clover Meadow",
+      habitatName_cat:      "Cat's Cozy Window",
+      habitatName_dog:      "Dog's Backyard",
+      habitatName_seaOtter: "Sea Otter's Kelp Cove",
+      habitatName_kangaroo: "Kangaroo's Outback Hop",
+      habitatName_unicorn:  "Unicorn's Rainbow Suite",
+      habitatName_alien:    "Alien's Stardust Pad",
+      habitatName_koala:    "Koala's Eucalyptus Loft",
+      habitatName_frog:     "Frog's Lily Pond",
+
       /* ---- Oliver's silly jokes (20) – kid friendly ---- */
       joke1: 'Why did the toilet paper roll down the hill?\nTo get to the bottom!',
       joke2: "What's a pirate's favorite bathroom?\nThe POOP deck!",
@@ -362,7 +393,7 @@
       titleSubtitle: '〜 ほっこり ホテルズー RPG 〜',
       play: 'スタート',
       howToPlay: 'あそびかた',
-      instructions: 'うかぶ: やじるしキー / 十字ボタン\nはなす: スペース / はなすボタン\nともだちに あいに いこう！ほしも たんけんしよう！',
+      instructions: 'あるく: やじるしキー / 十字ボタン\nどうぶつと はなす: スペース / はなすボタン\n26ひきの おきゃくさんを ぜんぶ さがそう！',
       language: 'ことば',
       langLabel: 'JP',
       rotateHint: 'デバイスを よこむきにしてください！',
@@ -372,13 +403,16 @@
 
       /* ---- イントロ / ものがたり ---- */
       introTitle: 'モモコの どうぶつホテル ぼうけん',
-      introText: 'ようこそ どうぶつホテルズーへ！\nどのおへやにも ちがう どうぶつが とまっています。\n\nモモコは ちいさい かばんを もって とうちゃくしました。\nうけつけの おねえさんが チェックインを してくれます。\nそのあと シャンデリアの おサルさんが おりてきて\nエレベーターまで あんないしてくれるよ。\n\n４かい。19のどうぶつのおへや。\nそれぞれの おへやに はいって あいさつしよう。\nどのこも じぶんだけの こえで ないてくれるよ！\n\nつかれたら じぶんのおへやに もどって\nふかふかの ベッドで ZZZZ おやすみなさい。\n\nチェックインの じゅんびは いい？',
+      introText: 'ようこそ どうぶつホテルズーへ！\n26ひきの おきゃくさんに あって モモコを ベッドへ つれていこう。\n\nチェックインの じゅんびは いい？',
       continueBtn: 'つぎへ',
 
       /* ---- HUD / ゲームプレイ ---- */
       paused: 'ポーズ',
       resume: 'つづける',
       quit: 'やめる',
+      stampToastPrefix: '',
+      stampToastSuffix: 'に であった！',
+      pauseHint: 'ポーズ (P)',
 
       /* ---- ゲームオーバー / 勝利 ---- */
       gameOver: 'ゲームオーバー',
@@ -668,6 +702,33 @@
       animalName_polarBear:'シロクマ',
       animalName_frog:     'カエル',
       animalName_gorilla:  'ゴリラ',
+
+      /* ---- えほん風 おへやの なまえ ---- */
+      habitatName_elephant: 'ぞうさんの みずあび',
+      habitatName_lion:     'はずかしがりライオンの すみか',
+      habitatName_tiger:    'トラの つるの にわ',
+      habitatName_bear:     'クマの はちみつ ほら',
+      habitatName_giraffe:  'キリンの たかい ものみ',
+      habitatName_zebra:    'シマウマの しまもよう のはら',
+      habitatName_hippo:    'カバの じゃぶじゃぶ かわ',
+      habitatName_rhino:    'サイの ひなた のはら',
+      habitatName_wolf:     'オオカミの つきあかり おね',
+      habitatName_eagle:    'ワシの くもの とまりぎ',
+      habitatName_fox:      'キツネの もみじ あなぐら',
+      habitatName_owl:      'フクロウの どくしょスペース',
+      habitatName_panda:    'パンダの たけ おんせん',
+      habitatName_penguin:  'ペンギンの ひょうざん',
+      habitatName_polarBear:'しろくまの ペントハウス',
+      habitatName_gorilla:  'ゴリラの ツリーハウス',
+      habitatName_bunny:    'ウサギの クローバー のはら',
+      habitatName_cat:      'ねこの ぽかぽか まどべ',
+      habitatName_dog:      'いぬの うらにわ',
+      habitatName_seaOtter: 'ラッコの こんぶの いりえ',
+      habitatName_kangaroo: 'カンガルーの アウトバック',
+      habitatName_unicorn:  'ユニコーンの にじ スイート',
+      habitatName_alien:    'うちゅうじんの ほしくず きち',
+      habitatName_koala:    'コアラの ユーカリ ロフト',
+      habitatName_frog:     'カエルの はす いけ',
 
       /* ---- オリバーのジョーク (20) ---- */
       joke1: 'トイレットペーパーは なぜ さかを ころがったの？\nいちばん したへ いきたかったから！',

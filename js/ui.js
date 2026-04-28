@@ -32,6 +32,39 @@
     c.fillText(text, x + w / 2, y + h / 2);
   }
 
+  /* Big primary call-to-action — used for the Play button on the title.
+     Pulses gently so it reads as the obvious thing to tap. */
+  function drawPrimaryButton(c, text, x, y, w, h, animTimer) {
+    var pulse = 0.5 + 0.5 * Math.sin((animTimer || 0) * 0.06);
+    var bx = x, by = y, bw = w, bh = h;
+    c.save();
+    /* Outer glow */
+    c.shadowColor = '#ff66cc';
+    c.shadowBlur = 14 + 6 * pulse;
+    c.fillStyle = '#ff3aa0';
+    c.fillRect(bx, by, bw, bh);
+    c.restore();
+    /* Inner gradient fill */
+    var g = c.createLinearGradient(bx, by, bx, by + bh);
+    g.addColorStop(0, '#ffd24a');
+    g.addColorStop(0.5, '#ff8ad4');
+    g.addColorStop(1, '#ff3aa0');
+    c.fillStyle = g;
+    c.fillRect(bx + 3, by + 3, bw - 6, bh - 6);
+    /* Border */
+    c.strokeStyle = '#ffffff';
+    c.lineWidth = 3;
+    c.strokeRect(bx, by, bw, bh);
+    /* Label */
+    c.fillStyle = '#220044';
+    c.font = 'bold 28px monospace';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(text, bx + bw / 2 + 1, by + bh / 2 + 1);
+    c.fillStyle = '#ffffff';
+    c.fillText(text, bx + bw / 2, by + bh / 2);
+  }
+
   function hitButton(mx, my, x, y, w, h) {
     return mx >= x && mx <= x + w && my >= y && my <= y + h;
   }
@@ -169,14 +202,14 @@
     c.textAlign = 'center';
     c.fillText(Game.i18n.t('titleSubtitle'), W / 2, 140);
 
-    /* Buttons */
-    drawButton(c, Game.i18n.t('play'), W / 2 - 90, 200, 180, 44);
-    drawButton(c, Game.i18n.t('howToPlay'), W / 2 - 90, 260, 180, 44);
-    drawButton(c, Game.i18n.t('language') + ': ' + Game.i18n.t('langLabel'), W / 2 - 90, 320, 180, 44);
+    /* Buttons — Play is the loudest action; others are sized down. */
+    drawPrimaryButton(c, Game.i18n.t('play'), W / 2 - 130, 196, 260, 60, titleAnimTimer);
+    drawButton(c, Game.i18n.t('howToPlay'), W / 2 - 90, 276, 180, 36);
+    drawButton(c, Game.i18n.t('language') + ': ' + Game.i18n.t('langLabel'), W / 2 - 90, 322, 180, 36);
 
     /* Sound toggle */
     var muteLabel = Game.i18n.t(Game.audio.isMuted() ? 'soundOff' : 'soundOn');
-    drawButton(c, muteLabel, W / 2 - 90, 380, 180, 36);
+    drawButton(c, muteLabel, W / 2 - 90, 368, 180, 36);
 
     /* Version stamp (bottom-right) – helps us know which build is running */
     if (Game.VERSION) {
@@ -222,10 +255,10 @@
       }
       return null;
     }
-    if (hitButton(mx, my, W / 2 - 90, 200, 180, 44)) { Game.audio.play('select'); return 'play'; }
-    if (hitButton(mx, my, W / 2 - 90, 260, 180, 44)) { Game.audio.play('select'); showInstructions = true; return null; }
-    if (hitButton(mx, my, W / 2 - 90, 320, 180, 44)) { Game.audio.play('select'); Game.i18n.toggleLanguage(); return null; }
-    if (hitButton(mx, my, W / 2 - 90, 380, 180, 36)) { Game.audio.toggleMute(); return null; }
+    if (hitButton(mx, my, W / 2 - 130, 196, 260, 60)) { Game.audio.play('select'); return 'play'; }
+    if (hitButton(mx, my, W / 2 - 90, 276, 180, 36)) { Game.audio.play('select'); showInstructions = true; return null; }
+    if (hitButton(mx, my, W / 2 - 90, 322, 180, 36)) { Game.audio.play('select'); Game.i18n.toggleLanguage(); return null; }
+    if (hitButton(mx, my, W / 2 - 90, 368, 180, 36)) { Game.audio.toggleMute(); return null; }
     return null;
   }
 
@@ -262,17 +295,6 @@
     var muteLabel = Game.i18n.t(Game.audio.isMuted() ? 'soundOff' : 'soundOn');
     drawButton(c, muteLabel, W / 2 - 10, 294, 220, 38);
     drawButton(c, Game.i18n.t('quit'), W / 2 - 10, 342, 220, 38);
-
-    /* Version stamp – matches the title-screen stamp so we can tell at a
-       glance which build is paused (handy for bug reports). */
-    if (Game.VERSION) {
-      c.fillStyle = '#6688aa';
-      c.font = '11px monospace';
-      c.textAlign = 'right';
-      c.textBaseline = 'alphabetic';
-      var pStamp = Game.VERSION + (Game.BUILD ? ' (' + Game.BUILD + ')' : '');
-      c.fillText(pStamp, W - 8, H - 8);
-    }
     c.restore();
   }
 
@@ -5141,12 +5163,21 @@
     if (!(Game.engine && Game.engine.getStampCount)) return;
     var got = Game.engine.getStampCount();
     var tot = Game.engine.getStampTotal();
+    /* Decrement the stamp-celebration timer so the pulse fades out. */
+    var pulse = Game.flags && Game.flags.stampPulse;
+    if (pulse && pulse.t > 0) pulse.t--;
+    var pulseAmt = (pulse && pulse.t > 0) ? Math.max(0, pulse.t / 110) : 0;
     c.save();
-    /* Ledger card top-right */
+    /* Ledger card top-right — bounces while a guest stamp is fresh. */
     var bx = W - 168, by = 38, bw = 158, bh = 30;
-    c.fillStyle = 'rgba(58, 36, 24, 0.85)';
+    var scale = 1 + 0.18 * Math.sin(pulseAmt * Math.PI);
+    c.save();
+    c.translate(bx + bw / 2, by + bh / 2);
+    c.scale(scale, scale);
+    c.translate(-(bx + bw / 2), -(by + bh / 2));
+    c.fillStyle = pulseAmt > 0 ? 'rgba(120, 80, 30, 0.95)' : 'rgba(58, 36, 24, 0.85)';
     c.fillRect(bx, by, bw, bh);
-    c.strokeStyle = '#caa040';
+    c.strokeStyle = pulseAmt > 0 ? '#ffe680' : '#caa040';
     c.lineWidth = 2;
     c.strokeRect(bx, by, bw, bh);
     c.fillStyle = '#fff8e0';
@@ -5158,6 +5189,45 @@
     c.textAlign = 'right';
     c.fillText(got + ' / ' + tot, bx + bw - 8, by + 19);
     c.textAlign = 'left';
+    c.restore();
+
+    /* Stamp toast: a postcard-style "Met the Tiger!" pop-up that floats
+       up briefly when a new guest is added. */
+    if (pulse && pulse.t > 0) {
+      var name = Game.i18n.t('animalName_' + pulse.species);
+      var pre = Game.i18n.t('stampToastPrefix') || '';
+      var post = Game.i18n.t('stampToastSuffix') || '';
+      var msg = pre + name + post;
+      var rise = (1 - pulseAmt) * 14;
+      var alpha = Math.min(1, pulseAmt * 2.4);
+      c.save();
+      c.globalAlpha = alpha;
+      var tw = 260, th = 56;
+      var tx = W / 2 - tw / 2, ty = 60 - rise;
+      /* Card */
+      c.fillStyle = '#fff4c0';
+      c.fillRect(tx, ty, tw, th);
+      c.strokeStyle = '#caa040';
+      c.lineWidth = 3;
+      c.strokeRect(tx, ty, tw, th);
+      /* Stamp circle on the left */
+      c.fillStyle = '#ff3aa0';
+      c.beginPath();
+      c.arc(tx + 26, ty + th / 2, 16, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = '#ffffff';
+      c.font = 'bold 14px monospace';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('★', tx + 26, ty + th / 2);
+      /* Message */
+      c.fillStyle = '#3a2418';
+      c.font = 'bold 16px monospace';
+      c.textAlign = 'left';
+      c.textBaseline = 'middle';
+      c.fillText(msg, tx + 52, ty + th / 2);
+      c.restore();
+    }
 
     /* Banner when complete */
     if (got >= tot) {
@@ -5166,6 +5236,17 @@
       c.textAlign = 'center';
       c.fillText('★ All Guests Greeted! ★', W / 2, 30);
       c.textAlign = 'left';
+    }
+
+    /* Tiny pause hint for desktop (touch already has a visible pause btn). */
+    if (Game.input && !Game.input.isTouch()) {
+      c.save();
+      c.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      c.font = 'bold 10px monospace';
+      c.textAlign = 'right';
+      c.textBaseline = 'alphabetic';
+      c.fillText(Game.i18n.t('pauseHint') || 'PAUSE (P)', W - 8, H - 8);
+      c.restore();
     }
     c.restore();
   }
@@ -6205,9 +6286,17 @@
     c.fillStyle = '#fff8e0';
     c.font = 'bold 18px monospace';
     c.textAlign = 'center';
-    var title = species === 'bedroom'
-      ? Game.i18n.t('bedroomLabel')
-      : Game.i18n.t('animalName_' + species) + (species === 'monkey' ? '' : "'s Habitat");
+    var habitatKey = 'habitatName_' + species;
+    var habitatName = Game.i18n.t(habitatKey);
+    var title;
+    if (species === 'bedroom') {
+      title = Game.i18n.t('bedroomLabel');
+    } else if (habitatName && habitatName !== habitatKey) {
+      /* Storybook-style themed name (e.g. "Bashful Lion's Den"). */
+      title = habitatName;
+    } else {
+      title = Game.i18n.t('animalName_' + species) + (species === 'monkey' ? '' : "'s Habitat");
+    }
     c.fillText(title, W / 2, 20);
     c.textAlign = 'left';
 

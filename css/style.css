@@ -47,6 +47,13 @@ html, body {
   color: #ffffff;
 }
 
+/* Hide the dev-style "Back to Game Center" chrome during immersive
+   cutscenes so the storybook moments stay uncluttered. The body class
+   is toggled by the engine each frame based on the current State. */
+body.cutscene-mode #game-center-link {
+  display: none;
+}
+
 /* Orientation hint for portrait phones/tablets */
 @media (orientation: portrait) and (max-width: 900px) {
   #rotate-hint {
