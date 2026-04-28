@@ -2944,19 +2944,43 @@
     c.restore();
     /* Body underneath */
     drawCreatureBase(c, sx, sy, p.body, p.shade);
-    /* Detailed mane tufts arranged radially with subtle variation */
-    for (var i = 0; i < 14; i++) {
-      var ang = -Math.PI + i * (Math.PI / 7);
-      var rr = 14 + (i % 2) * 2;
-      var ex = sx + 10 + Math.cos(ang) * rr;
-      var ey = sy + 18 + Math.sin(ang) * rr;
-      c.fillStyle = i % 2 === 0 ? p.accent : p.shade;
-      c.beginPath(); c.arc(ex, ey, 3, 0, Math.PI * 2); c.fill();
+    /* Mane — built from overlapping flame-shaped lobes around the face,
+       so it reads as a continuous mane instead of a circle of polka
+       dots. Two layers (shade behind, accent in front) give it depth. */
+    function manelobe(cx, cy, ang, len, w, color) {
+      c.save();
+      c.translate(cx, cy);
+      c.rotate(ang);
+      c.fillStyle = color;
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.bezierCurveTo(w * 0.6, -len * 0.15, w * 0.6, -len * 0.65, 0, -len);
+      c.bezierCurveTo(-w * 0.6, -len * 0.65, -w * 0.6, -len * 0.15, 0, 0);
+      c.closePath();
+      c.fill();
+      c.restore();
     }
-    /* Inner mane fluff over head */
+    /* Outer (darker) layer — 12 lobes around the face circle */
+    for (var i = 0; i < 12; i++) {
+      var ang = i * (Math.PI * 2 / 12);
+      var lcx = sx + 10 + Math.cos(ang) * 8;
+      var lcy = sy + 18 + Math.sin(ang) * 8;
+      manelobe(lcx, lcy, ang + Math.PI / 2, 9, 5, p.shade);
+    }
+    /* Inner (lighter) layer — slightly shorter lobes for fluff */
+    for (var i2 = 0; i2 < 12; i2++) {
+      var ang2 = i2 * (Math.PI * 2 / 12) + Math.PI / 12;
+      var l2cx = sx + 10 + Math.cos(ang2) * 7;
+      var l2cy = sy + 18 + Math.sin(ang2) * 7;
+      manelobe(l2cx, l2cy, ang2 + Math.PI / 2, 7, 4.4, p.accent);
+    }
+    /* Forehead tuft over the eyes */
     c.fillStyle = p.accent;
     c.beginPath();
-    c.arc(sx + 10, sy + 12, 4, Math.PI * 1.05, Math.PI * 1.95);
+    c.moveTo(sx + 5, sy + 11);
+    c.quadraticCurveTo(sx + 10, sy + 6,  sx + 15, sy + 11);
+    c.quadraticCurveTo(sx + 14, sy + 13, sx + 6,  sy + 13);
+    c.closePath();
     c.fill();
     /* Tufted ears */
     c.fillStyle = p.shade;
@@ -3215,159 +3239,311 @@
 
   function drawGiraffeSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.giraffe;
-    /* Soft drop shadow */
+    var BODY = p.body;
+    var SHADE = p.shade;
+    var DARK = '#5a3a14';
+    /* Drop shadow */
     c.save(); c.globalAlpha = 0.25; c.fillStyle = '#000';
-    c.beginPath(); c.ellipse(sx + 24, sy + 48, 18, 3, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 28, sy + 44, 18, 3, 0, 0, Math.PI * 2); c.fill();
     c.restore();
-    /* Body with vertical gradient */
-    var bg = c.createLinearGradient(0, sy + 18, 0, sy + 46);
-    bg.addColorStop(0, p.body); bg.addColorStop(1, p.shade);
-    c.fillStyle = bg;
-    c.beginPath(); c.ellipse(sx + 26, sy + 32, 20, 12, 0, 0, Math.PI * 2); c.fill();
-    /* Four tall legs */
-    c.fillStyle = p.shade;
-    c.fillRect(sx + 12, sy + 38, 3.4, 12);
-    c.fillRect(sx + 22, sy + 38, 3.4, 12);
-    c.fillRect(sx + 30, sy + 38, 3.4, 12);
-    c.fillRect(sx + 40, sy + 38, 3.4, 12);
+
+    /* Tail (drawn before body so it tucks behind) */
+    c.strokeStyle = SHADE; c.lineWidth = 1.4;
+    c.beginPath(); c.moveTo(sx + 42, sy + 22); c.quadraticCurveTo(sx + 47, sy + 28, sx + 46, sy + 36); c.stroke();
+    c.fillStyle = DARK;
+    c.beginPath(); c.arc(sx + 46, sy + 37, 1.8, 0, Math.PI * 2); c.fill();
+
+    /* Four long, slim legs (giraffes are leggy) */
+    c.fillStyle = BODY;
+    c.fillRect(sx + 14, sy + 26, 3, 18);
+    c.fillRect(sx + 20, sy + 26, 3, 18);
+    c.fillRect(sx + 32, sy + 26, 3, 18);
+    c.fillRect(sx + 38, sy + 26, 3, 18);
+    /* Knee joints (slightly darker bands) */
+    c.fillStyle = SHADE;
+    c.fillRect(sx + 14, sy + 33, 3, 1.4);
+    c.fillRect(sx + 20, sy + 33, 3, 1.4);
+    c.fillRect(sx + 32, sy + 33, 3, 1.4);
+    c.fillRect(sx + 38, sy + 33, 3, 1.4);
     /* Hooves */
-    c.fillStyle = '#3a2010';
-    c.fillRect(sx + 11.6, sy + 48, 4.4, 2);
-    c.fillRect(sx + 21.6, sy + 48, 4.4, 2);
-    c.fillRect(sx + 29.6, sy + 48, 4.4, 2);
-    c.fillRect(sx + 39.6, sy + 48, 4.4, 2);
-    /* Long curved neck */
-    c.fillStyle = p.body;
+    c.fillStyle = DARK;
+    c.fillRect(sx + 13.6, sy + 43, 3.8, 1.8);
+    c.fillRect(sx + 19.6, sy + 43, 3.8, 1.8);
+    c.fillRect(sx + 31.6, sy + 43, 3.8, 1.8);
+    c.fillRect(sx + 37.6, sy + 43, 3.8, 1.8);
+
+    /* Body — barrel-shaped (rectangular oval, not round). Slimmer than
+       the previous version so the long-legs / long-neck silhouette
+       reads clearly. */
+    var bg = c.createLinearGradient(0, sy + 16, 0, sy + 30);
+    bg.addColorStop(0, BODY); bg.addColorStop(1, SHADE);
+    c.fillStyle = bg;
+    c.beginPath(); c.ellipse(sx + 28, sy + 22, 16, 8, 0, 0, Math.PI * 2); c.fill();
+
+    /* Long curved neck — thinner at top, wider at body. Sweeps slightly
+       forward (left) like a real giraffe at rest. */
+    c.fillStyle = BODY;
     c.beginPath();
-    c.moveTo(sx + 6, sy + 22);
-    c.lineTo(sx + 4, sy - 12);
-    c.lineTo(sx + 12, sy - 14);
-    c.lineTo(sx + 14, sy + 22);
+    c.moveTo(sx + 14, sy + 22);
+    c.lineTo(sx + 8,  sy - 16);
+    c.lineTo(sx + 14, sy - 18);
+    c.lineTo(sx + 20, sy + 18);
     c.closePath();
     c.fill();
-    /* Head — distinctive elongated shape */
-    c.fillStyle = p.body;
-    c.beginPath(); c.ellipse(sx + 10, sy - 16, 10, 7, 0.1, 0, Math.PI * 2); c.fill();
-    /* Snout */
-    c.fillStyle = p.shade;
-    c.beginPath(); c.ellipse(sx + 2, sy - 14, 4, 3, 0.1, 0, Math.PI * 2); c.fill();
-    /* Spots — irregular giraffe pattern */
-    c.fillStyle = p.shade;
-    var spots = [
-      [16, 28, 4], [28, 24, 4], [38, 30, 3], [22, 36, 3.5], [34, 38, 3],
-      [10, 0, 2.5], [10, 8, 2.5], [10, -6, 1.8], [12, 16, 2.5], [9, -3, 2],
-    ];
-    for (var s = 0; s < spots.length; s++) {
+
+    /* Small giraffe head — tilted slightly, with elongated muzzle */
+    c.fillStyle = BODY;
+    c.beginPath(); c.ellipse(sx + 8, sy - 20, 7, 4, -0.15, 0, Math.PI * 2); c.fill();
+    /* Muzzle / snout protrudes left */
+    c.fillStyle = SHADE;
+    c.beginPath(); c.ellipse(sx + 1.5, sy - 18.5, 3.5, 2.6, -0.15, 0, Math.PI * 2); c.fill();
+
+    /* Ossicones (giraffe horns) — small stalks with fuzzy tips */
+    c.fillStyle = SHADE;
+    c.fillRect(sx + 7, sy - 28, 1.4, 6);
+    c.fillRect(sx + 12, sy - 28, 1.4, 6);
+    c.fillStyle = DARK;
+    c.beginPath(); c.arc(sx + 7.7,  sy - 29, 1.6, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(sx + 12.7, sy - 29, 1.6, 0, Math.PI * 2); c.fill();
+
+    /* Ears — elongated leaf-shaped, sticking sideways */
+    c.fillStyle = BODY;
+    c.beginPath(); c.ellipse(sx + 1, sy - 22, 3.2, 1.6, -0.6, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 15, sy - 22, 3.2, 1.6, 0.6, 0, Math.PI * 2); c.fill();
+    /* Inner ear pink */
+    c.fillStyle = '#cc9988';
+    c.beginPath(); c.ellipse(sx + 1, sy - 22, 1.8, 0.8, -0.6, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 15, sy - 22, 1.8, 0.8, 0.6, 0, Math.PI * 2); c.fill();
+
+    /* Mane — short bristle stripe along the back of the neck */
+    c.fillStyle = DARK;
+    for (var gm = 0; gm < 9; gm++) {
+      var my = sy - 16 + gm * 4.2;
+      c.fillRect(sx + 18 - gm * 0.4, my, 1.6, 2.4);
+    }
+
+    /* ---- Spots ---- Irregular giraffe patches as polygonal shapes (not
+       circles) so they read as the trademark giraffe pattern.  Clipped
+       to the body + neck silhouette so they don't bleed into the empty
+       canvas around the animal. */
+    c.fillStyle = SHADE;
+    function patch(cx, cy, r, sides) {
       c.beginPath();
-      c.ellipse(sx + spots[s][0], sy + spots[s][1], spots[s][2], spots[s][2] * 0.85, 0, 0, Math.PI * 2);
+      for (var i = 0; i < sides; i++) {
+        var a = (i / sides) * Math.PI * 2 + (cx * 0.3);
+        var rr = r * (0.78 + 0.22 * Math.sin(cx + cy + i));
+        var px = cx + Math.cos(a) * rr;
+        var py = cy + Math.sin(a) * rr;
+        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+      }
+      c.closePath();
       c.fill();
     }
-    /* Ossicones (giraffe horns) with fluffy tops */
-    c.fillStyle = p.shade;
-    c.fillRect(sx + 6, sy - 24, 1.6, 7);
-    c.fillRect(sx + 13, sy - 24, 1.6, 7);
-    c.beginPath(); c.arc(sx + 6.8, sy - 25, 1.8, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.arc(sx + 13.8, sy - 25, 1.8, 0, Math.PI * 2); c.fill();
-    /* Big floppy ears */
-    c.fillStyle = p.body;
-    c.beginPath(); c.ellipse(sx + 2, sy - 18, 4, 2, -0.3, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.ellipse(sx + 18, sy - 18, 4, 2, 0.3, 0, Math.PI * 2); c.fill();
+    /* Body patches */
+    c.save();
+    c.beginPath(); c.ellipse(sx + 28, sy + 22, 16, 8, 0, 0, Math.PI * 2); c.clip();
+    patch(sx + 18, sy + 20, 3.4, 6);
+    patch(sx + 25, sy + 17, 3.0, 5);
+    patch(sx + 32, sy + 21, 3.4, 6);
+    patch(sx + 38, sy + 19, 2.8, 5);
+    patch(sx + 22, sy + 26, 2.8, 6);
+    patch(sx + 30, sy + 27, 3.0, 5);
+    patch(sx + 38, sy + 26, 2.4, 5);
+    c.restore();
+
+    /* Neck patches */
+    c.save();
+    c.beginPath();
+    c.moveTo(sx + 14, sy + 22);
+    c.lineTo(sx + 8,  sy - 16);
+    c.lineTo(sx + 14, sy - 18);
+    c.lineTo(sx + 20, sy + 18);
+    c.closePath();
+    c.clip();
+    patch(sx + 13, sy + 14, 2.4, 5);
+    patch(sx + 11, sy + 4,  2.2, 5);
+    patch(sx + 14, sy - 4,  2.0, 5);
+    patch(sx + 12, sy - 12, 1.8, 5);
+    c.restore();
+
+    /* Leg patches — small triangle on each upper leg */
+    c.fillStyle = SHADE;
+    c.fillRect(sx + 14, sy + 28, 3, 2);
+    c.fillRect(sx + 20, sy + 28, 3, 2);
+    c.fillRect(sx + 32, sy + 28, 3, 2);
+    c.fillRect(sx + 38, sy + 28, 3, 2);
+
     /* Eye + lashes */
-    realEye(c, sx + 10, sy - 16, 1.6, '#3a2010');
+    realEye(c, sx + 9, sy - 19, 1.4, '#3a2010');
     c.strokeStyle = '#1a1a1a'; c.lineWidth = 0.5;
     c.beginPath();
-    c.moveTo(sx + 9.4, sy - 17.6); c.lineTo(sx + 8.6, sy - 18.8);
-    c.moveTo(sx + 10, sy - 18); c.lineTo(sx + 9.6, sy - 19);
-    c.moveTo(sx + 10.6, sy - 17.6); c.lineTo(sx + 11.4, sy - 18.8);
+    c.moveTo(sx + 8.4, sy - 21); c.lineTo(sx + 7.8, sy - 22);
+    c.moveTo(sx + 9.2, sy - 21.4); c.lineTo(sx + 9, sy - 22.4);
     c.stroke();
-    /* Mouth */
+
+    /* Nostril + mouth on muzzle */
+    c.fillStyle = '#3a2010';
+    c.beginPath(); c.arc(sx + 0.5, sy - 18, 0.5, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#7a3838'; c.lineWidth = 0.5;
     c.beginPath();
-    c.moveTo(sx + 4, sy - 13); c.quadraticCurveTo(sx + 2, sy - 12, sx + 0, sy - 13);
+    c.moveTo(sx, sy - 16);
+    c.quadraticCurveTo(sx + 1.4, sy - 15.4, sx + 2.6, sy - 16);
     c.stroke();
-    /* Mane along the neck */
-    c.fillStyle = p.shade;
-    for (var gm = 0; gm < 8; gm++) {
-      var gmy = sy - 14 + gm * 4;
-      c.fillRect(sx + 12, gmy, 1.4, 3);
-    }
-    /* Tail with tuft */
-    c.strokeStyle = p.shade; c.lineWidth = 1.4;
-    c.beginPath(); c.moveTo(sx + 44, sy + 26); c.lineTo(sx + 50, sy + 36); c.stroke();
-    c.fillStyle = p.shade;
-    c.beginPath(); c.arc(sx + 50, sy + 38, 2, 0, Math.PI * 2); c.fill();
   }
 
   function drawZebraSprite(c, sx, sy) {
-    var p = ANIMAL_PALETTES.zebra;
-    drawCreatureBase(c, sx, sy, p.body, '#cccccc');
-    /* Body stripes — chunkier, slightly curved, broken by the belly so
-       they read as zebra stripes rather than a row of pinstripes. */
-    c.fillStyle = p.accent;
-    var stripeXs = [4, 9, 14, 20, 26, 32, 37, 41];
-    var stripeWs = [3.4, 3.0, 3.4, 3.6, 3.4, 3.0, 2.6, 2.2];
-    for (var zi = 0; zi < stripeXs.length; zi++) {
-      var zx = sx + stripeXs[zi];
-      var zw = stripeWs[zi];
-      var zh = (zi < 2 || zi > 5) ? 14 : 20;
-      var zy = sy + 18 + (zi < 2 ? 0 : 2);
+    /* Side-view horse silhouette with bold black stripes. Skips the
+       generic creature base entirely so the proportions read as
+       "zebra/horse" rather than "round body with stripes painted on". */
+    var WHITE = '#ffffff';
+    var SHADE = '#dcdcdc';
+    var BLACK = '#1a1a1a';
+    /* Drop shadow */
+    c.save(); c.globalAlpha = 0.3; c.fillStyle = '#000';
+    c.beginPath(); c.ellipse(sx + 24, sy + 44, 18, 3, 0, 0, Math.PI * 2); c.fill();
+    c.restore();
+
+    /* Tail — drawn first so the body covers its root */
+    c.strokeStyle = WHITE; c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(sx + 41, sy + 22);
+    c.quadraticCurveTo(sx + 47, sy + 30, sx + 45, sy + 38);
+    c.stroke();
+    c.fillStyle = BLACK;
+    c.beginPath(); c.arc(sx + 45, sy + 39, 2.2, 0, Math.PI * 2); c.fill();
+
+    /* Back legs (drawn first so front legs overlap) */
+    c.fillStyle = WHITE;
+    c.fillRect(sx + 31, sy + 28, 3, 14);
+    c.fillRect(sx + 36, sy + 28, 3, 14);
+    /* Front legs */
+    c.fillRect(sx + 13, sy + 28, 3, 14);
+    c.fillRect(sx + 18, sy + 28, 3, 14);
+    /* Hooves */
+    c.fillStyle = BLACK;
+    c.fillRect(sx + 12.6, sy + 41, 3.8, 2);
+    c.fillRect(sx + 17.6, sy + 41, 3.8, 2);
+    c.fillRect(sx + 30.6, sy + 41, 3.8, 2);
+    c.fillRect(sx + 35.6, sy + 41, 3.8, 2);
+
+    /* Body — horizontal oval, slight back-arch */
+    var bg = c.createLinearGradient(0, sy + 16, 0, sy + 32);
+    bg.addColorStop(0, WHITE);
+    bg.addColorStop(1, SHADE);
+    c.fillStyle = bg;
+    c.beginPath(); c.ellipse(sx + 26, sy + 24, 16, 8, 0, 0, Math.PI * 2); c.fill();
+
+    /* Neck — trapezoid up-left from body */
+    c.fillStyle = WHITE;
+    c.beginPath();
+    c.moveTo(sx + 12, sy + 22);
+    c.lineTo(sx + 6, sy + 12);
+    c.lineTo(sx + 14, sy + 10);
+    c.lineTo(sx + 18, sy + 20);
+    c.closePath();
+    c.fill();
+
+    /* Head — long horse face pointing left */
+    c.beginPath(); c.ellipse(sx + 8, sy + 10, 8, 5, 0, 0, Math.PI * 2); c.fill();
+    /* Snout — slightly darker tip */
+    c.fillStyle = SHADE;
+    c.beginPath(); c.ellipse(sx + 2, sy + 11.5, 3, 2.6, 0, 0, Math.PI * 2); c.fill();
+
+    /* Ears — two small triangles */
+    c.fillStyle = WHITE;
+    c.beginPath();
+    c.moveTo(sx + 9, sy + 4);  c.lineTo(sx + 11, sy + 7); c.lineTo(sx + 7, sy + 7);
+    c.closePath(); c.fill();
+    c.beginPath();
+    c.moveTo(sx + 14, sy + 4); c.lineTo(sx + 16, sy + 7); c.lineTo(sx + 12, sy + 7);
+    c.closePath(); c.fill();
+    c.fillStyle = '#cc99aa';
+    c.beginPath();
+    c.moveTo(sx + 9, sy + 5);  c.lineTo(sx + 10.5, sy + 7); c.lineTo(sx + 7.5, sy + 7);
+    c.closePath(); c.fill();
+
+    /* ---- Black stripes ---- */
+    c.fillStyle = BLACK;
+
+    /* Stripes inside the body — clip so they hug the silhouette. */
+    c.save();
+    c.beginPath();
+    c.ellipse(sx + 26, sy + 24, 16, 8, 0, 0, Math.PI * 2);
+    c.clip();
+    for (var s = 0; s < 9; s++) {
+      var bx = sx + 12 + s * 3.4;
       c.save();
-      c.translate(zx + zw / 2, zy);
-      c.rotate((zi - 3.5) * 0.06);
-      c.beginPath();
-      c.moveTo(-zw / 2, 0);
-      c.quadraticCurveTo(0, zh / 2, zw / 2, 0);
-      c.lineTo(zw / 2, zh);
-      c.quadraticCurveTo(0, zh + zh / 6, -zw / 2, zh);
-      c.closePath();
-      c.fill();
+      c.translate(bx, sy + 24);
+      c.rotate((s - 4) * 0.05);
+      c.fillRect(-1.3, -9, 2.6, 18);
       c.restore();
     }
-    /* Cream belly band breaking the stripes so it reads as a body, not a grill */
-    c.save();
-    c.globalAlpha = 0.55;
-    c.fillStyle = '#fff8e0';
-    c.beginPath(); c.ellipse(sx + 24, sy + 34, 14, 4, 0, 0, Math.PI * 2); c.fill();
     c.restore();
-    /* Head stripes — thicker too */
-    c.fillStyle = p.accent;
-    c.fillRect(sx + 4, sy + 12, 2.4, 12);
-    c.fillRect(sx + 9, sy + 8, 2.4, 14);
-    c.fillRect(sx + 14, sy + 12, 2.4, 12);
-    /* Spiky mane */
-    c.fillStyle = p.accent;
-    for (var zm = 0; zm < 6; zm++) {
+
+    /* Stripes on neck — diagonal, following the trapezoid */
+    c.save();
+    c.beginPath();
+    c.moveTo(sx + 12, sy + 22);
+    c.lineTo(sx + 6, sy + 12);
+    c.lineTo(sx + 14, sy + 10);
+    c.lineTo(sx + 18, sy + 20);
+    c.closePath();
+    c.clip();
+    for (var ns = 0; ns < 4; ns++) {
+      c.save();
+      c.translate(sx + 8 + ns * 3, sy + 16);
+      c.rotate(0.22);
+      c.fillRect(-0.9, -8, 1.8, 16);
+      c.restore();
+    }
+    c.restore();
+
+    /* Stripes on head — thin radial bands */
+    c.save();
+    c.beginPath();
+    c.ellipse(sx + 8, sy + 10, 8, 5, 0, 0, Math.PI * 2);
+    c.clip();
+    c.fillRect(sx + 5, sy + 6, 0.9, 8);
+    c.fillRect(sx + 8, sy + 5, 0.9, 10);
+    c.fillRect(sx + 11, sy + 6, 0.9, 8);
+    c.fillRect(sx + 13.5, sy + 7, 0.9, 6);
+    c.restore();
+
+    /* Stripes on legs — ladder bands */
+    var legXs = [13, 18, 31, 36];
+    for (var li = 0; li < 4; li++) {
+      var lx = legXs[li];
+      c.fillRect(sx + lx, sy + 30, 3, 1.6);
+      c.fillRect(sx + lx, sy + 34, 3, 1.6);
+      c.fillRect(sx + lx, sy + 38, 3, 1.6);
+    }
+
+    /* Mane — short bristles along the back of the neck */
+    for (var m = 0; m < 6; m++) {
+      var mx = sx + 12 + m * 1.4;
+      var my = sy + 10 + m * 0.6;
       c.beginPath();
-      c.moveTo(sx + 8 + zm * 2, sy + 6);
-      c.lineTo(sx + 9 + zm * 2, sy + 0);
-      c.lineTo(sx + 10 + zm * 2, sy + 6);
+      c.moveTo(mx, my + 4);
+      c.lineTo(mx + 1, my);
+      c.lineTo(mx + 2, my + 4);
       c.closePath();
       c.fill();
     }
-    /* Ears with black inner */
-    c.fillStyle = p.body;
-    c.beginPath(); c.arc(sx + 3, sy + 10, 2.4, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.arc(sx + 17, sy + 10, 2.4, 0, Math.PI * 2); c.fill();
-    c.fillStyle = p.accent;
-    c.beginPath(); c.arc(sx + 3, sy + 10, 1.2, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.arc(sx + 17, sy + 10, 1.2, 0, Math.PI * 2); c.fill();
-    /* Snout */
-    c.fillStyle = p.body;
-    c.beginPath(); c.ellipse(sx + 4, sy + 22, 4.5, 3.4, 0, 0, Math.PI * 2); c.fill();
+
+    /* Eye — alert dark dot with highlight */
+    c.beginPath(); c.arc(sx + 10, sy + 9, 1.1, 0, Math.PI * 2); c.fill();
+    c.fillStyle = WHITE;
+    c.beginPath(); c.arc(sx + 10.4, sy + 8.6, 0.35, 0, Math.PI * 2); c.fill();
+
     /* Nostril */
-    c.fillStyle = p.accent;
-    c.beginPath(); c.arc(sx + 2, sy + 21, 1.0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#3a2010';
+    c.beginPath(); c.arc(sx + 1.5, sy + 11, 0.55, 0, Math.PI * 2); c.fill();
     /* Mouth */
-    c.strokeStyle = p.accent; c.lineWidth = 0.6;
+    c.strokeStyle = '#7a3838'; c.lineWidth = 0.5;
     c.beginPath();
-    c.moveTo(sx + 1, sy + 23); c.quadraticCurveTo(sx + 4, sy + 24.6, sx + 7, sy + 23);
+    c.moveTo(sx, sy + 12.6);
+    c.quadraticCurveTo(sx + 1.5, sy + 13.4, sx + 3, sy + 12.6);
     c.stroke();
-    /* Eye */
-    realEye(c, sx + 9, sy + 16, 1.6, '#3a2010');
-    /* Tail with black tuft */
-    c.strokeStyle = p.body; c.lineWidth = 1.6;
-    c.beginPath(); c.moveTo(sx + 42, sy + 26); c.lineTo(sx + 50, sy + 38); c.stroke();
-    c.fillStyle = p.accent;
-    c.beginPath(); c.arc(sx + 50, sy + 39, 2.4, 0, Math.PI * 2); c.fill();
   }
 
   function drawEagleSprite(c, sx, sy) {
@@ -4712,13 +4888,15 @@
     c.lineTo(sx + 10, sy + 18);
     c.closePath();
     c.fill();
-    /* Pointy ears with darker inner */
+    /* Small tube-shaped rhino ears (rounded ovals on stalks, NOT pointy
+       cat-style triangles which read as the wrong species). */
     c.fillStyle = p.shade;
-    c.beginPath(); c.moveTo(sx + 4, sy + 11); c.lineTo(sx + 6, sy + 0); c.lineTo(sx + 9, sy + 11); c.closePath(); c.fill();
-    c.beginPath(); c.moveTo(sx + 13, sy + 11); c.lineTo(sx + 15, sy + 0); c.lineTo(sx + 18, sy + 11); c.closePath(); c.fill();
-    c.fillStyle = '#3a3434';
-    c.beginPath(); c.moveTo(sx + 5, sy + 10); c.lineTo(sx + 6, sy + 4); c.lineTo(sx + 8, sy + 10); c.closePath(); c.fill();
-    c.beginPath(); c.moveTo(sx + 14, sy + 10); c.lineTo(sx + 15, sy + 4); c.lineTo(sx + 17, sy + 10); c.closePath(); c.fill();
+    c.beginPath(); c.ellipse(sx + 5,  sy + 6, 2.4, 4.2, -0.25, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 15, sy + 6, 2.4, 4.2,  0.25, 0, Math.PI * 2); c.fill();
+    /* Inner ear (pink/dark) */
+    c.fillStyle = '#5a4040';
+    c.beginPath(); c.ellipse(sx + 5,  sy + 7, 1.0, 2.6, -0.25, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 15, sy + 7, 1.0, 2.6,  0.25, 0, Math.PI * 2); c.fill();
     /* Mouth */
     c.strokeStyle = p.accent; c.lineWidth = 0.8;
     c.beginPath();
@@ -4776,22 +4954,6 @@
     /* Sweet brown eyes */
     realEye(c, sx + 9,  sy + 16, 1.6, '#3a2010');
     realEye(c, sx + 14, sy + 16, 1.4, '#3a2010');
-    /* Snowflake decoration on shoulder */
-    c.strokeStyle = '#a8d0e8'; c.lineWidth = 0.6;
-    c.beginPath();
-    c.moveTo(sx + 26, sy + 22); c.lineTo(sx + 26, sy + 28);
-    c.moveTo(sx + 23, sy + 25); c.lineTo(sx + 29, sy + 25);
-    c.moveTo(sx + 24, sy + 23); c.lineTo(sx + 28, sy + 27);
-    c.moveTo(sx + 28, sy + 23); c.lineTo(sx + 24, sy + 27);
-    c.stroke();
-    /* Falling snowflake particles */
-    c.fillStyle = '#ffffff';
-    var flakeP = [[34, 14], [38, 22], [40, 30], [44, 18], [42, 12]];
-    for (var pf = 0; pf < flakeP.length; pf++) {
-      c.beginPath();
-      c.arc(sx + flakeP[pf][0], sy + flakeP[pf][1], 0.8, 0, Math.PI * 2);
-      c.fill();
-    }
     /* Big paws with claws */
     c.fillStyle = p.shade;
     c.fillRect(sx + 11, sy + 44, 4, 2);
@@ -4801,18 +4963,6 @@
       c.fillRect(sx + 11 + pc * 1.2, sy + 45.6, 0.6, 1.4);
       c.fillRect(sx + 31 + pc * 1.2, sy + 45.6, 0.6, 1.4);
     }
-    /* Fish in mouth/paw */
-    c.fillStyle = '#88aacc';
-    c.beginPath();
-    c.moveTo(sx + 38, sy + 42);
-    c.lineTo(sx + 46, sy + 40);
-    c.lineTo(sx + 50, sy + 44);
-    c.lineTo(sx + 46, sy + 48);
-    c.lineTo(sx + 38, sy + 46);
-    c.closePath();
-    c.fill();
-    c.fillStyle = '#ffffff';
-    c.beginPath(); c.arc(sx + 42, sy + 43, 0.6, 0, Math.PI * 2); c.fill();
   }
 
   function drawFrogSprite(c, sx, sy) {

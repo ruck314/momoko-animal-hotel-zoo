@@ -5474,16 +5474,28 @@
         ? new Game.entities.BedroomBed(W - 280, ROOM_FLOOR_BOTTOM - 60)
         : null;
     } else {
-      /* Each species room shows the animal alone — the previous
-         "decorative bed" prop read as the same generic small chest in
-         every room and was indistinguishable from the dresser, so the
-         habitat (kelp cove, savanna, rainbow grove) does the cozy work
-         on its own. */
+      /* Layout per the v0.8 design: animal centered in the room, themed
+         bed pushed to the far-right wall so the habitat reads as the
+         guest's actual suite (animal at home + their bed). */
       if (Game.entities && Game.entities.Animal) {
-        /* Place the animal at the far right of the room. */
-        roomState.animal = new Game.entities.Animal(species, W - 240, ROOM_FLOOR_BOTTOM - 100);
+        /* Animal w=48; +scale 2.6 means ~125px wide on screen.
+           Place its top-left so the visible center sits at W/2. */
+        roomState.animal = new Game.entities.Animal(
+          species,
+          Math.round(W / 2 - 24),
+          ROOM_FLOOR_BOTTOM - 100
+        );
       }
-      roomState.bed = null;
+      /* Decorative themed bed on the right wall — non-interactive, pure
+         set dressing. The bedroom's real BedroomBed is the only one that
+         triggers the sleep cutscene. */
+      roomState.bed = {
+        x: W - 130,
+        y: ROOM_FLOOR_BOTTOM - 50,
+        w: 100,
+        h: 50,
+        decorative: true,
+      };
     }
   }
 

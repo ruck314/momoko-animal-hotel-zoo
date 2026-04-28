@@ -125,9 +125,9 @@
         /* Bonus suite — owl reading-nook (extra cozy) */
         { type: 'animalDoor', x: 1900, y: 388, species: 'owl' },
 
-        /* Elevator + stairs */
-        { type: 'elevator', x: 2180, y: 388 },
-        { type: 'stairs',   x: 2310, y: 388, dir: 'up' },
+        /* Elevator + stairs (lobby has only one set, on the right) */
+        { type: 'elevator', x: 2180, y: 388, side: 'right' },
+        { type: 'stairs',   x: 2310, y: 388, dir: 'up', side: 'right' },
       ],
       pickups: [],
     },
@@ -161,28 +161,32 @@
       { type: 'ceilingBeam', x: 1700, y: 60 },
       { type: 'ceilingBeam', x: 2200, y: 60 },
       { type: 'ceilingBeam', x: 2700, y: 60 },
-      { type: 'lobbyPlant',  x: 200,  y: 440 },
       { type: 'lobbyPlant',  x: 2550, y: 440 },
-      { type: 'wallPainting', x: 600,  y: 200, art: 'savanna' },
+      { type: 'wallPainting', x: 800,  y: 200, art: 'savanna' },
       { type: 'wallPainting', x: 1900, y: 200, art: 'savanna' },
-      { type: 'neonSign',     x: 100,  y: 200, text: 'SAFARI', color: '#ffaa44' },
+      { type: 'neonSign',     x: 360,  y: 200, text: 'SAFARI', color: '#ffaa44' },
 
       /* Mid-corridor lounge that breaks up the long hallway. */
       { type: 'commonArea', x: 1300, y: 440, w: 220, theme: 'safari',
         label: 'SAFARI LOUNGE' },
 
-      { type: 'roomDoorFrame', x: 320,  y: 388, color: '#cc8844' }, /* elephant */
-      { type: 'roomDoorFrame', x: 600,  y: 388, color: '#dd9944' }, /* lion */
-      { type: 'roomDoorFrame', x: 880,  y: 388, color: '#aa6644' }, /* tiger */
-      { type: 'roomDoorFrame', x: 1160, y: 388, color: '#664422' }, /* bear */
-      { type: 'roomDoorFrame', x: 1440, y: 388, color: '#ddbb66' }, /* giraffe */
-      { type: 'roomDoorFrame', x: 1720, y: 388, color: '#ddddee' }, /* zebra */
-      { type: 'roomDoorFrame', x: 2000, y: 388, color: '#7a6a8a' }, /* hippo */
-      { type: 'roomDoorFrame', x: 2280, y: 388, color: '#9a9088' }, /* rhino */
+      { type: 'roomDoorFrame', x: 520,  y: 388, color: '#cc8844' }, /* elephant */
+      { type: 'roomDoorFrame', x: 800,  y: 388, color: '#dd9944' }, /* lion */
+      { type: 'roomDoorFrame', x: 1080, y: 388, color: '#aa6644' }, /* tiger */
+      { type: 'roomDoorFrame', x: 1360, y: 388, color: '#664422' }, /* bear */
+      { type: 'roomDoorFrame', x: 1640, y: 388, color: '#ddbb66' }, /* giraffe */
+      { type: 'roomDoorFrame', x: 1920, y: 388, color: '#ddddee' }, /* zebra */
+      { type: 'roomDoorFrame', x: 2200, y: 388, color: '#7a6a8a' }, /* hippo */
+      { type: 'roomDoorFrame', x: 2480, y: 388, color: '#9a9088' }, /* rhino */
 
-      { type: 'peeker', x: 720, y: 200, species: 'monkey', side: 1 },
-      { type: 'peeker', x: 1500, y: 200, species: 'monkey', side: -1 },
+      { type: 'peeker', x: 920, y: 200, species: 'monkey', side: 1 },
+      { type: 'peeker', x: 1700, y: 200, species: 'monkey', side: -1 },
 
+      /* LEFT elevator + stairs (new in v0.8) */
+      { type: 'elevatorShaft', x: 116, y: 440 },
+      { type: 'stairwellDoor', x: 230, y: 440 },
+
+      /* RIGHT elevator + stairs */
       { type: 'elevatorShaft', x: 2676, y: 440 },
       { type: 'stairwellDoor', x: 2800, y: 440 },
     ],
@@ -191,16 +195,22 @@
       player: { x: 80, y: 380 },
       enemies: [],
       npcs: [
-        { type: 'animalDoor', x: 320,  y: 388, species: 'elephant' },
-        { type: 'animalDoor', x: 600,  y: 388, species: 'lion'     },
-        { type: 'animalDoor', x: 880,  y: 388, species: 'tiger'    },
-        { type: 'animalDoor', x: 1160, y: 388, species: 'bear'     },
-        { type: 'animalDoor', x: 1440, y: 388, species: 'giraffe'  },
-        { type: 'animalDoor', x: 1720, y: 388, species: 'zebra'    },
-        { type: 'animalDoor', x: 2000, y: 388, species: 'hippo'    },
-        { type: 'animalDoor', x: 2280, y: 388, species: 'rhino'    },
-        { type: 'elevator',   x: 2680, y: 388 },
-        { type: 'stairs',     x: 2810, y: 388, dir: 'both' },
+        /* LEFT-side transit — symmetric exits so the player isn't forced
+           to walk all the way across the floor to leave. */
+        { type: 'elevator',   x: 120,  y: 388, side: 'left' },
+        { type: 'stairs',     x: 240,  y: 388, dir: 'both', side: 'left' },
+
+        { type: 'animalDoor', x: 520,  y: 388, species: 'elephant' },
+        { type: 'animalDoor', x: 800,  y: 388, species: 'lion'     },
+        { type: 'animalDoor', x: 1080, y: 388, species: 'tiger'    },
+        { type: 'animalDoor', x: 1360, y: 388, species: 'bear'     },
+        { type: 'animalDoor', x: 1640, y: 388, species: 'giraffe'  },
+        { type: 'animalDoor', x: 1920, y: 388, species: 'zebra'    },
+        { type: 'animalDoor', x: 2200, y: 388, species: 'hippo'    },
+        { type: 'animalDoor', x: 2480, y: 388, species: 'rhino'    },
+
+        { type: 'elevator',   x: 2680, y: 388, side: 'right' },
+        { type: 'stairs',     x: 2810, y: 388, dir: 'both', side: 'right' },
       ],
       pickups: [],
     },
@@ -234,28 +244,32 @@
       { type: 'ceilingBeam', x: 1700, y: 60 },
       { type: 'ceilingBeam', x: 2200, y: 60 },
       { type: 'ceilingBeam', x: 2700, y: 60 },
-      { type: 'lobbyPlant',  x: 200,  y: 440 },
       { type: 'lobbyPlant',  x: 2550, y: 440 },
-      { type: 'wallPainting', x: 600,  y: 200, art: 'forest' },
+      { type: 'wallPainting', x: 800,  y: 200, art: 'forest' },
       { type: 'wallPainting', x: 1900, y: 200, art: 'forest' },
-      { type: 'neonSign',     x: 100,  y: 200, text: 'WILD', color: '#88ff88' },
+      { type: 'neonSign',     x: 360,  y: 200, text: 'WILD', color: '#88ff88' },
 
       /* Mid-corridor forest glade. */
       { type: 'commonArea', x: 1300, y: 440, w: 220, theme: 'forest',
         label: 'FOREST GLADE' },
 
-      { type: 'roomDoorFrame', x: 320,  y: 388, color: '#5a5a8a' }, /* wolf */
-      { type: 'roomDoorFrame', x: 600,  y: 388, color: '#8a6a3a' }, /* eagle */
-      { type: 'roomDoorFrame', x: 880,  y: 388, color: '#cc7733' }, /* fox */
-      { type: 'roomDoorFrame', x: 1160, y: 388, color: '#666688' }, /* owl */
-      { type: 'roomDoorFrame', x: 1440, y: 388, color: '#222222' }, /* panda */
-      { type: 'roomDoorFrame', x: 1720, y: 388, color: '#88aacc' }, /* penguin */
-      { type: 'roomDoorFrame', x: 2000, y: 388, color: '#fafafa' }, /* polar bear */
-      { type: 'roomDoorFrame', x: 2280, y: 388, color: '#3a3a3a' }, /* gorilla */
+      { type: 'roomDoorFrame', x: 520,  y: 388, color: '#5a5a8a' }, /* wolf */
+      { type: 'roomDoorFrame', x: 800,  y: 388, color: '#8a6a3a' }, /* eagle */
+      { type: 'roomDoorFrame', x: 1080, y: 388, color: '#cc7733' }, /* fox */
+      { type: 'roomDoorFrame', x: 1360, y: 388, color: '#666688' }, /* owl */
+      { type: 'roomDoorFrame', x: 1640, y: 388, color: '#222222' }, /* panda */
+      { type: 'roomDoorFrame', x: 1920, y: 388, color: '#88aacc' }, /* penguin */
+      { type: 'roomDoorFrame', x: 2200, y: 388, color: '#fafafa' }, /* polar bear */
+      { type: 'roomDoorFrame', x: 2480, y: 388, color: '#3a3a3a' }, /* gorilla */
 
-      { type: 'peeker', x: 760, y: 200, species: 'monkey', side: 1 },
-      { type: 'peeker', x: 1500, y: 200, species: 'monkey', side: -1 },
+      { type: 'peeker', x: 960,  y: 200, species: 'monkey', side: 1 },
+      { type: 'peeker', x: 1700, y: 200, species: 'monkey', side: -1 },
 
+      /* LEFT elevator + stairs */
+      { type: 'elevatorShaft', x: 116, y: 440 },
+      { type: 'stairwellDoor', x: 230, y: 440 },
+
+      /* RIGHT elevator + stairs */
       { type: 'elevatorShaft', x: 2676, y: 440 },
       { type: 'stairwellDoor', x: 2800, y: 440 },
     ],
@@ -264,16 +278,20 @@
       player: { x: 80, y: 380 },
       enemies: [],
       npcs: [
-        { type: 'animalDoor', x: 320,  y: 388, species: 'wolf'      },
-        { type: 'animalDoor', x: 600,  y: 388, species: 'eagle'     },
-        { type: 'animalDoor', x: 880,  y: 388, species: 'fox'       },
-        { type: 'animalDoor', x: 1160, y: 388, species: 'owl'       },
-        { type: 'animalDoor', x: 1440, y: 388, species: 'panda'     },
-        { type: 'animalDoor', x: 1720, y: 388, species: 'penguin'   },
-        { type: 'animalDoor', x: 2000, y: 388, species: 'polarBear' },
-        { type: 'animalDoor', x: 2280, y: 388, species: 'gorilla'   },
-        { type: 'elevator',   x: 2680, y: 388 },
-        { type: 'stairs',     x: 2810, y: 388, dir: 'both' },
+        { type: 'elevator',   x: 120,  y: 388, side: 'left' },
+        { type: 'stairs',     x: 240,  y: 388, dir: 'both', side: 'left' },
+
+        { type: 'animalDoor', x: 520,  y: 388, species: 'wolf'      },
+        { type: 'animalDoor', x: 800,  y: 388, species: 'eagle'     },
+        { type: 'animalDoor', x: 1080, y: 388, species: 'fox'       },
+        { type: 'animalDoor', x: 1360, y: 388, species: 'owl'       },
+        { type: 'animalDoor', x: 1640, y: 388, species: 'panda'     },
+        { type: 'animalDoor', x: 1920, y: 388, species: 'penguin'   },
+        { type: 'animalDoor', x: 2200, y: 388, species: 'polarBear' },
+        { type: 'animalDoor', x: 2480, y: 388, species: 'gorilla'   },
+
+        { type: 'elevator',   x: 2680, y: 388, side: 'right' },
+        { type: 'stairs',     x: 2810, y: 388, dir: 'both', side: 'right' },
       ],
       pickups: [],
     },
@@ -308,29 +326,33 @@
       { type: 'ceilingBeam', x: 2200, y: 60 },
       { type: 'ceilingBeam', x: 2700, y: 60 },
       { type: 'ceilingBeam', x: 3100, y: 60 },
-      { type: 'lobbyPlant',  x: 200,  y: 440 },
       { type: 'lobbyPlant',  x: 2850, y: 440 },
-      { type: 'wallPainting', x: 600,  y: 200, art: 'sea'    },
+      { type: 'wallPainting', x: 800,  y: 200, art: 'sea'    },
       { type: 'wallPainting', x: 2200, y: 200, art: 'rainbow'},
-      { type: 'neonSign',     x: 100,  y: 200, text: 'MAGIC', color: '#ff66cc' },
+      { type: 'neonSign',     x: 360,  y: 200, text: 'MAGIC', color: '#ff66cc' },
 
       /* Mid-corridor magic garden. */
       { type: 'commonArea', x: 1300, y: 440, w: 220, theme: 'magic',
         label: 'MAGIC GARDEN' },
 
-      { type: 'roomDoorFrame', x: 320,  y: 388, color: '#ffeecc' }, /* bunny */
-      { type: 'roomDoorFrame', x: 600,  y: 388, color: '#ffaa88' }, /* cat */
-      { type: 'roomDoorFrame', x: 880,  y: 388, color: '#aa7744' }, /* dog */
-      { type: 'roomDoorFrame', x: 1160, y: 388, color: '#88aaee' }, /* sea otter */
-      { type: 'roomDoorFrame', x: 1440, y: 388, color: '#cc8855' }, /* kangaroo */
-      { type: 'roomDoorFrame', x: 1720, y: 388, color: '#ff99ee' }, /* unicorn */
-      { type: 'roomDoorFrame', x: 2000, y: 388, color: '#88ff88' }, /* alien */
-      { type: 'roomDoorFrame', x: 2280, y: 388, color: '#a8a8b8' }, /* koala */
-      { type: 'roomDoorFrame', x: 2560, y: 388, color: '#5fc858' }, /* frog */
+      { type: 'roomDoorFrame', x: 520,  y: 388, color: '#ffeecc' }, /* bunny */
+      { type: 'roomDoorFrame', x: 800,  y: 388, color: '#ffaa88' }, /* cat */
+      { type: 'roomDoorFrame', x: 1080, y: 388, color: '#aa7744' }, /* dog */
+      { type: 'roomDoorFrame', x: 1360, y: 388, color: '#88aaee' }, /* sea otter */
+      { type: 'roomDoorFrame', x: 1640, y: 388, color: '#cc8855' }, /* kangaroo */
+      { type: 'roomDoorFrame', x: 1920, y: 388, color: '#ff99ee' }, /* unicorn */
+      { type: 'roomDoorFrame', x: 2200, y: 388, color: '#88ff88' }, /* alien */
+      { type: 'roomDoorFrame', x: 2480, y: 388, color: '#a8a8b8' }, /* koala */
+      { type: 'roomDoorFrame', x: 2760, y: 388, color: '#5fc858' }, /* frog */
 
-      { type: 'peeker', x: 760, y: 200, species: 'monkey', side: 1 },
-      { type: 'peeker', x: 1900, y: 200, species: 'monkey', side: -1 },
+      { type: 'peeker', x: 960,  y: 200, species: 'monkey', side: 1 },
+      { type: 'peeker', x: 2100, y: 200, species: 'monkey', side: -1 },
 
+      /* LEFT elevator + stairs */
+      { type: 'elevatorShaft', x: 116, y: 440 },
+      { type: 'stairwellDoor', x: 230, y: 440 },
+
+      /* RIGHT elevator + stairs */
       { type: 'elevatorShaft', x: 2976, y: 440 },
       { type: 'stairwellDoor', x: 3100, y: 440 },
     ],
@@ -339,17 +361,21 @@
       player: { x: 80, y: 380 },
       enemies: [],
       npcs: [
-        { type: 'animalDoor', x: 320,  y: 388, species: 'bunny'    },
-        { type: 'animalDoor', x: 600,  y: 388, species: 'cat'      },
-        { type: 'animalDoor', x: 880,  y: 388, species: 'dog'      },
-        { type: 'animalDoor', x: 1160, y: 388, species: 'seaOtter' },
-        { type: 'animalDoor', x: 1440, y: 388, species: 'kangaroo' },
-        { type: 'animalDoor', x: 1720, y: 388, species: 'unicorn'  },
-        { type: 'animalDoor', x: 2000, y: 388, species: 'alien'    },
-        { type: 'animalDoor', x: 2280, y: 388, species: 'koala'    },
-        { type: 'animalDoor', x: 2560, y: 388, species: 'frog'     },
-        { type: 'elevator',   x: 2980, y: 388 },
-        { type: 'stairs',     x: 3110, y: 388, dir: 'down' },
+        { type: 'elevator',   x: 120,  y: 388, side: 'left' },
+        { type: 'stairs',     x: 240,  y: 388, dir: 'both', side: 'left' },
+
+        { type: 'animalDoor', x: 520,  y: 388, species: 'bunny'    },
+        { type: 'animalDoor', x: 800,  y: 388, species: 'cat'      },
+        { type: 'animalDoor', x: 1080, y: 388, species: 'dog'      },
+        { type: 'animalDoor', x: 1360, y: 388, species: 'seaOtter' },
+        { type: 'animalDoor', x: 1640, y: 388, species: 'kangaroo' },
+        { type: 'animalDoor', x: 1920, y: 388, species: 'unicorn'  },
+        { type: 'animalDoor', x: 2200, y: 388, species: 'alien'    },
+        { type: 'animalDoor', x: 2480, y: 388, species: 'koala'    },
+        { type: 'animalDoor', x: 2760, y: 388, species: 'frog'     },
+
+        { type: 'elevator',   x: 2980, y: 388, side: 'right' },
+        { type: 'stairs',     x: 3110, y: 388, dir: 'both', side: 'right' },
       ],
       pickups: [],
     },

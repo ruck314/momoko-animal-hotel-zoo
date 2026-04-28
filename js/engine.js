@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.7.0';
+  Game.VERSION = 'v0.8.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -592,11 +592,17 @@
               }
             } else if (npcType === 'elevator') {
               if (interact) {
+                /* Remember which side the player tapped so when they arrive
+                   on the destination floor we can spawn them next to the
+                   matching elevator instead of teleporting them to the
+                   other end of the corridor. */
+                Game.flags.lastTransitSide = npcData.side || 'right';
                 onElevatorInteract();
                 npcCooldowns[npcType] = 300;
               }
             } else if (npcType === 'stairs') {
               if (interact) {
+                Game.flags.lastTransitSide = npcData.side || 'right';
                 useStairs(npcData.dir || 'both');
                 npcCooldowns[npcType] = 300;
               }
@@ -2895,24 +2901,37 @@
   function enterZone(zoneIndex) {
     currentZone = zoneIndex;
     loadLevel(currentZone);
-    /* Spawn Momoko a safe distance left of the elevator so:
-        (1) at least one animal door is visible in front of her,
-        (2) she's outside the elevator's interaction radius — a kid
-            hammering Up doesn't accidentally bounce right back into the
-            cab. The lobby is special-cased: dropping in left of the
-            elevator there would put her past the bedroom door, so we keep
-            the legacy "right next to the cab" position there. */
+    /* Spawn Momoko at the elevator that matches the side she just departed
+       from — so taking the LEFT elevator on floor 2 drops her at the LEFT
+       elevator on floor 3, not way across the corridor. The lobby is
+       special-cased: it only has one elevator (right side), so any arrival
+       lands next to it.
+       We also push her one viewport-width away from the cab on the
+       destination side so an immediate Up press doesn't re-trigger the
+       elevator she just stepped out of. */
     if (player) {
-      var elev = null;
+      var wantSide = (Game.flags && Game.flags.lastTransitSide) || 'right';
+      var elev = null, fallback = null;
       for (var ni = 0; ni < npcs.length; ni++) {
-        if (npcs[ni].type === 'elevator') { elev = npcs[ni].entity; break; }
+        if (npcs[ni].type === 'elevator') {
+          if (!fallback) fallback = npcs[ni];
+          if ((npcs[ni].data && npcs[ni].data.side) === wantSide) {
+            elev = npcs[ni];
+            break;
+          }
+        }
       }
+      if (!elev) elev = fallback;
       if (elev) {
-        var spawnOffset = (zoneIndex === 0) ? -60 : -180;
-        player.x = elev.x + spawnOffset;
-        player.y = elev.y;
+        var elevSide = (elev.data && elev.data.side) || 'right';
+        /* Lobby: keep legacy 60px snug-to-cab spawn. Other floors: push
+           the player away from the elevator into the corridor. */
+        var offset = (zoneIndex === 0) ? -60 : (elevSide === 'left' ? +180 : -180);
+        player.x = elev.entity.x + offset;
+        player.y = elev.entity.y;
         player.vx = 0; player.vy = 0;
-        player.facing = -1;
+        /* Face into the corridor — left elevators face right, right ones face left. */
+        player.facing = (elevSide === 'left') ? 1 : -1;
       }
     }
     /* Camera follows the player's new position */
