@@ -2837,14 +2837,22 @@
     }
     c.restore();
 
-    /* Legs */
+    /* Legs — four short stocky legs (front pair + back pair) so the
+       silhouette reads as a real quadruped, not a round body floating
+       on two pegs. Each leg has a paw highlight. */
     c.fillStyle = shade;
-    c.fillRect(sx + 10, sy + 38, 4, 6);
-    c.fillRect(sx + 30, sy + 38, 4, 6);
-    /* Paws (lighter highlight on top of feet) */
+    /* Front pair */
+    c.fillRect(sx + 9,  sy + 38, 3.4, 7);
+    c.fillRect(sx + 14, sy + 38, 3.4, 7);
+    /* Back pair */
+    c.fillRect(sx + 27, sy + 38, 3.4, 7);
+    c.fillRect(sx + 32, sy + 38, 3.4, 7);
+    /* Paw highlights on top of the feet */
     c.fillStyle = body;
-    c.beginPath(); c.ellipse(sx + 12, sy + 44, 2.4, 1.3, 0, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.ellipse(sx + 32, sy + 44, 2.4, 1.3, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 10.7, sy + 44.4, 2,  1.1, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 15.7, sy + 44.4, 2,  1.1, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 28.7, sy + 44.4, 2,  1.1, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 33.7, sy + 44.4, 2,  1.1, 0, 0, Math.PI * 2); c.fill();
 
     /* Tail stub */
     c.fillStyle = shade;
@@ -3392,157 +3400,184 @@
   }
 
   function drawZebraSprite(c, sx, sy) {
-    /* Side-view horse silhouette with bold black stripes. Skips the
-       generic creature base entirely so the proportions read as
-       "zebra/horse" rather than "round body with stripes painted on". */
-    var WHITE = '#ffffff';
-    var SHADE = '#dcdcdc';
+    /* Side-view zebra built from clean ovals. The brief: a HORSE
+       silhouette first, with bold WIDE stripes leaving real white in
+       between. The previous version packed too many narrow stripes
+       and lost the white. */
+    var WHITE = '#fafafa';
     var BLACK = '#1a1a1a';
+    var GRAY  = '#dcdcdc';
+
     /* Drop shadow */
-    c.save(); c.globalAlpha = 0.3; c.fillStyle = '#000';
-    c.beginPath(); c.ellipse(sx + 24, sy + 44, 18, 3, 0, 0, Math.PI * 2); c.fill();
+    c.save(); c.globalAlpha = 0.32; c.fillStyle = '#000';
+    c.beginPath(); c.ellipse(sx + 24, sy + 44, 19, 3, 0, 0, Math.PI * 2); c.fill();
     c.restore();
 
-    /* Tail — drawn first so the body covers its root */
-    c.strokeStyle = WHITE; c.lineWidth = 2;
+    /* Tail — drawn first so body root covers it */
+    c.strokeStyle = WHITE; c.lineWidth = 2.2;
     c.beginPath();
     c.moveTo(sx + 41, sy + 22);
-    c.quadraticCurveTo(sx + 47, sy + 30, sx + 45, sy + 38);
+    c.quadraticCurveTo(sx + 46, sy + 30, sx + 43, sy + 39);
     c.stroke();
     c.fillStyle = BLACK;
-    c.beginPath(); c.arc(sx + 45, sy + 39, 2.2, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 43, sy + 41, 2, 3, 0, 0, Math.PI * 2); c.fill();
 
-    /* Back legs (drawn first so front legs overlap) */
+    /* ---- Legs ---- 4 slim long pillars. Hind pair at right, front
+       pair at left, with a small gap between each pair so they read
+       as separate legs. */
     c.fillStyle = WHITE;
-    c.fillRect(sx + 31, sy + 28, 3, 14);
-    c.fillRect(sx + 36, sy + 28, 3, 14);
     /* Front legs */
-    c.fillRect(sx + 13, sy + 28, 3, 14);
-    c.fillRect(sx + 18, sy + 28, 3, 14);
+    c.fillRect(sx + 12, sy + 26, 2.6, 16);
+    c.fillRect(sx + 16, sy + 26, 2.6, 16);
+    /* Hind legs */
+    c.fillRect(sx + 31, sy + 26, 2.6, 16);
+    c.fillRect(sx + 35, sy + 26, 2.6, 16);
     /* Hooves */
     c.fillStyle = BLACK;
-    c.fillRect(sx + 12.6, sy + 41, 3.8, 2);
-    c.fillRect(sx + 17.6, sy + 41, 3.8, 2);
-    c.fillRect(sx + 30.6, sy + 41, 3.8, 2);
-    c.fillRect(sx + 35.6, sy + 41, 3.8, 2);
+    c.fillRect(sx + 11.6, sy + 41.6, 3.4, 2.4);
+    c.fillRect(sx + 15.6, sy + 41.6, 3.4, 2.4);
+    c.fillRect(sx + 30.6, sy + 41.6, 3.4, 2.4);
+    c.fillRect(sx + 34.6, sy + 41.6, 3.4, 2.4);
 
-    /* Body — horizontal oval, slight back-arch */
-    var bg = c.createLinearGradient(0, sy + 16, 0, sy + 32);
-    bg.addColorStop(0, WHITE);
-    bg.addColorStop(1, SHADE);
+    /* ---- Body ---- single elongated oval centered at (24, 22). Width
+       16, height 7 — clearly horse-shaped, not blobby. */
+    var bodyCX = sx + 25, bodyCY = sy + 22, bodyRX = 16, bodyRY = 7;
+    var bg = c.createLinearGradient(0, bodyCY - bodyRY, 0, bodyCY + bodyRY);
+    bg.addColorStop(0, WHITE); bg.addColorStop(1, GRAY);
     c.fillStyle = bg;
-    c.beginPath(); c.ellipse(sx + 26, sy + 24, 16, 8, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(bodyCX, bodyCY, bodyRX, bodyRY, 0, 0, Math.PI * 2); c.fill();
 
-    /* Neck — trapezoid up-left from body */
+    /* ---- Neck ---- arched ellipse rotated up-left, connecting body
+       front (around x=12) to head base (around x=8, y=10). */
+    var neckCX = sx + 11, neckCY = sy + 16, neckRX = 7, neckRY = 4;
     c.fillStyle = WHITE;
     c.beginPath();
-    c.moveTo(sx + 12, sy + 22);
-    c.lineTo(sx + 6, sy + 12);
-    c.lineTo(sx + 14, sy + 10);
-    c.lineTo(sx + 18, sy + 20);
-    c.closePath();
+    c.ellipse(neckCX, neckCY, neckRX, neckRY, -1.05, 0, Math.PI * 2);
     c.fill();
 
-    /* Head — long horse face pointing left */
-    c.beginPath(); c.ellipse(sx + 8, sy + 10, 8, 5, 0, 0, Math.PI * 2); c.fill();
-    /* Snout — slightly darker tip */
-    c.fillStyle = SHADE;
-    c.beginPath(); c.ellipse(sx + 2, sy + 11.5, 3, 2.6, 0, 0, Math.PI * 2); c.fill();
+    /* ---- Head ---- long horse muzzle pointing left. */
+    var headCX = sx + 6, headCY = sy + 9, headRX = 6, headRY = 4;
+    c.beginPath();
+    c.ellipse(headCX, headCY, headRX, headRY, -0.15, 0, Math.PI * 2);
+    c.fill();
+    /* Cheek bulge — adds dimension to the face */
+    c.beginPath();
+    c.ellipse(sx + 9, sy + 10, 3, 3, 0, 0, Math.PI * 2);
+    c.fill();
+    /* Muzzle — soft pinkish gray tip */
+    c.fillStyle = '#a89890';
+    c.beginPath(); c.ellipse(sx + 0.6, sy + 10, 2.4, 2, 0, 0, Math.PI * 2); c.fill();
 
-    /* Ears — two small triangles */
+    /* ---- Ears ---- two small rounded triangles atop forehead */
     c.fillStyle = WHITE;
     c.beginPath();
-    c.moveTo(sx + 9, sy + 4);  c.lineTo(sx + 11, sy + 7); c.lineTo(sx + 7, sy + 7);
+    c.moveTo(sx + 9, sy + 2);
+    c.quadraticCurveTo(sx + 7.5, sy + 5, sx + 6.5, sy + 6);
+    c.lineTo(sx + 10.5, sy + 5);
     c.closePath(); c.fill();
     c.beginPath();
-    c.moveTo(sx + 14, sy + 4); c.lineTo(sx + 16, sy + 7); c.lineTo(sx + 12, sy + 7);
+    c.moveTo(sx + 13, sy + 2);
+    c.quadraticCurveTo(sx + 11.5, sy + 5, sx + 10.5, sy + 5);
+    c.lineTo(sx + 14, sy + 5);
     c.closePath(); c.fill();
-    c.fillStyle = '#cc99aa';
+    /* Pink inner ear (just the front one) */
+    c.fillStyle = '#cc8899';
     c.beginPath();
-    c.moveTo(sx + 9, sy + 5);  c.lineTo(sx + 10.5, sy + 7); c.lineTo(sx + 7.5, sy + 7);
+    c.moveTo(sx + 9, sy + 3.4); c.lineTo(sx + 8, sy + 5); c.lineTo(sx + 10, sy + 4.6);
     c.closePath(); c.fill();
 
-    /* ---- Black stripes ---- */
+    /* ============================================================
+     *                          STRIPES
+     * ============================================================ */
     c.fillStyle = BLACK;
 
-    /* Stripes inside the body — clip so they hug the silhouette. */
+    /* Body — 5 chunky bands. Width 2.4, gap 4 between centers → leaves
+       1.6 of white between bands. Tilted slightly so they curve with
+       the body. */
     c.save();
-    c.beginPath();
-    c.ellipse(sx + 26, sy + 24, 16, 8, 0, 0, Math.PI * 2);
-    c.clip();
-    for (var s = 0; s < 9; s++) {
-      var bx = sx + 12 + s * 3.4;
+    c.beginPath(); c.ellipse(bodyCX, bodyCY, bodyRX, bodyRY, 0, 0, Math.PI * 2); c.clip();
+    for (var s = 0; s < 5; s++) {
+      var bx = sx + 14 + s * 5.5;
       c.save();
-      c.translate(bx, sy + 24);
-      c.rotate((s - 4) * 0.05);
-      c.fillRect(-1.3, -9, 2.6, 18);
+      c.translate(bx, bodyCY);
+      c.rotate((s - 2) * 0.06);
+      c.fillRect(-1.4, -bodyRY - 1, 2.8, bodyRY * 2 + 2);
       c.restore();
     }
     c.restore();
 
-    /* Stripes on neck — diagonal, following the trapezoid */
+    /* Neck — 3 diagonal bands. Wider gaps. */
     c.save();
     c.beginPath();
-    c.moveTo(sx + 12, sy + 22);
-    c.lineTo(sx + 6, sy + 12);
-    c.lineTo(sx + 14, sy + 10);
-    c.lineTo(sx + 18, sy + 20);
-    c.closePath();
+    c.ellipse(neckCX, neckCY, neckRX, neckRY, -1.05, 0, Math.PI * 2);
     c.clip();
-    for (var ns = 0; ns < 4; ns++) {
+    for (var ns = 0; ns < 3; ns++) {
       c.save();
-      c.translate(sx + 8 + ns * 3, sy + 16);
-      c.rotate(0.22);
-      c.fillRect(-0.9, -8, 1.8, 16);
+      c.translate(sx + 7 + ns * 2.6, sy + 14);
+      c.rotate(-0.95);
+      c.fillRect(-1.1, -8, 2.2, 16);
       c.restore();
     }
     c.restore();
 
-    /* Stripes on head — thin radial bands */
+    /* Head — 2 stripes across the muzzle (cheekbone + forehead) */
     c.save();
     c.beginPath();
-    c.ellipse(sx + 8, sy + 10, 8, 5, 0, 0, Math.PI * 2);
-    c.clip();
-    c.fillRect(sx + 5, sy + 6, 0.9, 8);
-    c.fillRect(sx + 8, sy + 5, 0.9, 10);
-    c.fillRect(sx + 11, sy + 6, 0.9, 8);
-    c.fillRect(sx + 13.5, sy + 7, 0.9, 6);
+    c.ellipse(headCX, headCY, headRX, headRY, -0.15, 0, Math.PI * 2); c.clip();
+    c.fillRect(sx + 6,  sy + 5, 1.6, 8);
+    c.fillRect(sx + 3,  sy + 6, 1.4, 7);
+    c.restore();
+    /* Stripe across the cheek bulge */
+    c.save();
+    c.beginPath(); c.ellipse(sx + 9, sy + 10, 3, 3, 0, 0, Math.PI * 2); c.clip();
+    c.fillRect(sx + 8.4, sy + 7, 1.2, 6);
     c.restore();
 
-    /* Stripes on legs — ladder bands */
-    var legXs = [13, 18, 31, 36];
-    for (var li = 0; li < 4; li++) {
-      var lx = legXs[li];
-      c.fillRect(sx + lx, sy + 30, 3, 1.6);
-      c.fillRect(sx + lx, sy + 34, 3, 1.6);
-      c.fillRect(sx + lx, sy + 38, 3, 1.6);
-    }
+    /* Legs — ladder bands. 3 bands per leg. */
+    function legBand(lx, ly) { c.fillRect(sx + lx, sy + ly, 2.6, 1.4); }
+    [12, 16, 31, 35].forEach(function (lx) {
+      legBand(lx, 30); legBand(lx, 34); legBand(lx, 38);
+    });
 
-    /* Mane — short bristles along the back of the neck */
+    /* ---- Mohawk mane ---- the zebra signature: stiff vertical
+       bristles standing UP along the back of the neck. Triangles
+       getting taller toward the body. */
     for (var m = 0; m < 6; m++) {
-      var mx = sx + 12 + m * 1.4;
-      var my = sy + 10 + m * 0.6;
+      var mx = sx + 10 + m * 1.6;
+      var my = sy + 8 - m * 0.4;
       c.beginPath();
-      c.moveTo(mx, my + 4);
-      c.lineTo(mx + 1, my);
-      c.lineTo(mx + 2, my + 4);
+      c.moveTo(mx,       my + 5);
+      c.lineTo(mx + 1.2, my - (2.5 + m * 0.2));
+      c.lineTo(mx + 2.4, my + 5);
       c.closePath();
       c.fill();
     }
+    /* Forelock between the ears */
+    c.beginPath();
+    c.moveTo(sx + 11.4, sy + 5);
+    c.lineTo(sx + 11.8, sy + 1);
+    c.lineTo(sx + 13,   sy + 5);
+    c.closePath(); c.fill();
 
-    /* Eye — alert dark dot with highlight */
-    c.beginPath(); c.arc(sx + 10, sy + 9, 1.1, 0, Math.PI * 2); c.fill();
+    /* ============================================================
+     *                       FACE DETAILS
+     * ============================================================ */
+    /* Eye — set well forward on the head */
     c.fillStyle = WHITE;
-    c.beginPath(); c.arc(sx + 10.4, sy + 8.6, 0.35, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(sx + 8.5, sy + 8.5, 1.4, 0, Math.PI * 2); c.fill();
+    c.fillStyle = BLACK;
+    c.beginPath(); c.arc(sx + 8.3, sy + 8.5, 0.9, 0, Math.PI * 2); c.fill();
+    c.fillStyle = WHITE;
+    c.beginPath(); c.arc(sx + 8.7, sy + 8.2, 0.35, 0, Math.PI * 2); c.fill();
 
     /* Nostril */
-    c.fillStyle = '#3a2010';
-    c.beginPath(); c.arc(sx + 1.5, sy + 11, 0.55, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#5a3030';
+    c.beginPath(); c.arc(sx + 0.4, sy + 9.8, 0.55, 0, Math.PI * 2); c.fill();
     /* Mouth */
-    c.strokeStyle = '#7a3838'; c.lineWidth = 0.5;
+    c.strokeStyle = '#7a4040'; c.lineWidth = 0.6;
     c.beginPath();
-    c.moveTo(sx, sy + 12.6);
-    c.quadraticCurveTo(sx + 1.5, sy + 13.4, sx + 3, sy + 12.6);
+    c.moveTo(sx + 0.2, sy + 11.6);
+    c.quadraticCurveTo(sx + 1.4, sy + 12.4, sx + 2.8, sy + 11.6);
     c.stroke();
   }
 
@@ -3827,10 +3862,12 @@
     c.fillStyle = '#1a1a1a';
     c.beginPath(); c.arc(sx + 6, sy + 38, 3, 0, Math.PI * 2); c.fill();
     c.beginPath(); c.arc(sx + 38, sy + 38, 3, 0, Math.PI * 2); c.fill();
-    /* Black saddle band across the back */
+    /* Black saddle / shoulder band — narrow strip just behind the head
+       so it reads as the panda's natural black back band, not a thick
+       stripe across the body. */
     c.fillStyle = p.shade;
     c.beginPath();
-    c.ellipse(sx + 22, sy + 22, 13, 3, 0, 0, Math.PI * 2);
+    c.ellipse(sx + 19, sy + 22, 7, 2, 0, 0, Math.PI * 2);
     c.fill();
     /* White muzzle */
     c.fillStyle = '#fafafa';

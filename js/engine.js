@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.8.0';
+  Game.VERSION = 'v0.8.1';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -3356,6 +3356,11 @@
     stampGuest: stampGuest,
     getStampCount: function () { return Game.flags.stampCount || 0; },
     getStampTotal: function () { return TOTAL_GUESTS; },
+    /* Test/debug helpers — used by Playwright drivers to capture state
+       without waiting on requestAnimationFrame, which is throttled in
+       headless Chromium. Cheap to keep in production. */
+    _getState: function () { return state; },
+    _forceRender: function () { render(); },
   };
 
   /* Auto-init when DOM is ready */
