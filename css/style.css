@@ -54,6 +54,13 @@ body.cutscene-mode #game-center-link {
   display: none;
 }
 
+/* Once the player is in-game (anywhere past the title screen) the
+   browser chrome shouldn't compete with gameplay either. The engine
+   adds .in-game whenever the state isn't TITLE / CUSTOMIZE / INTRO. */
+body.in-game #game-center-link {
+  display: none;
+}
+
 /* Orientation hint for portrait phones/tablets */
 @media (orientation: portrait) and (max-width: 900px) {
   #rotate-hint {

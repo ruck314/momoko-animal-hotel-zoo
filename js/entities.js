@@ -2862,39 +2862,54 @@
     c.fillStyle = p.accent;
     c.beginPath(); c.ellipse(sx + 4, sy + 16, 4, 6, -0.3, 0, Math.PI * 2); c.fill();
     c.beginPath(); c.ellipse(sx + 16, sy + 16, 4, 6, 0.3, 0, Math.PI * 2); c.fill();
-    /* Trunk — segmented + curled */
-    var trunkGrad = c.createLinearGradient(sx, sy + 16, sx, sy + 36);
+    /* Trunk — long, forward-curling, segmented so it reads
+       unambiguously as an elephant trunk and not just a snout. */
+    var trunkGrad = c.createLinearGradient(sx, sy + 14, sx + 4, sy + 44);
     trunkGrad.addColorStop(0, p.body);
     trunkGrad.addColorStop(1, p.shade);
     c.fillStyle = trunkGrad;
     c.beginPath();
-    c.moveTo(sx + 2, sy + 18);
-    c.quadraticCurveTo(sx - 8, sy + 26, sx - 6, sy + 36);
-    c.quadraticCurveTo(sx - 2, sy + 38, sx + 2, sy + 32);
-    c.quadraticCurveTo(sx, sy + 28, sx + 4, sy + 22);
+    c.moveTo(sx + 4, sy + 18);
+    c.quadraticCurveTo(sx - 10, sy + 28, sx - 8, sy + 42);
+    c.quadraticCurveTo(sx - 2, sy + 46, sx + 4, sy + 40);
+    c.quadraticCurveTo(sx + 1, sy + 32, sx + 6, sy + 24);
     c.closePath();
     c.fill();
-    /* Trunk segment lines */
-    c.strokeStyle = p.shade; c.lineWidth = 0.5;
-    for (var ts = 0; ts < 4; ts++) {
+    /* Trunk ring segments — chunkier so the trunk reads as articulated. */
+    c.strokeStyle = p.shade; c.lineWidth = 0.9;
+    for (var ts = 0; ts < 5; ts++) {
       c.beginPath();
-      c.arc(sx - 3, sy + 24 + ts * 3, 4 - ts * 0.4, Math.PI * 1.2, Math.PI * 1.8);
+      c.arc(sx - 3, sy + 24 + ts * 3.6, 5 - ts * 0.5, Math.PI * 1.15, Math.PI * 1.85);
       c.stroke();
     }
-    /* Tusks */
+    /* Trunk tip nostrils */
+    c.fillStyle = p.shade;
+    c.beginPath(); c.arc(sx - 7, sy + 41, 0.9, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(sx - 4, sy + 41, 0.9, 0, Math.PI * 2); c.fill();
+    /* Tusks — long curved ivory pair flanking the trunk so the species
+       reads at a glance. */
     c.fillStyle = '#fff8e0';
     c.beginPath();
-    c.moveTo(sx + 2, sy + 24);
-    c.lineTo(sx + 0, sy + 30);
-    c.lineTo(sx + 2.6, sy + 28);
+    c.moveTo(sx + 4, sy + 24);
+    c.quadraticCurveTo(sx + 1, sy + 32, sx + 0, sy + 36);
+    c.lineTo(sx + 3, sy + 34);
+    c.quadraticCurveTo(sx + 5, sy + 30, sx + 6, sy + 24);
+    c.closePath();
+    c.fill();
+    c.beginPath();
+    c.moveTo(sx + 12, sy + 24);
+    c.quadraticCurveTo(sx + 12, sy + 30, sx + 11, sy + 34);
+    c.lineTo(sx + 14, sy + 36);
+    c.quadraticCurveTo(sx + 16, sy + 32, sx + 14, sy + 24);
     c.closePath();
     c.fill();
     /* Tusk shading */
-    c.fillStyle = '#e0d6c0';
+    c.fillStyle = '#d8cfba';
     c.beginPath();
-    c.moveTo(sx + 2, sy + 26);
-    c.lineTo(sx + 1, sy + 29);
-    c.lineTo(sx + 2.4, sy + 28);
+    c.moveTo(sx + 4.6, sy + 26);
+    c.quadraticCurveTo(sx + 2.4, sy + 32, sx + 1.6, sy + 35);
+    c.lineTo(sx + 2.6, sy + 33);
+    c.quadraticCurveTo(sx + 4, sy + 30, sx + 5.2, sy + 26);
     c.closePath();
     c.fill();
     /* Eye with lashes */
@@ -3285,22 +3300,39 @@
   function drawZebraSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.zebra;
     drawCreatureBase(c, sx, sy, p.body, '#cccccc');
-    /* Tapered black body stripes (curved to follow the body) */
+    /* Body stripes — chunkier, slightly curved, broken by the belly so
+       they read as zebra stripes rather than a row of pinstripes. */
     c.fillStyle = p.accent;
-    for (var zi = 0; zi < 9; zi++) {
-      var zx = sx + 4 + zi * 4;
-      var zh = (zi < 2 || zi > 6) ? 16 : 22;
-      var zy = sy + 22 - (zi < 2 ? 4 : 0);
+    var stripeXs = [4, 9, 14, 20, 26, 32, 37, 41];
+    var stripeWs = [3.4, 3.0, 3.4, 3.6, 3.4, 3.0, 2.6, 2.2];
+    for (var zi = 0; zi < stripeXs.length; zi++) {
+      var zx = sx + stripeXs[zi];
+      var zw = stripeWs[zi];
+      var zh = (zi < 2 || zi > 5) ? 14 : 20;
+      var zy = sy + 18 + (zi < 2 ? 0 : 2);
       c.save();
-      c.translate(zx, zy);
-      c.rotate((zi - 4) * 0.04);
-      c.fillRect(-1, 0, 2, zh);
+      c.translate(zx + zw / 2, zy);
+      c.rotate((zi - 3.5) * 0.06);
+      c.beginPath();
+      c.moveTo(-zw / 2, 0);
+      c.quadraticCurveTo(0, zh / 2, zw / 2, 0);
+      c.lineTo(zw / 2, zh);
+      c.quadraticCurveTo(0, zh + zh / 6, -zw / 2, zh);
+      c.closePath();
+      c.fill();
       c.restore();
     }
-    /* Head stripes */
-    c.fillRect(sx + 4, sy + 12, 1.6, 12);
-    c.fillRect(sx + 9, sy + 8, 1.6, 14);
-    c.fillRect(sx + 14, sy + 12, 1.6, 12);
+    /* Cream belly band breaking the stripes so it reads as a body, not a grill */
+    c.save();
+    c.globalAlpha = 0.55;
+    c.fillStyle = '#fff8e0';
+    c.beginPath(); c.ellipse(sx + 24, sy + 34, 14, 4, 0, 0, Math.PI * 2); c.fill();
+    c.restore();
+    /* Head stripes — thicker too */
+    c.fillStyle = p.accent;
+    c.fillRect(sx + 4, sy + 12, 2.4, 12);
+    c.fillRect(sx + 9, sy + 8, 2.4, 14);
+    c.fillRect(sx + 14, sy + 12, 2.4, 12);
     /* Spiky mane */
     c.fillStyle = p.accent;
     for (var zm = 0; zm < 6; zm++) {
@@ -4622,33 +4654,48 @@
       c.stroke();
     }
     c.restore();
-    /* Big horn (front) — gradient ivory */
-    var hornG = c.createLinearGradient(sx - 8, sy + 18, sx + 2, sy + 22);
+    /* Big front horn — bigger and more dramatically forward so the
+       species reads at a glance instead of being read as "armored
+       bear." */
+    var hornG = c.createLinearGradient(sx - 16, sy + 18, sx + 4, sy + 24);
     hornG.addColorStop(0, '#f0e8d8');
     hornG.addColorStop(1, p.accent);
     c.fillStyle = hornG;
     c.beginPath();
-    c.moveTo(sx + 2, sy + 22);
-    c.lineTo(sx - 12, sy + 14);
-    c.lineTo(sx - 6, sy + 24);
+    c.moveTo(sx + 4, sy + 24);
+    c.quadraticCurveTo(sx - 8, sy + 16, sx - 18, sy + 12);
+    c.quadraticCurveTo(sx - 10, sy + 22, sx - 4, sy + 27);
     c.closePath();
     c.fill();
-    /* Horn highlight */
+    /* Horn outline so it pops against the gray hide. */
+    c.strokeStyle = '#7a6a4a'; c.lineWidth = 0.8;
+    c.beginPath();
+    c.moveTo(sx + 4, sy + 24);
+    c.quadraticCurveTo(sx - 8, sy + 16, sx - 18, sy + 12);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(sx - 18, sy + 12);
+    c.quadraticCurveTo(sx - 10, sy + 22, sx - 4, sy + 27);
+    c.stroke();
+    /* Horn highlight stripe */
     c.fillStyle = '#ffffff';
     c.beginPath();
     c.moveTo(sx + 2, sy + 22);
-    c.lineTo(sx - 8, sy + 17);
-    c.lineTo(sx - 2, sy + 22);
+    c.quadraticCurveTo(sx - 8, sy + 16, sx - 14, sy + 14);
+    c.quadraticCurveTo(sx - 8, sy + 18, sx - 2, sy + 22);
     c.closePath();
     c.fill();
-    /* Smaller second horn */
+    /* Smaller second horn — bumped up so it still reads against the
+       enlarged front horn. */
     c.fillStyle = p.accent;
     c.beginPath();
     c.moveTo(sx + 4, sy + 18);
-    c.lineTo(sx + 1, sy + 8);
-    c.lineTo(sx + 7, sy + 16);
+    c.lineTo(sx, sy + 4);
+    c.lineTo(sx + 8, sy + 14);
     c.closePath();
     c.fill();
+    c.strokeStyle = '#7a6a4a'; c.lineWidth = 0.6;
+    c.stroke();
     /* Tough armor plates */
     c.fillStyle = p.shade;
     c.fillRect(sx + 12, sy + 22, 18, 2);
@@ -5160,6 +5207,55 @@
       c.closePath();
       c.fill();
     }
+
+    /* Bedtime callout — once Momoko has greeted enough guests, the
+       bedroom door pulses with a "Z" badge so it's not just blank
+       wallpaper next to the bookshelf. Shows a softer hint at 20+,
+       a louder sparkly "ZZZ" when all 26 are stamped (victory route). */
+    if (this.species === 'bedroom') {
+      var stampCount = (Game.flags && Game.flags.stampCount) || 0;
+      if (stampCount >= 20) {
+        var allDone = stampCount >= 26;
+        var pulse = 0.6 + 0.4 * Math.abs(Math.sin(this.timer * 0.08));
+        c.save();
+        c.translate(hcx, hcy - 4);
+        if (allDone) {
+          /* Loud sparkle: rainbow halo + ZZZ */
+          c.shadowColor = '#88ddff';
+          c.shadowBlur = 14 * pulse;
+        } else {
+          c.shadowColor = '#ff99cc';
+          c.shadowBlur = 8 * pulse;
+        }
+        c.fillStyle = allDone ? '#fff0a0' : '#ffe8f4';
+        c.beginPath();
+        c.arc(0, 0, 13, 0, Math.PI * 2);
+        c.fill();
+        c.shadowBlur = 0;
+        c.strokeStyle = allDone ? '#88ddff' : '#ff99cc';
+        c.lineWidth = 2;
+        c.stroke();
+        c.fillStyle = '#3a2418';
+        c.font = 'bold 11px monospace';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(allDone ? 'Zzz' : 'Z', 0, 0);
+        c.restore();
+        /* Trailing sparkles when all done */
+        if (allDone) {
+          for (var sp = 0; sp < 4; sp++) {
+            var sa = (sp / 4) * Math.PI * 2 + this.timer * 0.05;
+            var sr = 22 + Math.sin(this.timer * 0.04 + sp) * 6;
+            var ssx = hcx + Math.cos(sa) * sr;
+            var ssy = hcy - 4 + Math.sin(sa) * sr * 0.5;
+            c.fillStyle = ['#ff88cc', '#ffd24a', '#88ddff', '#bb88ff'][sp];
+            c.beginPath();
+            c.arc(ssx, ssy, 2.4, 0, Math.PI * 2);
+            c.fill();
+          }
+        }
+      }
+    }
   };
 
   /* ========== RECEPTIONIST (human NPC at the front desk) ========== */
@@ -5385,6 +5481,63 @@
     c.fillStyle = '#ffe6d0';
     c.beginPath(); c.arc(sx + 28, sy + 12, 4, 0, Math.PI * 2); c.fill();
     c.restore();
+
+    /* "Story Time?" callout when Momoko walks within range and the
+       receptionist isn't already talking — surfaces the bookshelf cutscene
+       so it isn't an undiscoverable easter egg. */
+    var player = Game.player;
+    if (player && !this.talking) {
+      var dxp = player.x - this.x;
+      var dyp = player.y - this.y;
+      var pdist = Math.sqrt(dxp * dxp + dyp * dyp);
+      if (pdist < 120) {
+        var bob = Math.sin(this.timer * 0.07) * 2;
+        var bx = sx + 32, by = sy - 32 + bob;
+        var label = Game.i18n.t('storyTimePrompt') || 'Story Time?';
+        c.save();
+        c.font = 'bold 11px monospace';
+        var tw = c.measureText(label).width + 18;
+        var th = 20;
+        c.fillStyle = '#fff8e0';
+        c.strokeStyle = '#7a1828';
+        c.lineWidth = 1.5;
+        c.beginPath();
+        var rx = bx - tw / 2, ry = by - th / 2;
+        c.moveTo(rx + 6, ry);
+        c.lineTo(rx + tw - 6, ry);
+        c.quadraticCurveTo(rx + tw, ry, rx + tw, ry + 6);
+        c.lineTo(rx + tw, ry + th - 6);
+        c.quadraticCurveTo(rx + tw, ry + th, rx + tw - 6, ry + th);
+        c.lineTo(rx + 6, ry + th);
+        c.quadraticCurveTo(rx, ry + th, rx, ry + th - 6);
+        c.lineTo(rx, ry + 6);
+        c.quadraticCurveTo(rx, ry, rx + 6, ry);
+        c.fill();
+        c.stroke();
+        /* Tail pointing down to the receptionist's hat */
+        c.beginPath();
+        c.moveTo(bx - 4, ry + th);
+        c.lineTo(bx + 4, ry + th);
+        c.lineTo(bx, ry + th + 6);
+        c.closePath();
+        c.fillStyle = '#fff8e0';
+        c.fill();
+        c.strokeStyle = '#7a1828';
+        c.beginPath();
+        c.moveTo(bx - 4, ry + th);
+        c.lineTo(bx, ry + th + 6);
+        c.lineTo(bx + 4, ry + th);
+        c.stroke();
+        /* Text */
+        c.fillStyle = '#7a1828';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(label, bx, by);
+        c.textAlign = 'left';
+        c.textBaseline = 'alphabetic';
+        c.restore();
+      }
+    }
   };
 
   /* ========== CHANDELIER MONKEY (decoration NPC dangling from a chandelier) ========== */

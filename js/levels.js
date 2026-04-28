@@ -91,6 +91,9 @@
       /* Marquee neon over reception */
       { type: 'marqueeSign',  x: 720, y: 130, text: 'THE PLAZA ZOO', color: '#ffd24a' },
 
+      /* Lobby midpoint wayfinder — keeps kids oriented in the wide lobby */
+      { type: 'wayfindSign',  x: 1200, y: 440 },
+
       /* Bedroom door + extra suite */
       { type: 'roomDoorFrame', x: 280,  y: 388, color: '#ff99cc' },
       { type: 'roomDoorFrame', x: 1900, y: 388, color: '#88ddff' },

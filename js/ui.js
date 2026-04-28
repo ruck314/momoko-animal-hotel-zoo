@@ -231,24 +231,50 @@
 
   function drawInstructionsOverlay(c) {
     c.save();
-    c.fillStyle = 'rgba(0,0,0,0.85)';
+    /* Full opaque scrim so the underlying menu buttons don't read through.
+       Title-screen background is already dusk-purple; we want the overlay
+       to feel like its own modal. */
+    c.fillStyle = 'rgba(8, 4, 20, 0.97)';
     c.fillRect(0, 0, W, H);
+
+    /* Soft star-field on top so the modal still feels cozy, not jarring. */
+    for (var i = 0; i < titleBubbles.length; i++) {
+      var b = titleBubbles[i];
+      c.save();
+      c.globalAlpha = 0.18;
+      c.fillStyle = '#ffffff';
+      c.beginPath();
+      c.arc(b.x, b.y, 0.6 + b.r * 0.2, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+    }
+
+    /* Framed panel so the text has a clear container */
+    var pX = W / 2 - 290, pY = 60, pW = 580, pH = 320;
+    c.fillStyle = 'rgba(20, 12, 36, 0.98)';
+    roundRect(c, pX, pY, pW, pH, 14);
+    c.fill();
+    c.strokeStyle = '#66ccff';
+    c.lineWidth = 2;
+    roundRect(c, pX, pY, pW, pH, 14);
+    c.stroke();
+
     c.fillStyle = '#66ccff';
     c.font = 'bold 24px monospace';
     c.textAlign = 'center';
-    c.fillText(Game.i18n.t('howToPlay'), W / 2, 80);
+    c.fillText(Game.i18n.t('howToPlay'), W / 2, 100);
     c.fillStyle = '#ccddee';
     c.font = '16px monospace';
     c.textAlign = 'center';
-    wrapText(c, Game.i18n.t('instructions'), W / 2, 130, 600, 28);
-    drawButton(c, 'OK', W / 2 - 60, 350, 120, 40);
+    wrapText(c, Game.i18n.t('instructions'), W / 2, 150, 540, 28);
+    drawButton(c, 'OK', W / 2 - 60, 410, 120, 40);
     c.restore();
   }
 
   /* Title click handler – returns action string or null */
   function handleTitleClick(mx, my) {
     if (showInstructions) {
-      if (hitButton(mx, my, W / 2 - 60, 350, 120, 40)) {
+      if (hitButton(mx, my, W / 2 - 60, 410, 120, 40)) {
         showInstructions = false;
         Game.audio.play('select');
         return null;
@@ -289,21 +315,41 @@
       c.restore();
     }
 
+    /* "Leave Room" only appears when we were paused from inside an animal
+       room — gives kids a kid-proof escape if they can't find the EXIT
+       door themselves. Game.currentRoom is set whenever Momoko's inside
+       a room (and the bedroom is excluded so the bookshelf/sleep flows
+       still work as designed). */
+    var inRoom = !!Game.currentRoom && Game.currentRoom !== 'bedroom';
     drawButton(c, Game.i18n.t('resume'), W / 2 - 10, 150, 220, 38);
-    drawButton(c, '🎟️ ' + Game.i18n.t('ledgerOpen'), W / 2 - 10, 198, 220, 38);
-    drawButton(c, Game.i18n.t('language') + ': ' + Game.i18n.t('langLabel'), W / 2 - 10, 246, 220, 38);
+    var nextY = 198;
+    if (inRoom) {
+      drawButton(c, '🚪 ' + Game.i18n.t('leaveRoom'), W / 2 - 10, nextY, 220, 38);
+      nextY += 48;
+    }
+    drawButton(c, '🎟️ ' + Game.i18n.t('ledgerOpen'), W / 2 - 10, nextY, 220, 38); nextY += 48;
+    drawButton(c, Game.i18n.t('language') + ': ' + Game.i18n.t('langLabel'), W / 2 - 10, nextY, 220, 38); nextY += 48;
     var muteLabel = Game.i18n.t(Game.audio.isMuted() ? 'soundOff' : 'soundOn');
-    drawButton(c, muteLabel, W / 2 - 10, 294, 220, 38);
-    drawButton(c, Game.i18n.t('quit'), W / 2 - 10, 342, 220, 38);
+    drawButton(c, muteLabel, W / 2 - 10, nextY, 220, 38); nextY += 48;
+    drawButton(c, Game.i18n.t('quit'), W / 2 - 10, nextY, 220, 38);
     c.restore();
   }
 
   function handlePauseClick(mx, my) {
+    var inRoom = !!Game.currentRoom && Game.currentRoom !== 'bedroom';
     if (hitButton(mx, my, W / 2 - 10, 150, 220, 38)) { Game.audio.play('select'); return 'resume'; }
-    if (hitButton(mx, my, W / 2 - 10, 198, 220, 38)) { Game.audio.play('select'); return 'ledger'; }
-    if (hitButton(mx, my, W / 2 - 10, 246, 220, 38)) { Game.audio.play('select'); Game.i18n.toggleLanguage(); return null; }
-    if (hitButton(mx, my, W / 2 - 10, 294, 220, 38)) { Game.audio.toggleMute(); return null; }
-    if (hitButton(mx, my, W / 2 - 10, 342, 220, 38)) { Game.audio.play('select'); return 'quit'; }
+    var nextY = 198;
+    if (inRoom) {
+      if (hitButton(mx, my, W / 2 - 10, nextY, 220, 38)) { Game.audio.play('select'); return 'leaveRoom'; }
+      nextY += 48;
+    }
+    if (hitButton(mx, my, W / 2 - 10, nextY, 220, 38)) { Game.audio.play('select'); return 'ledger'; }
+    nextY += 48;
+    if (hitButton(mx, my, W / 2 - 10, nextY, 220, 38)) { Game.audio.play('select'); Game.i18n.toggleLanguage(); return null; }
+    nextY += 48;
+    if (hitButton(mx, my, W / 2 - 10, nextY, 220, 38)) { Game.audio.toggleMute(); return null; }
+    nextY += 48;
+    if (hitButton(mx, my, W / 2 - 10, nextY, 220, 38)) { Game.audio.play('select'); return 'quit'; }
     return null;
   }
 
@@ -1135,6 +1181,17 @@
 
     /* Start button */
     drawButton(c, Game.i18n.t('startGame'), START_BTN_X, START_BTN_Y, START_BTN_W, START_BTN_H);
+
+    /* Keyboard hint so kids on a laptop don't have to reach for the mouse.
+       Sits above the Start button to stay within the 480-tall canvas. */
+    c.fillStyle = '#88aacc';
+    c.font = '11px monospace';
+    c.textAlign = 'center';
+    c.fillText(
+      Game.i18n.t('customizeKbHint'),
+      START_BTN_X + START_BTN_W / 2,
+      START_BTN_Y - 8
+    );
   }
 
   function drawMomokoPreview(c, cust) {
@@ -2191,13 +2248,25 @@
   function drawFloorCard(c, x, y, w, h, idx, info) {
     var current = (Game.engine && Game.engine.getCurrentZone && Game.engine.getCurrentZone()) || 0;
     var isCurrent = idx === current;
+    var isHighlighted = (idx === travelSelection) && !isCurrent;
     c.save();
     c.fillStyle = isCurrent ? '#5a3a22' : info.body;
     c.strokeStyle = info.accent;
-    c.lineWidth = 2;
+    c.lineWidth = isHighlighted ? 4 : 2;
     roundRect(c, x, y, w, h, 10);
     c.fill();
     c.stroke();
+    /* Soft glow halo on the keyboard-highlighted card so it reads as
+       "selected, ready to confirm" without requiring a mouse hover. */
+    if (isHighlighted) {
+      c.save();
+      c.strokeStyle = '#fff8e0';
+      c.lineWidth = 2;
+      c.globalAlpha = 0.8;
+      roundRect(c, x - 3, y - 3, w + 6, h + 6, 12);
+      c.stroke();
+      c.restore();
+    }
 
     /* Floor number */
     c.fillStyle = '#1a1a1a';
@@ -2258,8 +2327,60 @@
     return null;
   }
 
+  /* Keyboard navigation for the travel menu. travelSelection holds the
+     currently highlighted card index (0..3) and skips over the current
+     floor so confirm always means "go somewhere new". travelKeyDelay
+     debounces held arrow keys so a single tap moves exactly one cell. */
+  var travelSelection = 0;
+  var travelKeyDelay = 0;
+
+  function resetTravelMenu() {
+    var current = (Game.engine && Game.engine.getCurrentZone && Game.engine.getCurrentZone()) || 0;
+    /* Start on the first non-current card so the player can confirm
+       immediately. Floor 1 → start on Floor 2; Floor 4 → start on Floor 1. */
+    travelSelection = (current === 0) ? 1 : 0;
+    travelKeyDelay = 0;
+  }
+
   function updateTravelMenu(keys, jp) {
-    /* no-op; click handles all interaction */
+    var current = (Game.engine && Game.engine.getCurrentZone && Game.engine.getCurrentZone()) || 0;
+    if (travelKeyDelay > 0) travelKeyDelay--;
+
+    /* 2x2 grid: 0 1 / 2 3. Up/Down cycle linearly through all floors
+       (skipping the current one) so a 7-year-old hammering Down doesn't
+       get stuck bouncing between the two cards in one column. Left/Right
+       still nudge by column so the visual layout still works for mouse
+       hovering / muscle memory. */
+    function moveTo(next) {
+      if (next < 0 || next > 3) return;
+      /* Skip past the YOU-ARE-HERE card so confirm never lands on it. */
+      if (next === current) return;
+      travelSelection = next;
+      travelKeyDelay = 8;
+      Game.audio.play('select');
+    }
+    function cycle(dir) {
+      var next = travelSelection;
+      for (var i = 0; i < 4; i++) {
+        next = (next + dir + 4) % 4;
+        if (next !== current) { moveTo(next); return; }
+      }
+    }
+
+    if (travelKeyDelay === 0) {
+      if (keys.left)       moveTo(travelSelection - 1);
+      else if (keys.right) moveTo(travelSelection + 1);
+      else if (keys.up)    cycle(-1);
+      else if (keys.down)  cycle(+1);
+    }
+
+    if (jp.action) {
+      if (travelSelection !== current) {
+        Game.audio.play('select');
+        return { zone: travelSelection };
+      }
+    }
+    return null;
   }
 
   /* ============================================================ */
@@ -5158,7 +5279,8 @@
   /* ============================================================ */
   /*                         QUEST HUD                              */
   /* ============================================================ */
-  function drawQuestHUD(c) {
+  function drawQuestHUD(c, opts) {
+    var showPauseHint = !opts || opts.showPauseHint !== false;
     /* Hotel zoo: guest stamp ledger */
     if (!(Game.engine && Game.engine.getStampCount)) return;
     var got = Game.engine.getStampCount();
@@ -5234,14 +5356,44 @@
       c.fillStyle = '#ffd24a';
       c.font = 'bold 18px monospace';
       c.textAlign = 'center';
-      c.fillText('★ All Guests Greeted! ★', W / 2, 30);
+      c.fillText(Game.i18n.t('hudAllGuests'), W / 2, 30);
       c.textAlign = 'left';
+    }
+
+    /* Mid-progress cheer toast — fired from stampGuest() at 10/26.
+       Drifts down from the top with a chandelier-monkey emoji so it
+       reads as the monkey shouting from above. */
+    var cheer = Game.flags && Game.flags.cheerToast;
+    if (cheer && cheer.t > 0) {
+      cheer.t--;
+      var cAlpha = Math.min(1, cheer.t / 40);
+      var msg2 = Game.i18n.t(cheer.key) || '';
+      c.save();
+      c.globalAlpha = cAlpha;
+      var tw2 = 360, th2 = 44;
+      var tx2 = W / 2 - tw2 / 2, ty2 = 100 - (1 - cAlpha) * 12;
+      c.fillStyle = '#fff4c0';
+      roundRect(c, tx2, ty2, tw2, th2, 10);
+      c.fill();
+      c.strokeStyle = '#caa040';
+      c.lineWidth = 3;
+      roundRect(c, tx2, ty2, tw2, th2, 10);
+      c.stroke();
+      c.fillStyle = '#3a2418';
+      c.font = 'bold 14px monospace';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('🐒  ' + msg2, tx2 + tw2 / 2, ty2 + th2 / 2);
+      c.textAlign = 'left';
+      c.textBaseline = 'alphabetic';
+      c.restore();
     }
 
     /* Pause hint for desktop (touch already has a visible pause btn).
        Sized large enough to read at a glance — it's the only desktop
-       discoverability cue for the menu. */
-    if (Game.input && !Game.input.isTouch()) {
+       discoverability cue for the menu. Suppressed inside animal rooms
+       and cutscenes so it doesn't compete with the cozy art. */
+    if (showPauseHint && Game.input && !Game.input.isTouch()) {
       c.save();
       c.fillStyle = 'rgba(255, 255, 255, 0.85)';
       c.font = 'bold 13px monospace';
@@ -5280,6 +5432,12 @@
     bed: null,
     /* Cooldown so a single press doesn't double-fire interaction. */
     interactCooldown: 0,
+    /* Set true after the player has successfully greeted the animal in this
+       visit — drives the "← EXIT" hint that points kids back to the door. */
+    hasGreeted: false,
+    /* Tracks whether the follow-up dialogue line has been shown for this
+       greeting cycle. Reset when the room is re-entered. */
+    showedFollowUp: false,
   };
 
   /* Per-species wallpaper / accent colors for animal-room interiors. */
@@ -5308,22 +5466,24 @@
     roomState.frame = 0;
     roomState.frameTimer = 0;
     roomState.interactCooldown = 30;
+    roomState.hasGreeted = false;
+    roomState.showedFollowUp = false;
     if (species === 'bedroom') {
       roomState.animal = null;
       roomState.bed = (Game.entities && Game.entities.BedroomBed)
         ? new Game.entities.BedroomBed(W - 280, ROOM_FLOOR_BOTTOM - 60)
         : null;
     } else {
-      /* Every species room now has both an animal AND a themed bed. */
+      /* Each species room shows the animal alone — the previous
+         "decorative bed" prop read as the same generic small chest in
+         every room and was indistinguishable from the dresser, so the
+         habitat (kelp cove, savanna, rainbow grove) does the cozy work
+         on its own. */
       if (Game.entities && Game.entities.Animal) {
         /* Place the animal at the far right of the room. */
         roomState.animal = new Game.entities.Animal(species, W - 240, ROOM_FLOOR_BOTTOM - 100);
       }
-      roomState.bed = (Game.entities && Game.entities.BedroomBed)
-        ? new Game.entities.BedroomBed(ROOM_FLOOR_LEFT + 240, ROOM_FLOOR_BOTTOM - 50)
-        : null;
-      /* Mark this bed as decorative (won't trigger sleep cutscene). */
-      if (roomState.bed) roomState.bed.decorative = true;
+      roomState.bed = null;
     }
   }
 
@@ -5598,21 +5758,127 @@
     } else if (habitat === 'cozyRoom') {
       paintSky(c, '#cca0a0', '#e0c0c0', '#f0d8d8');
       paintGround(c, '#ad7838', '#7a4818');
-      /* Plush rug */
+      /* Patterned wallpaper — vertical pinstripes for parlor feel */
+      c.save();
+      c.globalAlpha = 0.18;
+      c.strokeStyle = '#7a3050';
+      c.lineWidth = 1.4;
+      for (var ws = 0; ws < 22; ws++) {
+        c.beginPath();
+        c.moveTo(ws * 38 + 8, 0);
+        c.lineTo(ws * 38 + 8, ROOM_FLOOR_TOP);
+        c.stroke();
+      }
+      c.restore();
+      /* Pendant lamp from the ceiling — the same warm glow as the
+         sleep cutscene, signalling "comfy" without subtlety. */
+      c.strokeStyle = '#5a3a18'; c.lineWidth = 1.5;
+      c.beginPath();
+      c.moveTo(W / 2 + 80, 0); c.lineTo(W / 2 + 80, 90);
+      c.stroke();
+      c.fillStyle = '#caa040';
+      c.beginPath();
+      c.moveTo(W / 2 + 60, 90); c.lineTo(W / 2 + 100, 90);
+      c.lineTo(W / 2 + 92, 116); c.lineTo(W / 2 + 68, 116); c.closePath(); c.fill();
+      c.save();
+      c.globalAlpha = 0.55;
+      var lampG = c.createRadialGradient(W / 2 + 80, 116, 6, W / 2 + 80, 116, 160);
+      lampG.addColorStop(0, 'rgba(255, 224, 160, 0.7)');
+      lampG.addColorStop(1, 'rgba(255, 224, 160, 0)');
+      c.fillStyle = lampG;
+      c.beginPath(); c.arc(W / 2 + 80, 116, 160, 0, Math.PI * 2); c.fill();
+      c.restore();
+      /* Window with city skyline silhouette + warm sash */
+      c.fillStyle = '#3a2058';
+      c.fillRect(120, 60, 120, 90);
+      /* Tiny skyline */
+      c.fillStyle = '#1a0e2a';
+      for (var sk = 0; sk < 7; sk++) {
+        var skh = 10 + (sk * 7) % 26;
+        c.fillRect(124 + sk * 16, 60 + 90 - skh, 12, skh);
+      }
+      /* Stars */
+      c.fillStyle = '#fff8c0';
+      for (var stt = 0; stt < 8; stt++) {
+        c.beginPath();
+        c.arc(128 + stt * 12, 70 + (stt * 7) % 30, 1, 0, Math.PI * 2);
+        c.fill();
+      }
+      /* Window frame */
+      c.strokeStyle = '#7a3050'; c.lineWidth = 4;
+      c.strokeRect(120, 60, 120, 90);
+      c.beginPath(); c.moveTo(180, 60); c.lineTo(180, 150); c.stroke();
+      c.beginPath(); c.moveTo(120, 105); c.lineTo(240, 105); c.stroke();
+      /* Curtains */
       c.fillStyle = '#aa4488';
-      c.fillRect(W / 2 - 200, ROOM_FLOOR_BOTTOM - 8, 400, 8);
-      /* Window */
-      c.fillStyle = '#ffd24a';
-      c.fillRect(120, 60, 100, 80);
-      c.strokeStyle = '#5a3a18'; c.lineWidth = 3;
-      c.strokeRect(120, 60, 100, 80);
-      /* Yarn ball */
+      c.beginPath();
+      c.moveTo(108, 50); c.lineTo(140, 50); c.lineTo(132, 160); c.lineTo(112, 158);
+      c.closePath(); c.fill();
+      c.beginPath();
+      c.moveTo(220, 50); c.lineTo(252, 50); c.lineTo(248, 158); c.lineTo(228, 160);
+      c.closePath(); c.fill();
+      /* Plush oval rug — much bigger than the old strip, with a border */
+      c.fillStyle = '#aa4488';
+      c.beginPath();
+      c.ellipse(W / 2, ROOM_FLOOR_BOTTOM - 6, 200, 26, 0, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = '#cc66a0';
+      c.beginPath();
+      c.ellipse(W / 2, ROOM_FLOOR_BOTTOM - 6, 184, 20, 0, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = '#ffd6e8';
+      c.beginPath();
+      c.ellipse(W / 2, ROOM_FLOOR_BOTTOM - 6, 80, 8, 0, 0, Math.PI * 2);
+      c.fill();
+      /* Side table with steaming teacup */
+      var tt_x = W / 2 - 250, tt_y = ROOM_FLOOR_BOTTOM - 50;
+      c.fillStyle = '#7a4828';
+      c.fillRect(tt_x, tt_y, 60, 6);
+      c.fillRect(tt_x + 4, tt_y + 6, 6, 38);
+      c.fillRect(tt_x + 50, tt_y + 6, 6, 38);
+      /* Teacup */
+      c.fillStyle = '#fff8e0';
+      c.beginPath();
+      c.moveTo(tt_x + 18, tt_y - 14);
+      c.lineTo(tt_x + 42, tt_y - 14);
+      c.lineTo(tt_x + 38, tt_y - 2);
+      c.lineTo(tt_x + 22, tt_y - 2);
+      c.closePath(); c.fill();
+      /* Cup handle */
+      c.strokeStyle = '#fff8e0'; c.lineWidth = 2;
+      c.beginPath(); c.arc(tt_x + 44, tt_y - 8, 4, -Math.PI / 2, Math.PI / 2); c.stroke();
+      /* Saucer */
+      c.fillStyle = '#fff8e0';
+      c.beginPath();
+      c.ellipse(tt_x + 30, tt_y - 1, 14, 3, 0, 0, Math.PI * 2);
+      c.fill();
+      /* Cup tea ring */
+      c.fillStyle = '#aa6a3a';
+      c.beginPath();
+      c.ellipse(tt_x + 30, tt_y - 11, 9, 2, 0, 0, Math.PI * 2);
+      c.fill();
+      /* Steam wisps from the cup */
+      c.save();
+      c.strokeStyle = '#ffffff'; c.lineWidth = 1.5;
+      c.globalAlpha = 0.7;
+      var stPhase = Date.now() * 0.003;
+      for (var stm = 0; stm < 3; stm++) {
+        c.beginPath();
+        var stx = tt_x + 24 + stm * 6;
+        var sty = tt_y - 16;
+        c.moveTo(stx, sty);
+        c.quadraticCurveTo(stx + Math.sin(stPhase + stm) * 4, sty - 8,
+                           stx + Math.sin(stPhase + stm + 1) * 4, sty - 16);
+        c.stroke();
+      }
+      c.restore();
+      /* Yarn ball on the rug */
       c.fillStyle = '#ff66aa';
-      c.beginPath(); c.arc(180, ROOM_FLOOR_BOTTOM - 18, 8, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(W / 2 + 140, ROOM_FLOOR_BOTTOM - 18, 10, 0, Math.PI * 2); c.fill();
       c.strokeStyle = '#cc3377'; c.lineWidth = 1;
       for (var yb = 0; yb < 6; yb++) {
         c.beginPath();
-        c.arc(180, ROOM_FLOOR_BOTTOM - 18, 8, yb, yb + Math.PI);
+        c.arc(W / 2 + 140, ROOM_FLOOR_BOTTOM - 18, 10, yb, yb + Math.PI);
         c.stroke();
       }
     } else if (habitat === 'backyard') {
@@ -6170,17 +6436,89 @@
 
   /* Painter for an exit door — drawn after the habitat. */
   function paintExitDoor(c) {
-    c.fillStyle = '#3a2418';
-    c.fillRect(20, ROOM_FLOOR_BOTTOM - 90, 36, 110);
-    c.fillStyle = '#caa040';
-    c.fillRect(24, ROOM_FLOOR_BOTTOM - 86, 28, 102);
-    c.fillStyle = '#fcd870';
-    c.beginPath(); c.arc(46, ROOM_FLOOR_BOTTOM - 30, 2.4, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#fff8e0';
-    c.font = 'bold 9px monospace';
+    /* Doorway is wider, brighter, and topped with a green-on-glow EXIT
+       sign so it reads as "the way out" on first sight — the previous
+       thin yellow strip was easy to miss. */
+    var dx = 14, dy = ROOM_FLOOR_BOTTOM - 130;
+    var dw = 56, dh = 130;
+    /* Frame */
+    c.fillStyle = '#2a1808';
+    c.fillRect(dx - 4, dy - 4, dw + 8, dh + 4);
+    /* Door panel */
+    var doorG = c.createLinearGradient(dx, dy, dx + dw, dy);
+    doorG.addColorStop(0, '#b88828');
+    doorG.addColorStop(0.5, '#e0b850');
+    doorG.addColorStop(1, '#b88828');
+    c.fillStyle = doorG;
+    c.fillRect(dx, dy, dw, dh);
+    /* Door panel insets so it reads as a real door */
+    c.strokeStyle = '#7a5818';
+    c.lineWidth = 1.5;
+    c.strokeRect(dx + 6, dy + 10, dw - 12, dh / 2 - 16);
+    c.strokeRect(dx + 6, dy + dh / 2 + 6, dw - 12, dh / 2 - 16);
+    /* Round handle with brass plate */
+    c.fillStyle = '#7a5818';
+    c.beginPath(); c.arc(dx + dw - 10, ROOM_FLOOR_BOTTOM - 50, 4, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#ffd870';
+    c.beginPath(); c.arc(dx + dw - 10, ROOM_FLOOR_BOTTOM - 50, 2.6, 0, Math.PI * 2); c.fill();
+
+    /* Glowing EXIT sign over the doorway */
+    var sx = dx - 6, sy = dy - 28, sw = dw + 12, sh = 22;
+    c.save();
+    var sigGlow = c.createRadialGradient(sx + sw / 2, sy + sh / 2, 4,
+                                          sx + sw / 2, sy + sh / 2, 36);
+    sigGlow.addColorStop(0, 'rgba(120, 255, 130, 0.45)');
+    sigGlow.addColorStop(1, 'rgba(120, 255, 130, 0)');
+    c.fillStyle = sigGlow;
+    c.fillRect(sx - 16, sy - 8, sw + 32, sh + 24);
+    c.restore();
+    c.fillStyle = '#1a3a1a';
+    c.fillRect(sx, sy, sw, sh);
+    c.strokeStyle = '#88ff88';
+    c.lineWidth = 1.5;
+    c.strokeRect(sx, sy, sw, sh);
+    c.fillStyle = '#88ff88';
+    c.font = 'bold 13px monospace';
     c.textAlign = 'center';
-    c.fillText('EXIT', 38, ROOM_FLOOR_BOTTOM - 96);
+    c.textBaseline = 'middle';
+    c.fillText(Game.i18n.t('exitSign') || 'EXIT', sx + sw / 2, sy + sh / 2 + 1);
+    c.textBaseline = 'alphabetic';
     c.textAlign = 'left';
+
+    /* Animated arrow on the floor in front of the door pointing left
+       so the player sees where to stand to leave. */
+    var arrPhase = Date.now() * 0.005;
+    var arrX = dx + dw + 28 + Math.sin(arrPhase) * 4;
+    var arrY = ROOM_FLOOR_BOTTOM - 18;
+    c.save();
+    c.fillStyle = 'rgba(136, 255, 136, 0.85)';
+    c.beginPath();
+    c.moveTo(arrX, arrY);
+    c.lineTo(arrX + 12, arrY - 6);
+    c.lineTo(arrX + 12, arrY - 2);
+    c.lineTo(arrX + 22, arrY - 2);
+    c.lineTo(arrX + 22, arrY + 2);
+    c.lineTo(arrX + 12, arrY + 2);
+    c.lineTo(arrX + 12, arrY + 6);
+    c.closePath();
+    /* The arrow above is right-pointing; flip it so it points back to the door. */
+    c.restore();
+    c.save();
+    c.translate(arrX + 22, arrY);
+    c.scale(-1, 1);
+    c.translate(-arrX, -arrY);
+    c.fillStyle = 'rgba(136, 255, 136, 0.85)';
+    c.beginPath();
+    c.moveTo(arrX, arrY);
+    c.lineTo(arrX + 12, arrY - 6);
+    c.lineTo(arrX + 12, arrY - 2);
+    c.lineTo(arrX + 22, arrY - 2);
+    c.lineTo(arrX + 22, arrY + 2);
+    c.lineTo(arrX + 12, arrY + 2);
+    c.lineTo(arrX + 12, arrY + 6);
+    c.closePath();
+    c.fill();
+    c.restore();
   }
 
   /* Themed bed painter — picks a color/prop based on the species. */
@@ -6243,6 +6581,7 @@
       var scale = ANIMAL_ROOM_SCALE;
       var anchorX = roomState.animal.x + roomState.animal.w / 2;
       var anchorY = roomState.animal.y + roomState.animal.h;
+      var animalTopY = anchorY - roomState.animal.h * scale;
       c.save();
       c.translate(anchorX, anchorY);
       c.scale(scale, scale);
@@ -6259,8 +6598,81 @@
         c.font = 'bold 18px monospace';
         c.textAlign = 'center';
         var bob = Math.sin(Date.now() * 0.005) * 2;
-        c.fillText('!', anchorX, anchorY - roomState.animal.h * scale - 16 + bob);
+        c.fillText('!', anchorX, animalTopY - 16 + bob);
         c.textAlign = 'left';
+      }
+
+      /* In-room greeting feedback: a comic speech bubble next to the
+         animal showing its onomatopoeia — anchors the reaction at the
+         player's actual eye-line instead of leaving them to read the
+         bottom dialogue panel and the top stamp toast. */
+      if (roomState.animal.talking && roomState.animal.currentText) {
+        var elapsed = 360 - (roomState.animal.talkTimer || 0);
+        var pop = elapsed < 18 ? elapsed / 18 : 1;
+        c.save();
+        c.font = 'bold 14px monospace';
+        var msg = roomState.animal.currentText;
+        var tw = Math.min(W - 60, c.measureText(msg).width + 28);
+        var th = 36;
+        var bubX = anchorX - tw / 2;
+        var bubY = animalTopY - th - 22;
+        if (bubX < 12) bubX = 12;
+        if (bubX + tw > W - 12) bubX = W - 12 - tw;
+        if (bubY < 36) bubY = 36;
+        c.translate(bubX + tw / 2, bubY + th / 2);
+        c.scale(pop, pop);
+        c.translate(-(bubX + tw / 2), -(bubY + th / 2));
+        c.fillStyle = '#fff8e0';
+        c.strokeStyle = '#5a3a18';
+        c.lineWidth = 2;
+        roundRect(c, bubX, bubY, tw, th, 10);
+        c.fill();
+        c.stroke();
+        /* Tail pointing toward the animal */
+        var tailX = Math.max(bubX + 14, Math.min(bubX + tw - 14, anchorX));
+        c.beginPath();
+        c.moveTo(tailX - 6, bubY + th);
+        c.lineTo(tailX + 6, bubY + th);
+        c.lineTo(tailX, bubY + th + 10);
+        c.closePath();
+        c.fillStyle = '#fff8e0';
+        c.fill();
+        c.strokeStyle = '#5a3a18';
+        c.lineWidth = 2;
+        /* Cover the top edge of the tail so the bubble outline doesn't
+           cut across the connection. */
+        c.beginPath();
+        c.moveTo(tailX - 6, bubY + th);
+        c.lineTo(tailX, bubY + th + 10);
+        c.lineTo(tailX + 6, bubY + th);
+        c.stroke();
+        c.fillStyle = '#1a1a1a';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(msg, bubX + tw / 2, bubY + th / 2);
+        c.textBaseline = 'alphabetic';
+        c.textAlign = 'left';
+        c.restore();
+
+        /* Sparkle hearts around the animal during the first ~30 frames
+           so the greeting moment feels celebratory. */
+        if (elapsed < 36) {
+          c.save();
+          var sparkleAlpha = 1 - elapsed / 36;
+          c.globalAlpha = sparkleAlpha;
+          var palette = ['#ff88cc', '#ffd24a', '#88ddff'];
+          for (var s = 0; s < 6; s++) {
+            var sa = (s / 6) * Math.PI * 2 + elapsed * 0.18;
+            var sr = 60 + elapsed * 2.6;
+            var ssx = anchorX + Math.cos(sa) * sr;
+            var ssy = (animalTopY + roomState.animal.h * scale / 2) + Math.sin(sa) * sr * 0.55;
+            c.fillStyle = palette[s % palette.length];
+            c.beginPath();
+            c.arc(ssx, ssy, 4, 0, Math.PI * 2);
+            c.fill();
+          }
+          c.restore();
+        }
       }
     }
 
@@ -6327,6 +6739,20 @@
         c.textAlign = 'left';
       }
     }
+
+    /* "← EXIT" pulsing hint after the player has greeted the animal — kids
+       sometimes don't realize they can leave once the dialogue has played. */
+    if (roomState.hasGreeted && species !== 'bedroom') {
+      var exitPulse = 0.55 + 0.35 * Math.abs(Math.sin(Date.now() * 0.005));
+      c.save();
+      c.globalAlpha = exitPulse;
+      c.fillStyle = '#88ff88';
+      c.font = 'bold 14px monospace';
+      c.textAlign = 'left';
+      c.fillText('← ' + (Game.i18n.t('exitHint') || 'EXIT'),
+                 ROOM_FLOOR_LEFT + 12, ROOM_FLOOR_BOTTOM - 70);
+      c.restore();
+    }
     c.restore();
   }
 
@@ -6378,7 +6804,23 @@
       var dx = roomState.px - (roomState.animal.x + roomState.animal.w / 2);
       var dy = roomState.py - roomState.animal.y;
       if (Math.sqrt(dx * dx + dy * dy) < 160) {
-        roomState.animal.interact();
+        /* If we're already mid-talk and haven't shown the follow-up yet,
+           swap in the second line so re-pressing Z gives a tiny "tell me
+           more" beat instead of just re-firing the same greeting. */
+        if (roomState.animal.talking && !roomState.showedFollowUp) {
+          var followKey = 'animalDialogueB_' + roomState.animal.species;
+          var follow = Game.i18n.t(followKey);
+          if (follow && follow !== followKey) {
+            roomState.animal.currentText = follow;
+            roomState.animal.talkTimer = 360;
+            roomState.showedFollowUp = true;
+            if (Game.audio && Game.audio.play) Game.audio.play('select');
+          }
+        } else {
+          roomState.animal.interact();
+          roomState.showedFollowUp = false;
+        }
+        roomState.hasGreeted = true;
         roomState.interactCooldown = 30;
       }
     }
@@ -6415,8 +6857,8 @@
   }
 
   function handleAnimalRoomClick(mx, my, species) {
-    /* Tap exit door */
-    if (mx >= 20 && mx <= 56 && my >= 320 && my <= 430) return 'exit';
+    /* Tap exit door (kept generous so kid-fingers land on it). */
+    if (mx >= 10 && mx <= 78 && my >= ROOM_FLOOR_BOTTOM - 160 && my <= ROOM_FLOOR_BOTTOM + 4) return 'exit';
     /* Tap bed (in bedroom) */
     if (roomState.bed && !roomState.bed.decorative) {
       var bx = roomState.bed.x, by = roomState.bed.y;
@@ -7086,6 +7528,7 @@
     drawTravelMenu: drawTravelMenu,
     handleTravelMenuClick: handleTravelMenuClick,
     updateTravelMenu: updateTravelMenu,
+    resetTravelMenu: resetTravelMenu,
     drawRocketAnim: drawRocketAnim,
     drawHouseInterior: drawHouseInterior,
     handleHouseInteriorClick: handleHouseInteriorClick,

@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.5.0';
+  Game.VERSION = 'v0.7.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -240,6 +240,10 @@
     /* Player */
     var sp = level.spawns.player;
     player = new Game.entities.Momoko(sp.x, sp.y);
+    /* Expose so entity draw code (receptionist callout, chandelier monkey
+       proximity, bedroom-door sparkle) can react to Momoko's position
+       without threading it through every draw signature. */
+    Game.player = player;
 
     /* Enemies – friendly aliens (Fish class). */
     enemies = [];
@@ -409,11 +413,20 @@
         break;
 
       case State.CUSTOMIZE:
-        /* Customization screen handled by ui.js */
+        /* Keyboard fallback so kids on a laptop can finish customize without
+           the mouse — Space/Z confirms whatever's currently selected. */
+        if (jp.action) {
+          Game.audio.play('select');
+          state = State.INTRO;
+        }
         break;
 
       case State.INTRO:
-        /* Intro backstory handled by ui.js */
+        /* Keyboard advance — same as clicking Continue. */
+        if (jp.action) {
+          Game.audio.play('select');
+          startGame();
+        }
         break;
 
       case State.PLAYING:
@@ -524,9 +537,18 @@
           var npc = npcs[nc].entity;
           var npcType = npcs[nc].type;
           var npcData = npcs[nc].data || {};
-          var dist = Math.sqrt(
-            Math.pow(player.x - npc.x, 2) + Math.pow(player.y - npc.y, 2)
-          );
+          var dist;
+          if (npcType === 'chandelierMonkey') {
+            /* Monkeys hang on the chandelier ~270px above the corridor;
+               full Euclidean distance would never qualify. Use horizontal
+               distance only so a kid walking directly under one can call
+               them down for a re-greeting. */
+            dist = Math.abs(player.x - npc.x);
+          } else {
+            dist = Math.sqrt(
+              Math.pow(player.x - npc.x, 2) + Math.pow(player.y - npc.y, 2)
+            );
+          }
           if (dist < 80 && !npc.talking && (!npcCooldowns[npcType] || npcCooldowns[npcType] <= 0)) {
             /* Universal "interact" trigger: action button (Sparkle on
                touch, Space/Z on keyboard) or Up. */
@@ -654,7 +676,7 @@
         break;
 
       case State.PAUSED:
-        if (jp.pause) { state = State.PLAYING; }
+        if (jp.pause) { state = prevState || State.PLAYING; }
         break;
 
       case State.GAME_OVER:
@@ -670,8 +692,16 @@
         break;
 
       case State.TRAVEL_MENU:
-        if (jp.pause) { state = State.PLAYING; }
-        if (Game.ui.updateTravelMenu) Game.ui.updateTravelMenu(keys, jp);
+        if (jp.pause) { state = State.PLAYING; break; }
+        if (Game.ui.updateTravelMenu) {
+          var tvKb = Game.ui.updateTravelMenu(keys, jp);
+          if (tvKb && typeof tvKb.zone === 'number') {
+            rocketTarget = tvKb.zone;
+            rocketAnimTimer = 0;
+            state = State.ROCKET_ANIM;
+            Game.audio.play('victory');
+          }
+        }
         break;
 
       case State.ROCKET_ANIM:
@@ -698,7 +728,16 @@
         break;
 
       case State.ANIMAL_ROOM:
-        if (jp.pause) { exitAnimalRoom(); }
+        if (jp.pause) {
+          /* Pause from inside an animal room opens the pause menu (and
+             returns here on resume) instead of dumping the player back
+             out into the corridor — a 7-year-old hitting Esc to "stop"
+             expects a menu, not an eject. The EXIT door + arrow on the
+             left wall remain the deliberate way out. */
+          prevState = State.ANIMAL_ROOM;
+          state = State.PAUSED;
+          break;
+        }
         if (jp.ledger) { openLedger(); break; }
         if (Game.ui.updateAnimalRoom) Game.ui.updateAnimalRoom(keys, jp, Game.currentRoom);
         break;
@@ -723,6 +762,24 @@
         if (lobbyIntroTimer > 360) {
           state = State.PLAYING;
           Game.flags.checkedIn = true;
+          /* The cutscene visually walks Momoko from her spawn to the
+             elevator. Match her real position to where the camera left
+             her so she doesn't snap back to the lobby door — otherwise
+             she has to walk the full 2100px again to reach what the
+             monkey just escorted her to. */
+          if (player && level) {
+            var elev = null;
+            for (var lni = 0; lni < npcs.length; lni++) {
+              if (npcs[lni].type === 'elevator') { elev = npcs[lni].entity; break; }
+            }
+            if (elev) {
+              player.x = elev.x - 60;
+              player.y = elev.y;
+              player.vx = 0; player.vy = 0;
+              player.facing = 1;
+              camera.x = Math.max(0, Math.min(player.x - W / 2, level.width - W));
+            }
+          }
           /* The escort is the player's actual meeting with the chandelier
              monkey — stamp them here so the passport's 26th slot is
              reachable in normal play (the monkeys hang well above
@@ -769,8 +826,15 @@
                       state === State.ROCKET_ANIM ||
                       state === State.INTRO ||
                       state === State.VICTORY);
+    /* `.in-game` is broader: any state past the entry menus. The Game
+       Center link is dev/menu chrome; once gameplay starts we don't
+       want it competing with the cozy art. */
+    var inGame = (state !== State.TITLE &&
+                  state !== State.CUSTOMIZE &&
+                  state !== State.INTRO);
     if (document.body.classList.toggle) {
       document.body.classList.toggle('cutscene-mode', inCutscene);
+      document.body.classList.toggle('in-game', inGame);
     }
 
     /* Paint side-strip backgrounds first so they sit underneath the pause
@@ -853,8 +917,9 @@
       case State.ANIMAL_ROOM:
         if (Game.ui.drawAnimalRoomInterior) Game.ui.drawAnimalRoomInterior(ctx, Game.currentRoom, player);
         /* HUD here too, so the stamp celebration toast lands at the moment
-           the player greets a new animal. */
-        if (Game.ui.drawQuestHUD) Game.ui.drawQuestHUD(ctx);
+           the player greets a new animal — but suppress the PAUSE (P)
+           hint inside the cozy room, where it competes with the art. */
+        if (Game.ui.drawQuestHUD) Game.ui.drawQuestHUD(ctx, { showPauseHint: false });
         /* Surface dialogue from the in-room animal (if any) below the
            viewport in the bottom bezel — same flow as PLAYING. */
         pendingDialogue = null;
@@ -895,7 +960,15 @@
         break;
 
       case State.PAUSED:
-        renderGame();
+        /* Paint the underlying scene so the pause menu reads as an
+           overlay on top of "where she actually is" — corridor lobby
+           if she paused from PLAYING, animal-room habitat if she
+           paused from inside a guest's room. */
+        if (prevState === State.ANIMAL_ROOM && Game.ui.drawAnimalRoomInterior) {
+          Game.ui.drawAnimalRoomInterior(ctx, Game.currentRoom, player);
+        } else {
+          renderGame();
+        }
         Game.ui.drawPauseMenu(ctx);
         break;
 
@@ -2193,6 +2266,12 @@
         ctx.fillText('RECEPTION', dx, dy - 24);
         ctx.textAlign = 'left';
       } else if (d.type === 'lobbyPlant') {
+        /* Rustle: leaves sway harder when Momoko walks past so the
+           corridor reads as alive rather than as a series of static props. */
+        var lpPlayerCx = player ? (player.x + player.w / 2) : -99999;
+        var lpDist = Math.abs(lpPlayerCx - d.x);
+        var lpRustle = lpDist < 90 ? (1 - lpDist / 90) : 0;
+        var lpPhase = Date.now() * 0.012;
         /* Pot */
         ctx.fillStyle = '#a05028';
         ctx.fillRect(dx - 10, dy - 14, 20, 14);
@@ -2201,7 +2280,8 @@
         /* Leaves */
         ctx.fillStyle = '#3a7838';
         for (var lp = 0; lp < 6; lp++) {
-          var ang = -Math.PI / 2 + (lp - 3) * 0.4;
+          var baseAng = -Math.PI / 2 + (lp - 3) * 0.4;
+          var ang = baseAng + Math.sin(lpPhase + lp * 0.7) * lpRustle * 0.32;
           var lx = dx + Math.cos(ang) * 16;
           var ly = dy - 18 + Math.sin(ang) * 16;
           ctx.beginPath();
@@ -2210,7 +2290,7 @@
         }
         ctx.fillStyle = '#5a9848';
         ctx.beginPath();
-        ctx.ellipse(dx, dy - 24, 6, 14, 0, 0, Math.PI * 2);
+        ctx.ellipse(dx + Math.sin(lpPhase) * lpRustle * 1.6, dy - 24, 6, 14, 0, 0, Math.PI * 2);
         ctx.fill();
       } else if (d.type === 'lobbySofa') {
         ctx.fillStyle = '#7a3050';
@@ -2535,16 +2615,86 @@
         ctx.fillText(d.text || 'HOTEL', dx, dy);
         ctx.textBaseline = 'alphabetic';
         ctx.textAlign = 'left';
+      } else if (d.type === 'wayfindSign') {
+        /* Free-standing brass post with two arrows pointing toward the
+           bedroom (left) and the elevator (right). Drops a clear
+           orientation cue at the lobby midpoint so kids can re-find
+           the bedroom without exhaustively walking the whole lobby. */
+        var psW = 12, psH = 110;
+        var psX = dx - psW / 2, psY = d.y - psH;
+        /* Post */
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(psX, psY, psW, psH);
+        ctx.fillStyle = '#caa040';
+        ctx.fillRect(psX + 2, psY, psW - 4, psH);
+        /* Top finial */
+        ctx.fillStyle = '#fcd870';
+        ctx.beginPath();
+        ctx.arc(dx, psY - 3, 5, 0, Math.PI * 2);
+        ctx.fill();
+        /* Helper to draw a labeled arrow plate */
+        function drawPlate(side, label, icon, plateY) {
+          var pw = 84, ph = 22;
+          var px = side > 0 ? dx + 6 : dx - 6 - pw;
+          var py = plateY;
+          ctx.fillStyle = '#fff8e0';
+          ctx.fillRect(px, py, pw, ph);
+          ctx.strokeStyle = '#7a3a18';
+          ctx.lineWidth = 1.4;
+          ctx.strokeRect(px, py, pw, ph);
+          /* Arrow tip extending into the post */
+          ctx.fillStyle = '#fff8e0';
+          ctx.beginPath();
+          if (side > 0) {
+            ctx.moveTo(px, py);
+            ctx.lineTo(px - 8, py + ph / 2);
+            ctx.lineTo(px, py + ph);
+          } else {
+            ctx.moveTo(px + pw, py);
+            ctx.lineTo(px + pw + 8, py + ph / 2);
+            ctx.lineTo(px + pw, py + ph);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = '#7a3a18';
+          ctx.beginPath();
+          if (side > 0) {
+            ctx.moveTo(px, py); ctx.lineTo(px - 8, py + ph / 2); ctx.lineTo(px, py + ph);
+          } else {
+            ctx.moveTo(px + pw, py); ctx.lineTo(px + pw + 8, py + ph / 2); ctx.lineTo(px + pw, py + ph);
+          }
+          ctx.stroke();
+          /* Text */
+          ctx.fillStyle = '#3a2418';
+          ctx.font = 'bold 9px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText((side > 0 ? '' : '← ') + label + (side > 0 ? ' →' : ''),
+                       px + pw / 2, py + ph / 2);
+          ctx.font = '12px sans-serif';
+          ctx.textBaseline = 'alphabetic';
+          ctx.textAlign = 'left';
+        }
+        drawPlate(-1, Game.i18n.t('wayfindBedroom') || 'BED', '', psY + 10);
+        drawPlate(+1, Game.i18n.t('wayfindElevator') || 'ELEV', '', psY + 50);
       } else if (d.type === 'peeker') {
         /* An animal peeking around a column, watching the player.
-           A small bob plus a slow wobble makes it feel alive. */
+           A small bob plus a slow wobble makes it feel alive — and
+           when Momoko walks directly underneath, the head ducks back
+           behind the column with a brief "!" surprise so the corridor
+           rewards traversal. */
         var palettes = (Game.entities && Game.entities.ANIMAL_PALETTES) || {};
         var pp = palettes[d.species] || { body: '#888', shade: '#444', accent: '#fff' };
         var side = d.side || 1;
+        var pkPlayerCx = player ? (player.x + player.w / 2) : -99999;
+        var pkDist = Math.abs(pkPlayerCx - d.x);
+        /* Duck factor 0..1 — closer = more ducked. Clamps the head down
+           toward the column so only the eyes/ears stay visible. */
+        var pkDuck = pkDist < 180 ? (1 - pkDist / 180) : 0;
         var bob = Math.sin(Date.now() * 0.003 + d.x * 0.01) * 2;
-        var slide = Math.sin(Date.now() * 0.0015 + d.x * 0.02) * 4;
+        var slide = Math.sin(Date.now() * 0.0015 + d.x * 0.02) * 4 * (1 - pkDuck);
         var px = dx + slide;
-        var py = dy + bob;
+        var py = dy + bob + pkDuck * 14;
         ctx.save();
         /* Column / pillar to peek from behind */
         ctx.fillStyle = '#3a2418';
@@ -2574,6 +2724,17 @@
           ctx.fillStyle = pp.body;
           ctx.beginPath(); ctx.arc(px + side * 1.5, py - 5, 2.5, 0, Math.PI * 2); ctx.fill();
           ctx.beginPath(); ctx.arc(px + side * 13, py - 5, 2.5, 0, Math.PI * 2); ctx.fill();
+        }
+        /* "!" surprise just as Momoko enters proximity (the brief moment
+           between idle and full duck) so a kid sees the peeker react. */
+        if (pkDuck > 0.05 && pkDuck < 0.4) {
+          ctx.save();
+          ctx.fillStyle = '#ffd24a';
+          ctx.font = 'bold 18px monospace';
+          ctx.textAlign = 'center';
+          var pulse = Math.sin(Date.now() * 0.02) * 1.5;
+          ctx.fillText('!', dx, dy - 36 + pulse);
+          ctx.restore();
         }
         ctx.restore();
       }
@@ -2608,7 +2769,13 @@
 
       case State.PAUSED:
         var pAction = Game.ui.handlePauseClick(mx, my);
-        if (pAction === 'resume') state = State.PLAYING;
+        if (pAction === 'resume') state = prevState || State.PLAYING;
+        else if (pAction === 'leaveRoom') {
+          /* Pause was opened from inside an animal room; "Leave Room"
+             dumps the player back to the corridor instead of the cab. */
+          prevState = null;
+          exitAnimalRoom();
+        }
         else if (pAction === 'ledger') {
           /* Open the passport from inside the pause menu — return to the
              paused gameplay when the player closes it. */
@@ -2728,15 +2895,21 @@
   function enterZone(zoneIndex) {
     currentZone = zoneIndex;
     loadLevel(currentZone);
-    /* Spawn Momoko near the elevator door so she can see the cab she just
-       stepped out of (instead of the far-left default spawn). */
+    /* Spawn Momoko a safe distance left of the elevator so:
+        (1) at least one animal door is visible in front of her,
+        (2) she's outside the elevator's interaction radius — a kid
+            hammering Up doesn't accidentally bounce right back into the
+            cab. The lobby is special-cased: dropping in left of the
+            elevator there would put her past the bedroom door, so we keep
+            the legacy "right next to the cab" position there. */
     if (player) {
       var elev = null;
       for (var ni = 0; ni < npcs.length; ni++) {
         if (npcs[ni].type === 'elevator') { elev = npcs[ni].entity; break; }
       }
       if (elev) {
-        player.x = elev.x - 60;
+        var spawnOffset = (zoneIndex === 0) ? -60 : -180;
+        player.x = elev.x + spawnOffset;
         player.y = elev.y;
         player.vx = 0; player.vy = 0;
         player.facing = -1;
@@ -2761,6 +2934,7 @@
   /* ---- Hotel zoo: elevator + stairs ---- */
   function onElevatorInteract() {
     state = State.TRAVEL_MENU;
+    if (Game.ui && Game.ui.resetTravelMenu) Game.ui.resetTravelMenu();
     if (Game.audio && Game.audio.play) Game.audio.play('select');
   }
 
@@ -2782,6 +2956,9 @@
   /* ---- Hotel zoo: animal rooms ---- */
   function enterAnimalRoom(species) {
     Game.currentRoom = species;
+    /* Drop any stale stamp toast from the corridor so it doesn't bleed
+       through onto the animal-room habitat. */
+    if (Game.flags && Game.flags.stampPulse) Game.flags.stampPulse = null;
     if (Game.ui && Game.ui.resetAnimalRoom) Game.ui.resetAnimalRoom(species);
     state = State.ANIMAL_ROOM;
   }
@@ -2799,6 +2976,18 @@
   }
 
   function exitSleepCutscene() {
+    /* If the player has already greeted all 26 guests, the very next
+       sleep cutscene is the *real* ending — roll directly into the
+       VICTORY overlay so the storybook beat lands on a high note,
+       instead of dumping the player back into the bedroom. */
+    if (Game.flags && Game.flags.readyForVictory) {
+      Game.flags.readyForVictory = false;
+      sleepCutsceneTimer = 0;
+      Game.currentRoom = null;
+      if (Game.audio && Game.audio.stopMusic) Game.audio.stopMusic();
+      state = State.VICTORY;
+      return;
+    }
     /* Return to the bedroom interior */
     sleepCutsceneTimer = 0;
     Game.currentRoom = 'bedroom';
@@ -2810,6 +2999,10 @@
   /* Total unique species players can greet (excludes the bedroom door). */
   var TOTAL_GUESTS = 26;
   var ALL_STAMPED_FLAG = false;
+  /* Mid-progress acknowledgment: at 10 stamps the chandelier monkey
+     shouts a halfway-cheer. Tracked so we don't re-fire on subsequent
+     stamps. */
+  var MID_CHEER_FIRED = false;
   function stampGuest(species) {
     /* The bedroom door is Momoko's own room, not a guest. */
     if (!species || species === 'bedroom') return;
@@ -2822,13 +3015,25 @@
     Game.flags.stampPulse = { species: species, t: 110 };
     if (Game.audio && Game.audio.play) Game.audio.play('select');
     savePersistent();
-    /* Roll into the victory cutscene the first time the ledger is
-       complete. We delay the transition so the postcard "Met the …!"
-       toast and any in-room dialogue can still play out. */
+    /* Halfway cheer: at 10/26, queue a chandelier-monkey shout for the
+       next time Momoko walks in the lobby. We surface it via a global
+       toast that drawQuestHUD reads. */
+    if (Game.flags.stampCount >= 10 && !MID_CHEER_FIRED) {
+      MID_CHEER_FIRED = true;
+      Game.flags.cheerToast = { t: 280, key: 'midCheer' };
+      if (Game.audio && Game.audio.play) Game.audio.play('victory');
+    }
+    /* When the ledger fills, *don't* slam straight into a victory overlay.
+       The bedroom door sparkles (see AnimalDoor.draw), and a "Bedtime!"
+       celebration toast nudges the player toward it. The actual victory
+       screen plays after the bedroom sleep cutscene — so the kid earns
+       the ending by tucking Momoko in herself instead of having it
+       happen TO her. */
     if (Game.flags.stampCount >= TOTAL_GUESTS && !ALL_STAMPED_FLAG) {
       ALL_STAMPED_FLAG = true;
       if (Game.audio && Game.audio.play) Game.audio.play('victory');
-      setTimeout(triggerVictory, 1800);
+      Game.flags.readyForVictory = true;
+      Game.flags.cheerToast = { t: 360, key: 'bedtimeCheer' };
     }
   }
 
