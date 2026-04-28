@@ -3400,90 +3400,92 @@
   }
 
   function drawZebraSprite(c, sx, sy) {
-    /* Side-view zebra built from clean ovals. The brief: a HORSE
-       silhouette first, with bold WIDE stripes leaving real white in
-       between. The previous version packed too many narrow stripes
-       and lost the white. */
+    /* Chibi/cartoon zebra. Bigger head, bigger eye, body proportions
+       closer to a cute children's-book zebra than to anatomical
+       reference. The brief from the player: previous attempts read
+       as "stocky pony with bars painted on" — this one leans into
+       the cartoon and emphasizes the iconic zebra silhouette: oversized
+       round head + mohawk mane + bold curving stripes with real white
+       between. */
     var WHITE = '#fafafa';
-    var BLACK = '#1a1a1a';
-    var GRAY  = '#dcdcdc';
+    var BLACK = '#181818';
+    var GRAY  = '#dadada';
 
     /* Drop shadow */
     c.save(); c.globalAlpha = 0.32; c.fillStyle = '#000';
-    c.beginPath(); c.ellipse(sx + 24, sy + 44, 19, 3, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 26, sy + 44, 18, 3, 0, 0, Math.PI * 2); c.fill();
     c.restore();
 
-    /* Tail — drawn first so body root covers it */
-    c.strokeStyle = WHITE; c.lineWidth = 2.2;
+    /* ---- Legs (4 slim, drawn first so body covers tops) ---- */
+    c.fillStyle = WHITE;
+    c.fillRect(sx + 16, sy + 30, 3, 12);
+    c.fillRect(sx + 21, sy + 30, 3, 12);
+    c.fillRect(sx + 32, sy + 30, 3, 12);
+    c.fillRect(sx + 37, sy + 30, 3, 12);
+    c.fillStyle = BLACK;
+    c.fillRect(sx + 15.5, sy + 41.5, 4, 2.5);
+    c.fillRect(sx + 20.5, sy + 41.5, 4, 2.5);
+    c.fillRect(sx + 31.5, sy + 41.5, 4, 2.5);
+    c.fillRect(sx + 36.5, sy + 41.5, 4, 2.5);
+
+    /* ---- Tail (drawn behind body) ---- */
+    c.strokeStyle = WHITE; c.lineWidth = 2.4;
     c.beginPath();
-    c.moveTo(sx + 41, sy + 22);
-    c.quadraticCurveTo(sx + 46, sy + 30, sx + 43, sy + 39);
+    c.moveTo(sx + 42, sy + 24);
+    c.quadraticCurveTo(sx + 48, sy + 32, sx + 45, sy + 40);
     c.stroke();
     c.fillStyle = BLACK;
-    c.beginPath(); c.ellipse(sx + 43, sy + 41, 2, 3, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 45, sy + 41, 2.4, 3.4, 0, 0, Math.PI * 2); c.fill();
 
-    /* ---- Legs ---- 4 slim long pillars. Hind pair at right, front
-       pair at left, with a small gap between each pair so they read
-       as separate legs. */
-    c.fillStyle = WHITE;
-    /* Front legs */
-    c.fillRect(sx + 12, sy + 26, 2.6, 16);
-    c.fillRect(sx + 16, sy + 26, 2.6, 16);
-    /* Hind legs */
-    c.fillRect(sx + 31, sy + 26, 2.6, 16);
-    c.fillRect(sx + 35, sy + 26, 2.6, 16);
-    /* Hooves */
-    c.fillStyle = BLACK;
-    c.fillRect(sx + 11.6, sy + 41.6, 3.4, 2.4);
-    c.fillRect(sx + 15.6, sy + 41.6, 3.4, 2.4);
-    c.fillRect(sx + 30.6, sy + 41.6, 3.4, 2.4);
-    c.fillRect(sx + 34.6, sy + 41.6, 3.4, 2.4);
-
-    /* ---- Body ---- single elongated oval centered at (24, 22). Width
-       16, height 7 — clearly horse-shaped, not blobby. */
-    var bodyCX = sx + 25, bodyCY = sy + 22, bodyRX = 16, bodyRY = 7;
-    var bg = c.createLinearGradient(0, bodyCY - bodyRY, 0, bodyCY + bodyRY);
-    bg.addColorStop(0, WHITE); bg.addColorStop(1, GRAY);
-    c.fillStyle = bg;
+    /* ---- Body ---- rounder than before so it reads as the chunky
+       barrel of a stylized zebra, not a flat plank. */
+    var bodyCX = sx + 28, bodyCY = sy + 25, bodyRX = 14, bodyRY = 9;
+    var bodyG = c.createLinearGradient(0, bodyCY - bodyRY, 0, bodyCY + bodyRY);
+    bodyG.addColorStop(0, WHITE); bodyG.addColorStop(1, GRAY);
+    c.fillStyle = bodyG;
     c.beginPath(); c.ellipse(bodyCX, bodyCY, bodyRX, bodyRY, 0, 0, Math.PI * 2); c.fill();
 
-    /* ---- Neck ---- arched ellipse rotated up-left, connecting body
-       front (around x=12) to head base (around x=8, y=10). */
-    var neckCX = sx + 11, neckCY = sy + 16, neckRX = 7, neckRY = 4;
+    /* ---- Neck ---- chunky tapered trapezoid connecting head to body */
     c.fillStyle = WHITE;
     c.beginPath();
-    c.ellipse(neckCX, neckCY, neckRX, neckRY, -1.05, 0, Math.PI * 2);
+    c.moveTo(sx + 14, sy + 26);   /* lower neck attachment */
+    c.lineTo(sx + 12, sy + 14);   /* upper-left back of neck */
+    c.lineTo(sx + 19, sy + 12);   /* upper-right top of neck */
+    c.lineTo(sx + 19, sy + 24);   /* lower neck front */
+    c.closePath();
     c.fill();
 
-    /* ---- Head ---- long horse muzzle pointing left. */
-    var headCX = sx + 6, headCY = sy + 9, headRX = 6, headRY = 4;
-    c.beginPath();
-    c.ellipse(headCX, headCY, headRX, headRY, -0.15, 0, Math.PI * 2);
-    c.fill();
-    /* Cheek bulge — adds dimension to the face */
-    c.beginPath();
-    c.ellipse(sx + 9, sy + 10, 3, 3, 0, 0, Math.PI * 2);
-    c.fill();
-    /* Muzzle — soft pinkish gray tip */
-    c.fillStyle = '#a89890';
-    c.beginPath(); c.ellipse(sx + 0.6, sy + 10, 2.4, 2, 0, 0, Math.PI * 2); c.fill();
+    /* ---- Big chibi head ---- a rounded shape with prominent muzzle.
+       Significantly bigger than v0.8.1 (~14×12 vs ~12×8) so the face
+       reads at the small in-game scale. */
+    /* Cheek/jowl */
+    c.beginPath(); c.ellipse(sx + 12, sy + 16, 7, 6, 0, 0, Math.PI * 2); c.fill();
+    /* Forehead/dome */
+    c.beginPath(); c.ellipse(sx + 11, sy + 11, 5.5, 4.5, 0, 0, Math.PI * 2); c.fill();
+    /* Long muzzle pushing left */
+    c.beginPath(); c.ellipse(sx + 4, sy + 16, 7, 4.5, -0.15, 0, Math.PI * 2); c.fill();
 
-    /* ---- Ears ---- two small rounded triangles atop forehead */
+    /* Pink soft muzzle tip */
+    c.fillStyle = '#cca8a0';
+    c.beginPath(); c.ellipse(sx - 1.5, sy + 15.5, 2.4, 2.0, -0.15, 0, Math.PI * 2); c.fill();
+
+    /* ---- Ears ---- larger rounded triangles, leaning slightly back */
     c.fillStyle = WHITE;
     c.beginPath();
-    c.moveTo(sx + 9, sy + 2);
-    c.quadraticCurveTo(sx + 7.5, sy + 5, sx + 6.5, sy + 6);
-    c.lineTo(sx + 10.5, sy + 5);
+    c.moveTo(sx + 8,  sy + 4);
+    c.bezierCurveTo(sx + 6, sy + 9, sx + 8, sy + 11, sx + 11, sy + 9);
+    c.lineTo(sx + 10, sy + 5);
     c.closePath(); c.fill();
     c.beginPath();
-    c.moveTo(sx + 13, sy + 2);
-    c.quadraticCurveTo(sx + 11.5, sy + 5, sx + 10.5, sy + 5);
-    c.lineTo(sx + 14, sy + 5);
+    c.moveTo(sx + 14, sy + 4);
+    c.bezierCurveTo(sx + 12, sy + 9, sx + 14, sy + 11, sx + 17, sy + 9);
+    c.lineTo(sx + 16, sy + 5);
     c.closePath(); c.fill();
-    /* Pink inner ear (just the front one) */
+    /* Pink inner ear */
     c.fillStyle = '#cc8899';
     c.beginPath();
-    c.moveTo(sx + 9, sy + 3.4); c.lineTo(sx + 8, sy + 5); c.lineTo(sx + 10, sy + 4.6);
+    c.moveTo(sx + 9, sy + 6);
+    c.bezierCurveTo(sx + 7.5, sy + 9, sx + 9, sy + 10.5, sx + 10.5, sy + 9);
     c.closePath(); c.fill();
 
     /* ============================================================
@@ -3491,93 +3493,124 @@
      * ============================================================ */
     c.fillStyle = BLACK;
 
-    /* Body — 5 chunky bands. Width 2.4, gap 4 between centers → leaves
-       1.6 of white between bands. Tilted slightly so they curve with
-       the body. */
-    c.save();
-    c.beginPath(); c.ellipse(bodyCX, bodyCY, bodyRX, bodyRY, 0, 0, Math.PI * 2); c.clip();
-    for (var s = 0; s < 5; s++) {
-      var bx = sx + 14 + s * 5.5;
-      c.save();
-      c.translate(bx, bodyCY);
-      c.rotate((s - 2) * 0.06);
-      c.fillRect(-1.4, -bodyRY - 1, 2.8, bodyRY * 2 + 2);
-      c.restore();
-    }
-    c.restore();
-
-    /* Neck — 3 diagonal bands. Wider gaps. */
+    /* Body — bold vertical bands with REAL WHITE between. Each stripe
+       is a thin capsule, rotated slightly, clipped to body silhouette.
+       5 bands with even gaps so the white actually shows. */
     c.save();
     c.beginPath();
-    c.ellipse(neckCX, neckCY, neckRX, neckRY, -1.05, 0, Math.PI * 2);
+    c.ellipse(bodyCX, bodyCY, bodyRX, bodyRY, 0, 0, Math.PI * 2);
     c.clip();
-    for (var ns = 0; ns < 3; ns++) {
+    var stripeXs = [17, 22, 27, 32, 37];
+    var stripeRots = [-0.30, -0.12, 0.04, 0.18, 0.34];
+    for (var si = 0; si < stripeXs.length; si++) {
       c.save();
-      c.translate(sx + 7 + ns * 2.6, sy + 14);
-      c.rotate(-0.95);
-      c.fillRect(-1.1, -8, 2.2, 16);
+      c.translate(sx + stripeXs[si], bodyCY);
+      c.rotate(stripeRots[si]);
+      c.fillRect(-1.4, -bodyRY - 2, 2.8, bodyRY * 2 + 4);
       c.restore();
     }
     c.restore();
 
-    /* Head — 2 stripes across the muzzle (cheekbone + forehead) */
+    /* Neck — 2 diagonal bands clipped to neck shape. Fewer than the
+       previous 3 so the chest doesn't fuse to a black blob where the
+       neck meets the body. */
     c.save();
     c.beginPath();
-    c.ellipse(headCX, headCY, headRX, headRY, -0.15, 0, Math.PI * 2); c.clip();
-    c.fillRect(sx + 6,  sy + 5, 1.6, 8);
-    c.fillRect(sx + 3,  sy + 6, 1.4, 7);
-    c.restore();
-    /* Stripe across the cheek bulge */
-    c.save();
-    c.beginPath(); c.ellipse(sx + 9, sy + 10, 3, 3, 0, 0, Math.PI * 2); c.clip();
-    c.fillRect(sx + 8.4, sy + 7, 1.2, 6);
+    c.moveTo(sx + 14, sy + 26);
+    c.lineTo(sx + 12, sy + 14);
+    c.lineTo(sx + 19, sy + 12);
+    c.lineTo(sx + 19, sy + 24);
+    c.closePath();
+    c.clip();
+    for (var ni = 0; ni < 2; ni++) {
+      c.save();
+      c.translate(sx + 14 + ni * 3.5, sy + 18);
+      c.rotate(-0.18);
+      c.fillRect(-1.4, -10, 2.6, 20);
+      c.restore();
+    }
     c.restore();
 
-    /* Legs — ladder bands. 3 bands per leg. */
-    function legBand(lx, ly) { c.fillRect(sx + lx, sy + ly, 2.6, 1.4); }
-    [12, 16, 31, 35].forEach(function (lx) {
-      legBand(lx, 30); legBand(lx, 34); legBand(lx, 38);
+    /* Head — 2 face stripes (forehead-to-cheek + jaw) */
+    c.save();
+    c.beginPath();
+    c.ellipse(sx + 12, sy + 16, 7, 6, 0, 0, Math.PI * 2);
+    c.ellipse(sx + 11, sy + 11, 5.5, 4.5, 0, 0, Math.PI * 2);
+    c.clip();
+    c.fillRect(sx + 13.5, sy + 7, 2,   12);
+    c.fillRect(sx + 8,    sy + 9, 1.6, 10);
+    c.restore();
+
+    /* Muzzle stripes */
+    c.save();
+    c.beginPath();
+    c.ellipse(sx + 4, sy + 16, 7, 4.5, -0.15, 0, Math.PI * 2);
+    c.clip();
+    c.fillRect(sx + 4, sy + 11, 1.6, 10);
+    c.fillRect(sx + 1, sy + 12, 1.4, 8);
+    c.restore();
+
+    /* Legs — chunky ladder bands */
+    function legB(lx, ly) { c.fillRect(sx + lx, sy + ly, 3, 1.6); }
+    [16, 21, 32, 37].forEach(function (lx) {
+      legB(lx, 32); legB(lx, 36); legB(lx, 40);
     });
 
-    /* ---- Mohawk mane ---- the zebra signature: stiff vertical
-       bristles standing UP along the back of the neck. Triangles
-       getting taller toward the body. */
-    for (var m = 0; m < 6; m++) {
-      var mx = sx + 10 + m * 1.6;
-      var my = sy + 8 - m * 0.4;
+    /* ---- Mohawk mane ---- prominent, standing UP along the back of
+       the neck, with each bristle slightly different size for an
+       organic feel. */
+    var maneSpikes = [
+      [13, 11, 4], [14.5, 9, 5], [16, 8, 6], [17.5, 8, 6],
+      [19, 9, 5], [20.5, 11, 4],
+    ];
+    for (var mi = 0; mi < maneSpikes.length; mi++) {
+      var ms = maneSpikes[mi];
       c.beginPath();
-      c.moveTo(mx,       my + 5);
-      c.lineTo(mx + 1.2, my - (2.5 + m * 0.2));
-      c.lineTo(mx + 2.4, my + 5);
+      c.moveTo(sx + ms[0],     sy + ms[1] + 2);
+      c.lineTo(sx + ms[0] + 1, sy + ms[1] - ms[2]);
+      c.lineTo(sx + ms[0] + 2, sy + ms[1] + 2);
       c.closePath();
       c.fill();
     }
-    /* Forelock between the ears */
+    /* Forelock — tuft between ears */
     c.beginPath();
-    c.moveTo(sx + 11.4, sy + 5);
-    c.lineTo(sx + 11.8, sy + 1);
-    c.lineTo(sx + 13,   sy + 5);
+    c.moveTo(sx + 12, sy + 6);
+    c.lineTo(sx + 12.5, sy + 1.5);
+    c.lineTo(sx + 13.5, sy + 6);
     c.closePath(); c.fill();
 
     /* ============================================================
-     *                       FACE DETAILS
+     *                       BIG CHIBI EYE
      * ============================================================ */
-    /* Eye — set well forward on the head */
+    /* Big white sclera background */
     c.fillStyle = WHITE;
-    c.beginPath(); c.arc(sx + 8.5, sy + 8.5, 1.4, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 9.5, sy + 14, 2.6, 2.8, 0, 0, Math.PI * 2); c.fill();
+    /* Iris — dark brown */
+    c.fillStyle = '#3a2418';
+    c.beginPath(); c.arc(sx + 9.3, sy + 14.2, 1.8, 0, Math.PI * 2); c.fill();
+    /* Pupil */
     c.fillStyle = BLACK;
-    c.beginPath(); c.arc(sx + 8.3, sy + 8.5, 0.9, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(sx + 9.3, sy + 14.2, 1.0, 0, Math.PI * 2); c.fill();
+    /* Highlight */
     c.fillStyle = WHITE;
-    c.beginPath(); c.arc(sx + 8.7, sy + 8.2, 0.35, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(sx + 9.8, sy + 13.6, 0.6, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(sx + 8.9, sy + 14.6, 0.3, 0, Math.PI * 2); c.fill();
+
+    /* Eyelash flick (top of eye) */
+    c.strokeStyle = BLACK; c.lineWidth = 0.6;
+    c.beginPath();
+    c.moveTo(sx + 7.4, sy + 12);
+    c.lineTo(sx + 7,   sy + 11);
+    c.stroke();
 
     /* Nostril */
-    c.fillStyle = '#5a3030';
-    c.beginPath(); c.arc(sx + 0.4, sy + 9.8, 0.55, 0, Math.PI * 2); c.fill();
-    /* Mouth */
-    c.strokeStyle = '#7a4040'; c.lineWidth = 0.6;
+    c.fillStyle = '#3a2018';
+    c.beginPath(); c.arc(sx - 1.6, sy + 15, 0.6, 0, Math.PI * 2); c.fill();
+    /* Mouth — curved smile under the muzzle */
+    c.strokeStyle = '#7a4040'; c.lineWidth = 0.7;
     c.beginPath();
-    c.moveTo(sx + 0.2, sy + 11.6);
-    c.quadraticCurveTo(sx + 1.4, sy + 12.4, sx + 2.8, sy + 11.6);
+    c.moveTo(sx - 2,  sy + 17.5);
+    c.quadraticCurveTo(sx, sy + 18.6, sx + 2, sy + 17.4);
     c.stroke();
   }
 
