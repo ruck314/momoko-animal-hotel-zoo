@@ -6865,7 +6865,9 @@
 
     /* Animal idle update (so its bob loop runs even when not interacted) */
     if (roomState.animal) roomState.animal.update();
-    if (roomState.bed)    roomState.bed.update();
+    /* Only the bedroom's BedroomBed is a real entity with an update loop;
+       guest-room beds are plain decorative props (see resetAnimalRoom). */
+    if (roomState.bed && !roomState.bed.decorative) roomState.bed.update();
   }
 
   function handleAnimalRoomClick(mx, my, species) {
