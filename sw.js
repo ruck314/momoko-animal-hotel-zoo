@@ -1,7 +1,7 @@
 /* Bump this string alongside Game.VERSION in js/engine.js on every release.
    A new CACHE_NAME forces the activate handler to purge the old cache, so
    returning visitors pick up the new bundle on their next page load. */
-var CACHE_NAME = 'momoko-hotel-zoo-v0.8.3';
+var CACHE_NAME = 'momoko-hotel-zoo-v0.8.4';
 var ASSETS = [
   './',
   './index.html',
