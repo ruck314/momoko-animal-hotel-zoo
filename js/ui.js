@@ -207,6 +207,31 @@
       c.beginPath(); c.moveTo(sx - 60, sy - 16); c.lineTo(sx, sy); c.stroke();
     }
 
+    /* Soft plum clouds drifting slowly east. Most sit above the
+       viewport and only show on tablets, where they fill the tall sky. */
+    var clouds = [[-230, -150, 1.3], [90, -70, 0.9], [420, -170, 1.5], [760, -110, 1.1],
+                  [1010, -40, 0.9], [-120, 30, 0.7], [690, 46, 0.6]];
+    var span = VIEW.w + 320;
+    for (var ci = 0; ci < clouds.length; ci++) {
+      var ck = clouds[ci][2];
+      var cxp = VIEW.x - 160 + ((clouds[ci][0] - VIEW.x + 160 + t * 0.05 * ck) % span + span) % span;
+      var cyp = clouds[ci][1];
+      c.fillStyle = 'rgba(122, 66, 120, 0.26)';
+      c.beginPath();
+      c.ellipse(cxp, cyp, 70 * ck, 14 * ck, 0, 0, Math.PI * 2);
+      c.moveTo(cxp - 4 * ck, cyp - 8 * ck);
+      c.arc(cxp - 26 * ck, cyp - 8 * ck, 22 * ck, 0, Math.PI * 2);
+      c.moveTo(cxp + 42 * ck, cyp - 14 * ck);
+      c.arc(cxp + 14 * ck, cyp - 14 * ck, 28 * ck, 0, Math.PI * 2);
+      c.fill('nonzero');
+      /* Pink moonlit rim along the top of the big puff */
+      c.strokeStyle = 'rgba(255, 170, 200, 0.16)';
+      c.lineWidth = 2;
+      c.beginPath();
+      c.arc(cxp + 14 * ck, cyp - 14 * ck, 27 * ck, Math.PI * 1.15, Math.PI * 1.85);
+      c.stroke();
+    }
+
     /* Skyline silhouettes with a few warm windows */
     var blocks = [[0, 352, 56], [52, 330, 40], [96, 362, 70], [170, 318, 46],
                   [222, 372, 60], [500, 340, 54], [548, 300, 44],
@@ -226,21 +251,49 @@
       }
     }
 
-    /* Sidewalk + curb, spanning the whole view so the pavement runs on
-       under the bezel on tablets. */
+    /* Sidewalk + curb, spanning the whole view width. On tablets the
+       view runs on below the viewport, so the pavement ends at a kerb
+       there and a quiet evening road fills the rest. */
     var vx0 = VIEW.x, vx1 = VIEW.x + VIEW.w, vBottom = VIEW.y + VIEW.h;
     var walk = c.createLinearGradient(0, STREET_Y, 0, H);
     walk.addColorStop(0, '#4a2a44');
-    walk.addColorStop(1, '#22122a');
+    walk.addColorStop(1, '#2e1a34');
     c.fillStyle = walk;
-    c.fillRect(vx0, STREET_Y, vx1 - vx0, vBottom - STREET_Y);
+    c.fillRect(vx0, STREET_Y, vx1 - vx0, H - STREET_Y);
     c.fillStyle = '#8a5a6a';
     c.fillRect(vx0, STREET_Y, vx1 - vx0, 2);
     c.strokeStyle = 'rgba(0, 0, 0, 0.25)';
     c.lineWidth = 1;
-    var slant = -14 * (vBottom - STREET_Y - 2) / (H - STREET_Y - 2);
     for (var sx2 = Math.floor(vx0 / 60) * 60 + 30; sx2 < vx1; sx2 += 60) {
-      c.beginPath(); c.moveTo(sx2, STREET_Y + 2); c.lineTo(sx2 + slant, vBottom); c.stroke();
+      c.beginPath(); c.moveTo(sx2, STREET_Y + 2); c.lineTo(sx2 - 14, H); c.stroke();
+    }
+    if (vBottom > H) {
+      var road = c.createLinearGradient(0, H, 0, vBottom);
+      road.addColorStop(0, '#2a1832');
+      road.addColorStop(1, '#170c1e');
+      c.fillStyle = road;
+      c.fillRect(vx0, H, vx1 - vx0, vBottom - H);
+      /* Kerb stones with a lit top edge */
+      c.fillStyle = '#5e3a56';
+      c.fillRect(vx0, H, vx1 - vx0, 8);
+      c.fillStyle = '#9a6a7a';
+      c.fillRect(vx0, H, vx1 - vx0, 2);
+      c.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      for (var kx = Math.floor(vx0 / 48) * 48; kx < vx1; kx += 48) c.fillRect(kx, H + 2, 1, 6);
+      c.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      c.fillRect(vx0, H + 8, vx1 - vx0, 3);
+      /* Dashed centre line */
+      var laneY = H + 8 + (vBottom - H - 8) * 0.45;
+      c.fillStyle = 'rgba(255, 220, 150, 0.28)';
+      for (var lx2 = Math.floor(vx0 / 70) * 70; lx2 < vx1; lx2 += 70) c.fillRect(lx2, laneY, 36, 3);
+      /* The hotel's lit lobby and windows shimmer on the wet road */
+      var hRefl = c.createLinearGradient(0, H + 10, 0, H + 130);
+      hRefl.addColorStop(0, 'rgba(255, 226, 140, 0.14)');
+      hRefl.addColorStop(1, 'rgba(255, 226, 140, 0)');
+      c.fillStyle = hRefl;
+      for (var hr = 0; hr < 3; hr++) {
+        c.beginPath(); c.ellipse(638 + hr * 52, H + 60, 13, 52, 0, 0, Math.PI * 2); c.fill();
+      }
     }
 
     /* Street lamps with a slow, warm breathing glow */
@@ -255,6 +308,13 @@
       c.fillRect(lx - 60, 284, 120, 120);
       c.fillStyle = 'rgba(255, 214, 130, ' + (0.18 * glow) + ')';
       c.beginPath(); c.ellipse(lx, STREET_Y + 10, 34, 6, 0, 0, Math.PI * 2); c.fill();
+      if (vBottom > H) {
+        var refl = c.createLinearGradient(0, H + 10, 0, H + 90);
+        refl.addColorStop(0, 'rgba(255, 214, 130, ' + (0.16 * glow) + ')');
+        refl.addColorStop(1, 'rgba(255, 214, 130, 0)');
+        c.fillStyle = refl;
+        c.beginPath(); c.ellipse(lx, H + 40, 16, 34, 0, 0, Math.PI * 2); c.fill();
+      }
       c.fillStyle = '#2a1626';
       c.fillRect(lx - 2, 350, 4, STREET_Y - 350);
       c.fillRect(lx - 6, STREET_Y - 6, 12, 6);
@@ -391,11 +451,27 @@
       c.arc(plX + 18 + Math.cos(ang) * 21, plY + 15 + Math.sin(ang) * 17, 1.6, 0, Math.PI * 2);
       c.fill();
     }
-    c.fillStyle = '#b02848';
+    /* Red carpet down the sidewalk, finished with gold edging, a brass
+       rod and a fringe right at the kerb so it ends on purpose instead
+       of running off the viewport edge. */
+    var cEnd = H - 5;
+    var cg = c.createLinearGradient(0, STREET_Y, 0, cEnd);
+    cg.addColorStop(0, '#9a2040');
+    cg.addColorStop(1, '#c43456');
+    c.fillStyle = cg;
     c.beginPath();
     c.moveTo(dx + 2, STREET_Y); c.lineTo(dx + 38, STREET_Y);
-    c.lineTo(dx + 50, H); c.lineTo(dx - 10, H);
+    c.lineTo(dx + 48, cEnd); c.lineTo(dx - 8, cEnd);
     c.closePath(); c.fill();
+    c.strokeStyle = '#e8b860';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(dx + 5, STREET_Y); c.lineTo(dx - 3, cEnd);
+    c.moveTo(dx + 35, STREET_Y); c.lineTo(dx + 43, cEnd);
+    c.stroke();
+    c.fillStyle = '#e8b860';
+    c.fillRect(dx - 10, cEnd - 1, 60, 3);
+    for (var fr = dx - 7; fr <= dx + 47; fr += 4) c.fillRect(fr, cEnd + 2, 1.5, 3);
   }
 
   /* Momoko arriving with her suitcase, and two guests waiting to greet
@@ -560,18 +636,6 @@
     /* Sound toggle */
     var muteLabel = Game.i18n.t(Game.audio.isMuted() ? 'soundOff' : 'soundOn');
     drawButton(c, muteLabel, W / 2 - 90, 368, 180, 36);
-
-    /* Version stamp (bottom-right) – helps us know which build is running */
-    if (Game.VERSION) {
-      c.save();
-      c.fillStyle = 'rgba(255, 230, 200, 0.45)';
-      c.font = '11px "M PLUS Rounded 1c", sans-serif';
-      c.textAlign = 'right';
-      c.textBaseline = 'alphabetic';
-      var stamp = Game.VERSION + (Game.BUILD ? ' (' + Game.BUILD + ')' : '');
-      c.fillText(stamp, W - 8, H - 8);
-      c.restore();
-    }
 
     /* Instructions overlay flag */
     return false;
@@ -961,9 +1025,14 @@
     c.shadowOffsetY = 0;
     c.shadowColor = 'rgba(0,0,0,0)';
 
-    /* Subtitle + thanks */
-    c.fillStyle = '#ffe6f2';
+    /* Subtitle + thanks, on a soft plum plate so they stay readable
+       over the bright lobby wallpaper. */
     fitFont(c, Game.i18n.t('victorySubtitle'), W - 120, 18, 'bold');
+    var plateW = Math.min(W - 80, c.measureText(Game.i18n.t('victorySubtitle')).width + 48);
+    c.fillStyle = 'rgba(48, 12, 40, 0.62)';
+    roundRect(c, W / 2 - plateW / 2, 134, plateW, 60, 14);
+    c.fill();
+    c.fillStyle = '#ffe6f2';
     c.fillText(Game.i18n.t('victorySubtitle'), W / 2, 152);
     c.fillStyle = '#ffd6a0';
     fitFont(c, Game.i18n.t('thanks'), W - 120, 15);
@@ -6516,7 +6585,21 @@
       }
     } else if (habitat === 'meadow') {
       paintSky(c, '#88c8e0', '#cce0ee', '#fff8c0');
+      c.fillStyle = '#ffffff';
+      c.beginPath(); c.arc(150, 70, 16, 0, Math.PI * 2); c.arc(176, 62, 22, 0, Math.PI * 2); c.arc(202, 72, 14, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(W - 240, 100, 12, 0, Math.PI * 2); c.arc(W - 220, 94, 16, 0, Math.PI * 2); c.arc(W - 202, 102, 10, 0, Math.PI * 2); c.fill();
+      /* Rolling hills, two layers, with a tiny far tree */
+      c.fillStyle = '#a8d880';
+      c.beginPath(); c.ellipse(180, ROOM_FLOOR_TOP + 10, 320, 66, 0, Math.PI, 0); c.fill();
+      c.beginPath(); c.ellipse(690, ROOM_FLOOR_TOP + 10, 280, 54, 0, Math.PI, 0); c.fill();
+      c.fillStyle = '#5a3a20';
+      c.fillRect(598, ROOM_FLOOR_TOP - 54, 3, 14);
+      c.fillStyle = '#7ab858';
+      c.beginPath(); c.arc(599.5, ROOM_FLOOR_TOP - 60, 10, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#8ccc60';
+      c.beginPath(); c.ellipse(440, ROOM_FLOOR_TOP + 14, 300, 40, 0, Math.PI, 0); c.fill();
       paintGround(c, '#7ac848', '#4a8028');
+      paintGrassTufts(c, '#5aa838', ROOM_FLOOR_TOP + 10, 14, 12, 5);
       /* Carrots in the ground */
       for (var cr = 0; cr < 6; cr++) {
         var crx = 80 + cr * 110;
@@ -6809,19 +6892,86 @@
         c.stroke();
       }
     } else if (habitat === 'lilyPond') {
-      paintSky(c, '#88c8e0', '#cce0ee', '#a8d8a8');
+      paintSky(c, '#88c8e0', '#cce0ee', '#d8ecc8');
+      c.fillStyle = '#ffffff';
+      c.beginPath(); c.arc(170, 74, 16, 0, Math.PI * 2); c.arc(194, 66, 22, 0, Math.PI * 2); c.arc(218, 76, 14, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(W - 250, 104, 12, 0, Math.PI * 2); c.arc(W - 230, 98, 16, 0, Math.PI * 2); c.arc(W - 212, 106, 10, 0, Math.PI * 2); c.fill();
+      /* Far bank: a soft willow and bush line along the horizon */
+      c.fillStyle = '#7ab070';
+      for (var fb = 0; fb < 9; fb++) {
+        c.beginPath();
+        c.ellipse(fb * 100 + hash01(fb + 3) * 40, ROOM_FLOOR_TOP, 70, 22 + hash01(fb) * 16, 0, Math.PI, 0);
+        c.fill();
+      }
+      c.fillStyle = '#5a9858';
+      for (var fb2 = 0; fb2 < 7; fb2++) {
+        c.beginPath();
+        c.ellipse(50 + fb2 * 125, ROOM_FLOOR_TOP, 46, 12 + hash01(fb2 + 20) * 8, 0, Math.PI, 0);
+        c.fill();
+      }
       paintGround(c, '#3a78a8', '#1a4878');
-      /* Lily pads */
-      c.fillStyle = '#3a8a30';
+      /* Bank reflected in the still water */
+      c.fillStyle = 'rgba(60, 120, 80, 0.35)';
+      c.fillRect(0, ROOM_FLOOR_TOP, W, 8);
+      /* Cattails on the far bank */
+      for (var ct = 0; ct < 7; ct++) {
+        var ctx2 = 120 + ct * 95 + hash01(ct + 40) * 30;
+        var cth = 30 + hash01(ct + 60) * 18;
+        c.strokeStyle = '#4a7a38'; c.lineWidth = 1.5;
+        c.beginPath(); c.moveTo(ctx2, ROOM_FLOOR_TOP + 6); c.lineTo(ctx2 + 2, ROOM_FLOOR_TOP - cth); c.stroke();
+        c.fillStyle = '#7a4a28';
+        c.beginPath(); c.ellipse(ctx2 + 1.6, ROOM_FLOOR_TOP - cth + 9, 2.6, 7, 0, 0, Math.PI * 2); c.fill();
+      }
+      /* Gentle shimmer streaks drifting on the water */
+      var lpT = Date.now() * 0.001;
+      c.fillStyle = 'rgba(255, 255, 255, 0.28)';
+      for (var sh = 0; sh < 16; sh++) {
+        var shy = ROOM_FLOOR_TOP + 16 + hash01(sh + 80) * (ROOM_FLOOR_BOTTOM - ROOM_FLOOR_TOP - 40);
+        var shw = 10 + (shy - ROOM_FLOOR_TOP) * 0.15;
+        var shx = (hash01(sh + 90) * W + lpT * 6) % (W + 40) - 20;
+        c.fillRect(shx, shy, shw, 1.5);
+      }
+      /* Small pads floating out in the pond */
+      for (var bp = 0; bp < 7; bp++) {
+        var bpx = 70 + bp * 105 + hash01(bp + 100) * 40;
+        var bpy = ROOM_FLOOR_TOP + 22 + hash01(bp + 110) * 60;
+        var bps = 0.4 + (bpy - ROOM_FLOOR_TOP) / 200;
+        c.fillStyle = '#4a9a40';
+        c.beginPath();
+        c.moveTo(bpx, bpy);
+        c.ellipse(bpx, bpy, 18 * bps, 6 * bps, 0, 0.4, Math.PI * 2 - 0.1);
+        c.closePath(); c.fill();
+      }
+      /* Lily pads – notched, with a light rim and a centre vein */
       for (var lp2 = 0; lp2 < 5; lp2++) {
         var lpx = 100 + lp2 * 130;
-        c.beginPath(); c.ellipse(lpx, ROOM_FLOOR_BOTTOM - 16, 24, 8, 0, 0, Math.PI * 2); c.fill();
+        var lpy = ROOM_FLOOR_BOTTOM - 16;
+        c.fillStyle = 'rgba(0, 30, 60, 0.3)';
+        c.beginPath(); c.ellipse(lpx + 2, lpy + 3, 25, 8, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#3a8a30';
+        c.beginPath();
+        c.moveTo(lpx, lpy);
+        c.ellipse(lpx, lpy, 24, 8, 0, 0.35, Math.PI * 2 - 0.1);
+        c.closePath(); c.fill();
+        c.fillStyle = '#5aaa48';
+        c.beginPath();
+        c.moveTo(lpx, lpy - 1);
+        c.ellipse(lpx, lpy - 1, 19, 5.5, 0, 0.45, Math.PI * 2 - 0.15);
+        c.closePath(); c.fill();
+        c.strokeStyle = 'rgba(40, 100, 30, 0.6)'; c.lineWidth = 1;
+        c.beginPath(); c.moveTo(lpx - 16, lpy - 1); c.lineTo(lpx, lpy - 1); c.stroke();
       }
-      /* Lily flowers */
-      c.fillStyle = '#ffaadd';
+      /* Lotus flowers */
       for (var lf2 = 0; lf2 < 3; lf2++) {
-        var lfx = 160 + lf2 * 200;
-        c.beginPath(); c.arc(lfx, ROOM_FLOOR_BOTTOM - 22, 4, 0, Math.PI * 2); c.fill();
+        var lfx = 160 + lf2 * 200, lfy = ROOM_FLOOR_BOTTOM - 22;
+        c.fillStyle = '#ffaadd';
+        for (var pe = -2; pe <= 2; pe++) {
+          c.beginPath(); c.ellipse(lfx + pe * 3.2, lfy - 1 + Math.abs(pe), 2.6, 6, pe * 0.35, 0, Math.PI * 2); c.fill();
+        }
+        c.fillStyle = '#ff77bb';
+        c.beginPath(); c.ellipse(lfx, lfy - 2, 2.2, 5, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#ffe070';
+        c.beginPath(); c.arc(lfx, lfy + 1, 1.6, 0, Math.PI * 2); c.fill();
       }
     } else if (habitat === 'bedroom') {
       /* ---- Walls: pink stripes + heart wallpaper ---- */
@@ -8525,16 +8675,7 @@
     var btnY = cardY + cardH - btnH - 14;
     ledgerCloseRect.x = btnX; ledgerCloseRect.y = btnY;
     ledgerCloseRect.w = btnW; ledgerCloseRect.h = btnH;
-    c.fillStyle = '#ff99cc';
-    roundRect(c, btnX, btnY, btnW, btnH, 8);
-    c.fill();
-    c.strokeStyle = '#a85578';
-    c.lineWidth = 2;
-    c.stroke();
-    c.fillStyle = '#3a1428';
-    c.font = 'bold 14px "M PLUS Rounded 1c", sans-serif';
-    c.textAlign = 'center';
-    c.fillText(Game.i18n.t('ledgerClose'), btnX + btnW / 2, btnY + btnH / 2 + 5);
+    drawButton(c, Game.i18n.t('ledgerClose'), btnX, btnY, btnW, btnH, false, 'primary');
     c.textAlign = 'left';
 
     c.restore();
@@ -8642,6 +8783,18 @@
       c.save();
       drawTitleScreen(c);
       c.restore();
+      /* Version stamp in the bottom-right corner of the screen (the
+         bezel corner on tablets) – helps us know which build is running. */
+      if (Game.VERSION) {
+        c.save();
+        c.fillStyle = 'rgba(255, 230, 200, 0.45)';
+        c.font = '11px "M PLUS Rounded 1c", sans-serif';
+        c.textAlign = 'right';
+        c.textBaseline = 'alphabetic';
+        var stamp = Game.VERSION + (Game.BUILD ? ' (' + Game.BUILD + ')' : '');
+        c.fillText(stamp, VIEW.x + VIEW.w - 8, VIEW.y + VIEW.h - 8);
+        c.restore();
+      }
       if (showInstructions) drawInstructionsOverlay(c);
     },
     drawPauseMenu: drawPauseMenu,
