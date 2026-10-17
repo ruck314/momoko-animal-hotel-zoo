@@ -2256,7 +2256,7 @@
     c.fillStyle = '#ffd24a';
     c.fillRect(sx + 32, sy + 84, 26, 4);
     c.fillStyle = '#ff66cc';
-    c.font = 'bold 4.5px monospace';
+    c.font = 'bold 4.5px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
     c.fillText('MOMOKO', cx, sy + 87.5);
 
@@ -2423,7 +2423,7 @@
     c.fill();
     /* Tiny "OPEN" tag */
     c.fillStyle = '#ffd24a';
-    c.font = 'bold 8px monospace';
+    c.font = 'bold 8px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
     c.fillText('OPEN', sx + 24, sy - 22 + bob * 0.5);
     c.textAlign = 'left';
@@ -2473,7 +2473,7 @@
     c.fill();
     /* Tiny "SHOP" tag */
     c.fillStyle = '#44ffff';
-    c.font = 'bold 8px monospace';
+    c.font = 'bold 8px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
     c.fillText('SHOP', sx + 24, sy - 22 + bob * 0.5);
     c.textAlign = 'left';
@@ -5372,19 +5372,26 @@
     /* Brass handle */
     c.fillStyle = '#ffd24a';
     c.beginPath(); c.arc(sx + 38, sy + 28, 2.6, 0, Math.PI * 2); c.fill();
-    /* Tiny species name plate */
-    c.fillStyle = '#fff8e0';
-    c.fillRect(sx + 8, sy + 8, 32, 10);
-    c.strokeStyle = p.shade;
-    c.lineWidth = 1;
-    c.strokeRect(sx + 8, sy + 8, 32, 10);
-    c.fillStyle = '#1a1a1a';
-    c.font = 'bold 7px monospace';
-    c.textAlign = 'center';
+    /* Species name plate — the door's only label. Text shrinks to fit
+       the plate; names too long even at the minimum size widen it. */
     var label = (this.species === 'bedroom')
       ? 'MOMOKO'
       : Game.i18n.t('animalName_' + this.species).toUpperCase();
-    c.fillText(label, sx + 24, sy + 15);
+    var plSize = 8;
+    do {
+      c.font = 'bold ' + plSize + 'px "M PLUS Rounded 1c", sans-serif';
+    } while (c.measureText(label).width > 34 && --plSize > 6);
+    var plW = Math.max(38, Math.ceil(c.measureText(label).width) + 4);
+    c.fillStyle = '#fff8e0';
+    c.fillRect(sx + 24 - plW / 2, sy + 7, plW, 12);
+    c.strokeStyle = p.shade;
+    c.lineWidth = 1;
+    c.strokeRect(sx + 24 - plW / 2, sy + 7, plW, 12);
+    c.fillStyle = '#1a1a1a';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(label, sx + 24, sy + 13.5);
+    c.textBaseline = 'alphabetic';
     c.textAlign = 'left';
     /* Visited indicator: a bold gold "STAMPED" badge floating above the
        door. Tells the player at a glance which doors they've already
@@ -5411,7 +5418,7 @@
       c.lineWidth = 2;
       c.stroke();
       c.fillStyle = '#3a2418';
-      c.font = 'bold 11px monospace';
+      c.font = 'bold 11px "M PLUS Rounded 1c", sans-serif';
       c.textAlign = 'center';
       c.textBaseline = 'middle';
       c.fillText('★', 0, 0);
@@ -5456,7 +5463,7 @@
         c.lineWidth = 2;
         c.stroke();
         c.fillStyle = '#3a2418';
-        c.font = 'bold 11px monospace';
+        c.font = 'bold 11px "M PLUS Rounded 1c", sans-serif';
         c.textAlign = 'center';
         c.textBaseline = 'middle';
         c.fillText(allDone ? 'Zzz' : 'Z', 0, 0);
@@ -5690,7 +5697,7 @@
     c.fillStyle = '#caa040';
     c.fillRect(sx + 28, sy + 38, 16, 5);
     c.fillStyle = '#1a1a1a';
-    c.font = 'bold 4px monospace';
+    c.font = 'bold 4px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
     c.fillText('CONCIERGE', sx + 36, sy + 42);
     c.textAlign = 'left';
@@ -5715,7 +5722,7 @@
         var bx = sx + 32, by = sy - 32 + bob;
         var label = Game.i18n.t('storyTimePrompt') || 'Story Time?';
         c.save();
-        c.font = 'bold 11px monospace';
+        c.font = 'bold 11px "M PLUS Rounded 1c", sans-serif';
         var tw = c.measureText(label).width + 18;
         var th = 20;
         c.fillStyle = '#fff8e0';
@@ -5896,9 +5903,15 @@
     c.lineWidth = 1.2;
     c.strokeRect(sx + 8, sy - 14, 34, 12);
     c.fillStyle = '#1a1a1a';
-    c.font = 'bold 8px monospace';
+    var stLabel = Game.i18n.t('signStairs');
+    var stSize = 8;
+    do {
+      c.font = 'bold ' + stSize + 'px "M PLUS Rounded 1c", sans-serif';
+    } while (c.measureText(stLabel).width > 32 && --stSize > 6);
     c.textAlign = 'center';
-    c.fillText('STAIRS', sx + 25, sy - 6);
+    c.textBaseline = 'middle';
+    c.fillText(stLabel, sx + 25, sy - 8);
+    c.textBaseline = 'alphabetic';
     c.textAlign = 'left';
   };
 
@@ -5947,7 +5960,7 @@
     /* Bobbing ZZZ prompt */
     var bob = Math.sin(this.timer * 0.08) * 2;
     c.fillStyle = '#88ddff';
-    c.font = 'bold 12px monospace';
+    c.font = 'bold 12px "M PLUS Rounded 1c", sans-serif';
     c.fillText('ZZZ', sx + 32, sy - 8 + bob);
   };
 

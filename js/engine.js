@@ -28,9 +28,32 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.8.4';
+  Game.VERSION = 'v0.9.0';
   Game.BUILD = '';
   var canvas, ctx;
+
+  /* ---- Save keys ----
+     Every game on ruck314.github.io shares one localStorage origin. This
+     game was forked from the space game and kept writing its
+     'momoko-space-*' keys, so the two clobbered each other. Everything
+     now goes through KEY(); ui.js reaches it via Game.saveKey. */
+  var NS = 'momoko-hotel-';
+  function KEY(n) { return NS + n; }
+  Game.saveKey = KEY;
+
+  /* One-time copy of the old shared keys so an existing player keeps
+     their Momoko. Only fills keys the hotel doesn't have yet, and never
+     writes the space keys. */
+  function migrateSpaceKeys() {
+    var names = ['customization', 'furniture', 'quests'];
+    try {
+      for (var i = 0; i < names.length; i++) {
+        if (localStorage.getItem(KEY(names[i])) !== null) continue;
+        var old = localStorage.getItem('momoko-space-' + names[i]);
+        if (old !== null) localStorage.setItem(KEY(names[i]), old);
+      }
+    } catch (e) { /* storage may be disabled */ }
+  }
 
   /* ---- Game state ---- */
   var State = {
@@ -824,25 +847,6 @@
   function render() {
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
-    /* Toggle a body class so CSS can hide non-game chrome (the "Back to
-       Game Center" link) during immersive cutscenes. */
-    var inCutscene = (state === State.SLEEP_CUTSCENE ||
-                      state === State.LOBBY_INTRO ||
-                      state === State.BOOKSHELF_CUTSCENE ||
-                      state === State.ROCKET_ANIM ||
-                      state === State.INTRO ||
-                      state === State.VICTORY);
-    /* `.in-game` is broader: any state past the entry menus. The Game
-       Center link is dev/menu chrome; once gameplay starts we don't
-       want it competing with the cozy art. */
-    var inGame = (state !== State.TITLE &&
-                  state !== State.CUSTOMIZE &&
-                  state !== State.INTRO);
-    if (document.body.classList.toggle) {
-      document.body.classList.toggle('cutscene-mode', inCutscene);
-      document.body.classList.toggle('in-game', inGame);
-    }
-
     /* Paint side-strip backgrounds first so they sit underneath the pause
        button (which is drawn last, in canvas space). The game viewport in
        the middle is fully overwritten by the state renderer below, so it
@@ -855,6 +859,12 @@
        0..H coordinates regardless of the side / top / bottom padding. */
     ctx.save();
     if (GAME_X || GAME_Y) ctx.translate(GAME_X, GAME_Y);
+    /* Keep the world inside the viewport so it can't bleed into the
+       touch bezels. */
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.clip();
+    if (Game.ui.beginFrame) Game.ui.beginFrame();
 
     switch (state) {
       case State.TITLE:
@@ -997,6 +1007,8 @@
 
     ctx.restore();
 
+    updateChrome();
+
     /* Canvas-space overlays sit outside the game viewport so they can
        use the bezel area. */
     if (Game.input.isTouch() && (state === State.PLAYING || state === State.PAUSED)) {
@@ -1032,6 +1044,21 @@
         CANVAS_W, CANVAS_H, GAME_X, GAME_Y
       );
     }
+  }
+
+  /* DOM bits that track the game state: the Game Center link only shows
+     where it can't cover play, and the cursor turns into a pointer over
+     anything clickable. */
+  var linkEl = null, lastLinkShown = null, lastCursor = null;
+  function updateChrome() {
+    if (!linkEl) linkEl = document.getElementById('game-center-link');
+    var show = state === State.TITLE || state === State.PAUSED;
+    if (linkEl && show !== lastLinkShown) {
+      linkEl.classList.toggle('hidden', !show);
+      lastLinkShown = show;
+    }
+    var cursor = Game.ui.isHot && Game.ui.isHot() ? 'pointer' : 'default';
+    if (cursor !== lastCursor) { canvas.style.cursor = cursor; lastCursor = cursor; }
   }
 
   function renderGame() {
@@ -1249,7 +1276,7 @@
           ctx.stroke();
           /* Up arrow */
           ctx.fillStyle = '#a8211f';
-          ctx.font = 'bold 16px monospace';
+          ctx.font = 'bold 16px "M PLUS Rounded 1c", sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText('↑', ix, iy + 1);
@@ -1259,30 +1286,17 @@
       }
     }
 
-    /* Hanging room-name signs above each animal door — and also small
-       wayfinding labels above stairs and the elevator so players can
-       tell the two transition points apart. Rendered after the NPCs so
-       the sign sits over the door frame's top edge. */
+    /* Hanging wayfinding sign above the elevator so players can tell it
+       apart from the stairs. Animal doors and stairs carry their own
+       name plates (entities.js), so they don't get a second label here.
+       Rendered after the NPCs so the sign sits over the frame's top edge. */
     for (var nm = 0; nm < npcs.length; nm++) {
-      var nmType = npcs[nm].type;
-      var isDoor = nmType === 'animalDoor';
-      var isStairs = nmType === 'stairs';
-      var isElevator = nmType === 'elevator';
-      if (!isDoor && !isStairs && !isElevator) continue;
+      if (npcs[nm].type !== 'elevator') continue;
       var dnpc = npcs[nm].entity;
-      var sp = dnpc.species || (npcs[nm].data && npcs[nm].data.species);
-      if (isDoor && (!sp || sp === 'bedroom')) continue;
       var nx = dnpc.x - camera.x + dnpc.w / 2;
       var ny = dnpc.y - camera.y - 24;
-      var label;
-      if (isStairs) {
-        label = (Game.i18n.t('signStairs') || 'STAIRS').toUpperCase();
-      } else if (isElevator) {
-        label = (Game.i18n.t('signElevator') || 'ELEVATOR').toUpperCase();
-      } else {
-        label = (Game.i18n.t('animalName_' + sp) || sp).toUpperCase();
-      }
-      ctx.font = 'bold 9px monospace';
+      var label = Game.i18n.t('signElevator').toUpperCase();
+      ctx.font = 'bold 9px "M PLUS Rounded 1c", sans-serif';
       var tw = ctx.measureText(label).width;
       var pw = Math.max(tw + 14, 44);
       var ph = 14;
@@ -1644,7 +1658,7 @@
         ctx.lineWidth = 1.4;
         ctx.strokeRect(dx + 50, dy - 70, 18, 26);
         ctx.fillStyle = '#ffe9f4';
-        ctx.font = '5px monospace';
+        ctx.font = '5px "M PLUS Rounded 1c", sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('MENU', dx + 59, dy - 62);
         ctx.fillStyle = '#ffd24a';
@@ -1784,7 +1798,7 @@
         ctx.fillStyle = '#1a0a14';
         ctx.fillRect(swX + 8, swY - 12, 28, 12);
         ctx.fillStyle = '#ff4466';
-        ctx.font = 'bold 9px monospace';
+        ctx.font = 'bold 9px "M PLUS Rounded 1c", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('OPEN', swX + 22, swY - 6);
@@ -1889,7 +1903,7 @@
         ctx.save();
         ctx.globalAlpha = 0.85 + Math.sin(Date.now() * 0.012 + d.x * 0.03) * 0.15;
         ctx.fillStyle = nsC;
-        ctx.font = 'bold 14px monospace';
+        ctx.font = 'bold 14px "M PLUS Rounded 1c", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(nsTxt, dx, dy - 78);
@@ -1909,7 +1923,7 @@
         ctx.save();
         ctx.globalAlpha = 0.85 + Math.sin(Date.now() * 0.012 + d.x * 0.03) * 0.15;
         ctx.fillStyle = rsC;
-        ctx.font = 'bold 13px monospace';
+        ctx.font = 'bold 13px "M PLUS Rounded 1c", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(rsTxt, dx, rsY + 11);
@@ -2131,7 +2145,7 @@
         ctx.beginPath(); ctx.arc(dx - 8, dy - 45, 0.7, 0, Math.PI * 2); ctx.fill();
         /* Sign text */
         ctx.fillStyle = '#ffe9c8';
-        ctx.font = 'bold 9px monospace';
+        ctx.font = 'bold 9px "M PLUS Rounded 1c", sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(d.text || 'CHEESE', dx + 6, dy - 41);
       } else if (d.type === 'cheeseMoonBg') {
@@ -2267,9 +2281,9 @@
         ctx.fillRect(dx + 14, dy - 56, 24, 4);
         /* "RECEPTION" label */
         ctx.fillStyle = '#ffd24a';
-        ctx.font = 'bold 9px monospace';
+        ctx.font = 'bold 9px "M PLUS Rounded 1c", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('RECEPTION', dx, dy - 24);
+        ctx.fillText(Game.i18n.t('signReception'), dx, dy - 24);
         ctx.textAlign = 'left';
       } else if (d.type === 'lobbyPlant') {
         /* Rustle: leaves sway harder when Momoko walks past so the
@@ -2433,7 +2447,7 @@
         /* Banner / nameplate above */
         var caLabel = d.label || '';
         if (caLabel) {
-          ctx.font = 'bold 12px monospace';
+          ctx.font = 'bold 12px "M PLUS Rounded 1c", sans-serif';
           var ctw = ctx.measureText(caLabel).width;
           var bw = ctw + 20, bh = 18;
           ctx.fillStyle = '#fff8e0';
@@ -2613,12 +2627,16 @@
           ctx.fillStyle = lit ? '#fff8c0' : '#caa040';
           ctx.beginPath(); ctx.arc(bx, by, 2.4, 0, Math.PI * 2); ctx.fill();
         }
-        /* Text */
+        /* Text, shrunk to fit inside the bulb border */
+        var mqText = d.textKey ? Game.i18n.t(d.textKey) : (d.text || 'HOTEL');
+        var mqSize = 18;
+        do {
+          ctx.font = 'bold ' + mqSize + 'px "M PLUS Rounded 1c", sans-serif';
+        } while (ctx.measureText(mqText).width > mw - 24 && --mqSize > 10);
         ctx.fillStyle = d.color || '#ffd24a';
-        ctx.font = 'bold 18px monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(d.text || 'HOTEL', dx, dy);
+        ctx.fillText(mqText, dx, dy);
         ctx.textBaseline = 'alphabetic';
         ctx.textAlign = 'left';
       } else if (d.type === 'wayfindSign') {
@@ -2672,7 +2690,7 @@
           ctx.stroke();
           /* Text */
           ctx.fillStyle = '#3a2418';
-          ctx.font = 'bold 9px monospace';
+          ctx.font = 'bold 9px "M PLUS Rounded 1c", sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText((side > 0 ? '' : '← ') + label + (side > 0 ? ' →' : ''),
@@ -2736,7 +2754,7 @@
         if (pkDuck > 0.05 && pkDuck < 0.4) {
           ctx.save();
           ctx.fillStyle = '#ffd24a';
-          ctx.font = 'bold 18px monospace';
+          ctx.font = 'bold 18px "M PLUS Rounded 1c", sans-serif';
           ctx.textAlign = 'center';
           var pulse = Math.sin(Date.now() * 0.02) * 1.5;
           ctx.fillText('!', dx, dy - 36 + pulse);
@@ -3143,7 +3161,7 @@
   function depositCartIntoHouse(houseId) {
     if (!Game.shop || !Game.shop.cart || Game.shop.cart.length === 0) return;
     var raw = null;
-    try { raw = localStorage.getItem('momoko-space-furniture'); } catch (e) {}
+    try { raw = localStorage.getItem(KEY('furniture')); } catch (e) {}
     var furn = {};
     try { furn = raw ? JSON.parse(raw) : {}; } catch (e) { furn = {}; }
     if (!furn[houseId]) furn[houseId] = [];
@@ -3154,7 +3172,7 @@
       var iy = FY_TOP + Math.floor(Math.random() * (FY_BOTTOM - FY_TOP));
       furn[houseId].push({ type: Game.shop.cart[ci].type, x: ix, y: iy });
     }
-    try { localStorage.setItem('momoko-space-furniture', JSON.stringify(furn)); } catch (e) {}
+    try { localStorage.setItem(KEY('furniture'), JSON.stringify(furn)); } catch (e) {}
     Game.shop.cart = [];
     if (Game.audio && Game.audio.play) Game.audio.play('victory');
   }
@@ -3162,26 +3180,27 @@
   /* ---- Persistence ---- */
   function savePersistent() {
     try {
-      localStorage.setItem('momoko-space-customization', JSON.stringify(Game.customization));
+      localStorage.setItem(KEY('customization'), JSON.stringify(Game.customization));
       if (Game.quests) {
-        localStorage.setItem('momoko-space-quests', JSON.stringify(Game.quests));
+        localStorage.setItem(KEY('quests'), JSON.stringify(Game.quests));
       }
-      localStorage.setItem('momoko-hotel-flags', JSON.stringify(Game.flags || {}));
+      localStorage.setItem(KEY('flags'), JSON.stringify(Game.flags || {}));
     } catch (e) { /* storage may be disabled */ }
   }
 
   function loadPersistent() {
+    migrateSpaceKeys();
     try {
-      var cs = localStorage.getItem('momoko-space-customization');
+      var cs = localStorage.getItem(KEY('customization'));
       if (cs) {
         var parsed = JSON.parse(cs);
         for (var k in parsed) { Game.customization[k] = parsed[k]; }
       }
-      var qs = localStorage.getItem('momoko-space-quests');
+      var qs = localStorage.getItem(KEY('quests'));
       if (qs) {
         Game.quests = JSON.parse(qs);
       }
-      var hf = localStorage.getItem('momoko-hotel-flags');
+      var hf = localStorage.getItem(KEY('flags'));
       if (hf) {
         Game.flags = JSON.parse(hf);
       }

@@ -43,6 +43,8 @@
       /* ---- Wayfinding signs above stairs / elevator ---- */
       signStairs: 'STAIRS',
       signElevator: 'ELEVATOR',
+      signReception: 'RECEPTION',
+      signPlazaZoo: 'THE PLAZA ZOO',
       /* ---- Ledger bonus row ---- */
       ledgerBonusHeader: '★ Bonus Guest',
 
@@ -65,6 +67,7 @@
       skinTone: 'Skin',
       startGame: 'Start!',
       customizeKbHint: 'or press SPACE to start',
+      customizeTouchHint: 'Tap Start when you are ready!',
       presetOcean: 'Bunny PJs',
       presetExplorer: 'Panda PJs',
       presetRainbow: 'Unicorn PJs',
@@ -140,6 +143,7 @@
       destFloor3: 'Floor 3 — Wild',
       destFloor4: 'Floor 4 — Magic',
       travelConfirm: 'Go!',
+      travelHere: 'YOU ARE HERE',
       travelCancel: 'Cancel',
       rocketLaunching: 'Going up…',
       rocketArriving: 'Ding!',
@@ -226,6 +230,7 @@
       bookPage5: 'But a kind woodcutter heard the wolf\'s sneaky\nplan and chased him deep into the woods.',
       bookPage6: 'Grandma was safe! They sat down with Red\nand shared the warm muffins. The end.',
       bookSkipHint: 'Tap or press SPACE to turn the page',
+      bookPage: 'Page %s / %s',
       bookEndHint: 'Tap or press SPACE to close the book',
       receptionistReadIntro: 'Of course, Momoko! Let me read you one\nof my favorites…',
 
@@ -238,7 +243,9 @@
       ledgerUnvisited: '— not yet —',
       ledgerClose: 'Close',
       ledgerOpen: 'Passport',
-      ledgerHint: 'Press B to open the Passport',
+      ledgerHint: 'Press B or Esc to close the Passport',
+      ledgerHintTouch: 'Tap anywhere to close the Passport',
+      hudGuests: '🎟️ Guests:',
       hudAllGuests: '★ All Guests Greeted! ★',
       midCheer: "Ook ook! Halfway there, Momoko!",
       bedtimeCheer: "All 26 guests greeted! Time for bed, Momoko ★",
@@ -475,6 +482,8 @@
       /* ---- かいだん / エレベーター の ふだ ---- */
       signStairs: 'かいだん',
       signElevator: 'エレベーター',
+      signReception: 'うけつけ',
+      signPlazaZoo: 'プラザ ズー',
       /* ---- パスポート おまけ ---- */
       ledgerBonusHeader: '★ おまけの おきゃくさん',
 
@@ -497,6 +506,7 @@
       skinTone: 'はだ',
       startGame: 'スタート！',
       customizeKbHint: 'スペースキーでスタート',
+      customizeTouchHint: 'じゅんびが できたら タップ！',
       presetOcean: 'うさぎパジャマ',
       presetExplorer: 'パンダパジャマ',
       presetRainbow: 'ユニコーンパジャマ',
@@ -572,6 +582,7 @@
       destFloor3: '３かい — ワイルド',
       destFloor4: '４かい — マジック',
       travelConfirm: 'はっしゃ！',
+      travelHere: 'いま ここ',
       travelCancel: 'キャンセル',
       rocketLaunching: 'うえへ…',
       rocketArriving: 'チーン！',
@@ -658,6 +669,7 @@
       bookPage5: 'やさしい きこりが オオカミの けいかくを きいて\nもりの おくへ おいかけて いきました。',
       bookPage6: 'おばあちゃんは ぶじでした！みんなで\nマフィンを たべました。おしまい。',
       bookSkipHint: 'タップか スペースで つぎの ページへ',
+      bookPage: '%s / %s ページ',
       bookEndHint: 'タップか スペースで ほんを とじよう',
       receptionistReadIntro: 'もちろん モモコ！おすすめの\nおはなしを よんであげるね…',
 
@@ -670,7 +682,9 @@
       ledgerUnvisited: '— まだ —',
       ledgerClose: 'とじる',
       ledgerOpen: 'パスポート',
-      ledgerHint: 'B キーで パスポートを ひらく',
+      ledgerHint: 'B キーか Esc で パスポートを とじる',
+      ledgerHintTouch: 'タップで パスポートを とじる',
+      hudGuests: '🎟️ おきゃく:',
       hudAllGuests: '★ ぜんいんに あえたね！ ★',
       midCheer: 'ウキッ！はんぶん きたよ、モモコ！',
       bedtimeCheer: 'ぜんいんに あえたね！もう ねるじかんだよ、モモコ ★',
@@ -883,9 +897,22 @@
     },
 
     t: function (key) {
-      return (strings[currentLang] && strings[currentLang][key]) ||
-             (strings.en && strings.en[key]) ||
-             key;
+      /* Check for undefined, not falsy: an intentionally empty string
+         (e.g. the JA stamp-toast prefix) must not fall back to EN. */
+      var cur = strings[currentLang];
+      if (cur && cur[key] !== undefined) return cur[key];
+      if (strings.en && strings.en[key] !== undefined) return strings.en[key];
+      return key;
+    },
+
+    /* Every string in every language, so the UI font's Japanese subsets
+       can be fetched up front instead of popping in mid-game. */
+    allText: function () {
+      var out = '';
+      for (var lang in strings) {
+        for (var k in strings[lang]) out += strings[lang][k];
+      }
+      return out;
     },
 
     getJoke: function () {
