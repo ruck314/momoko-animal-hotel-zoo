@@ -2683,7 +2683,7 @@
     /* Dim backdrop over the game */
     c.save();
     c.fillStyle = 'rgba(20, 10, 40, 0.85)';
-    c.fillRect(0, 0, W, H);
+    c.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
 
     /* Panel */
     c.fillStyle = '#3a2418';
@@ -8353,7 +8353,7 @@
     c.save();
     /* Dim the underlying scene */
     c.fillStyle = 'rgba(8, 4, 24, 0.86)';
-    c.fillRect(0, 0, W, H);
+    c.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
 
     /* Paper / card background */
     var pad = 28;
