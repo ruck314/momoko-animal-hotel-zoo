@@ -895,7 +895,7 @@
     dim.addColorStop(0.5, 'rgba(40, 8, 30, 0.35)');
     dim.addColorStop(1, 'rgba(40, 8, 30, 0.2)');
     c.fillStyle = dim;
-    c.fillRect(0, 0, W, H);
+    c.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
 
     /* Spotlight on the dance floor */
     c.save();

@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.14.0';
+  Game.VERSION = 'v0.15.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -1548,7 +1548,7 @@
        menu floats over the frozen game instead of a bright island. */
     var dimAll = Game.input.isTouch() && (
       state === State.PAUSED || state === State.GAME_OVER ||
-      state === State.TRAVEL_MENU || state === State.LEDGER);
+      state === State.TRAVEL_MENU || state === State.LEDGER || state === State.VICTORY);
     if (Game.input.isTouch() && !fullBleed) {
       Game.input.drawTouchStrip(ctx, false);
     }
@@ -1703,7 +1703,7 @@
       case State.VICTORY:
         /* Render the live lobby/floor underneath so the celebration
            feels rooted in the place she just finished. */
-        renderGame();
+        drawClipped(renderGame);
         Game.ui.drawVictory(ctx);
         break;
 
