@@ -13,6 +13,10 @@
   var kb = { left: false, right: false, up: false, down: false, action: false, pause: false, ledger: false };
   var justPressed = { action: false, pause: false, ledger: false };
   var prevKeys = { action: false, pause: false, ledger: false };
+  /* A key tapped and released between two frames would never be seen
+     by the per-frame edge detect in update(), so keydown latches it
+     here until the next update() consumes it. */
+  var tapped = { action: false, pause: false, ledger: false };
 
   /* Touch state – each touch: { x, y, button } where button is a sticky binding
      so a finger that lands on a direction button keeps that button pressed
@@ -97,9 +101,9 @@
       case 'ArrowRight': case 'KeyD': kb.right = true; break;
       case 'ArrowUp': case 'KeyW': kb.up = true; break;
       case 'ArrowDown': case 'KeyS': kb.down = true; break;
-      case 'Space': case 'KeyZ': kb.action = true; e.preventDefault(); break;
-      case 'Escape': case 'KeyP': kb.pause = true; break;
-      case 'KeyB': kb.ledger = true; break;
+      case 'Space': case 'KeyZ': if (!kb.action) tapped.action = true; kb.action = true; e.preventDefault(); break;
+      case 'Escape': case 'KeyP': if (!kb.pause) tapped.pause = true; kb.pause = true; break;
+      case 'KeyB': if (!kb.ledger) tapped.ledger = true; kb.ledger = true; break;
     }
   }
 
@@ -264,12 +268,15 @@
   /* Call once per frame before reading keys */
   function update() {
     /* Detect just-pressed (rising edge) */
-    justPressed.action = keys.action && !prevKeys.action;
-    justPressed.pause = keys.pause && !prevKeys.pause;
-    justPressed.ledger = keys.ledger && !prevKeys.ledger;
+    justPressed.action = (keys.action && !prevKeys.action) || tapped.action;
+    justPressed.pause = (keys.pause && !prevKeys.pause) || tapped.pause;
+    justPressed.ledger = (keys.ledger && !prevKeys.ledger) || tapped.ledger;
     prevKeys.action = keys.action;
     prevKeys.pause = keys.pause;
     prevKeys.ledger = keys.ledger;
+    tapped.action = false;
+    tapped.pause = false;
+    tapped.ledger = false;
   }
 
   /* Call at end of frame to clear keyboard-only states (touch states reset via processTouches) */

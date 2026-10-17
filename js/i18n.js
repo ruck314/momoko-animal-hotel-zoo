@@ -451,7 +451,7 @@
       howToPlay: 'あそびかた',
       instructions: 'あるく: やじるしキー / 十字ボタン\nどうぶつと はなす: スペース / はなすボタン\nポーズ / パスポート: Esc / B\n4かい ホテルで 26ひきの おきゃくさんに あおう！',
       language: 'ことば',
-      langLabel: 'JP',
+      langLabel: 'JA',
       rotateHint: 'デバイスを よこむきにしてください！',
       bubbleBtn: 'はなす',
       soundOn: 'おと: オン',

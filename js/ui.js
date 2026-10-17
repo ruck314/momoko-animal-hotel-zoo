@@ -587,7 +587,7 @@
     /* Scrim so the underlying menu buttons don't read through, while the
        dusk sky still glows faintly behind the modal. */
     c.fillStyle = 'rgba(16, 6, 26, 0.82)';
-    c.fillRect(0, 0, W, H);
+    c.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
 
     var pX = W / 2 - 290, pY = 84, pW = 580, pH = 290;
     drawHotelPanel(c, pX, pY, pW, pH);
@@ -636,7 +636,7 @@
     pauseFlossTimer++;
     c.save();
     c.fillStyle = 'rgba(10, 4, 32, 0.82)';
-    c.fillRect(0, 0, W, H);
+    c.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
     c.font = 'bold 32px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
     /* Centred over the button column (Momoko dances on the left). Gold
@@ -857,7 +857,7 @@
   function drawGameOver(c) {
     c.save();
     c.fillStyle = 'rgba(20, 0, 0, 0.85)';
-    c.fillRect(0, 0, W, H);
+    c.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
 
     c.fillStyle = '#ff3344';
     c.font = 'bold 40px "M PLUS Rounded 1c", sans-serif';
@@ -8637,7 +8637,11 @@
     setView: setView,
     isHot: function () { return anyHot; },
     drawTitleScreen: function (c) {
+      /* The title clips itself to the viewport; pop that before the
+         How-to card so its scrim can dim the whole tablet screen. */
+      c.save();
       drawTitleScreen(c);
+      c.restore();
       if (showInstructions) drawInstructionsOverlay(c);
     },
     drawPauseMenu: drawPauseMenu,
