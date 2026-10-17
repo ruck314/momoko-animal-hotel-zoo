@@ -21,6 +21,37 @@
   /* ---- Helpers ---- */
   var FONT = '"M PLUS Rounded 1c", sans-serif';
 
+  /* The rectangle the ambient backdrops fill, in game coordinates. It is
+     the 800x480 viewport everywhere except on touch devices, where the
+     engine widens it to the whole canvas for the title, customize and
+     intro screens so the dusk sky fills the bezel instead of a dark
+     frame. Everything else on those screens stays clipped to the
+     viewport via clipGame(). */
+  var VIEW = { x: 0, y: 0, w: W, h: H };
+  function setView(x, y, w, h) { VIEW.x = x; VIEW.y = y; VIEW.w = w; VIEW.h = h; }
+  function clipGame(c) { c.beginPath(); c.rect(0, 0, W, H); c.clip(); }
+
+  /* Extra stars for the part of the view outside the viewport, made once
+     per layout at the same density as the title's own star field. */
+  var bezelStars = [], bezelKey = '';
+  function viewBezelStars() {
+    var key = VIEW.x + ',' + VIEW.y + ',' + VIEW.w + ',' + VIEW.h;
+    if (key === bezelKey) return bezelStars;
+    bezelKey = key;
+    bezelStars = [];
+    var extra = VIEW.w * VIEW.h - W * H;
+    var n = Math.round(titleBubbles.length * extra / (W * H));
+    for (var i = 0; i < n; i++) {
+      var x, y, tries = 0;
+      do {
+        x = VIEW.x + Math.random() * VIEW.w;
+        y = VIEW.y + Math.random() * VIEW.h;
+      } while (x >= 0 && x < W && y >= 0 && y < H && ++tries < 20);
+      bezelStars.push({ x: x, y: y, r: 1 + Math.random() * 4, wobble: Math.random() * Math.PI * 2 });
+    }
+    return bezelStars;
+  }
+
   /* True when the mouse is over the rect, in whatever coordinate space
      the caller is currently drawing in (the pointer is stored in
      backing-store pixels and mapped back through the live transform). */
@@ -178,7 +209,11 @@
 
     /* Skyline silhouettes with a few warm windows */
     var blocks = [[0, 352, 56], [52, 330, 40], [96, 362, 70], [170, 318, 46],
-                  [222, 372, 60], [500, 340, 54], [548, 300, 44]];
+                  [222, 372, 60], [500, 340, 54], [548, 300, 44],
+                  /* Off-viewport blocks only show on tablets, where the
+                     title spreads into the bezel beside the game. */
+                  [-270, 346, 64], [-204, 368, 48], [-154, 324, 56], [-96, 358, 52], [-44, 338, 44],
+                  [800, 356, 58], [862, 326, 46], [912, 364, 66], [982, 334, 50], [1036, 352, 60]];
     for (var i = 0; i < blocks.length; i++) {
       var bx = blocks[i][0], by = blocks[i][1], bw = blocks[i][2];
       c.fillStyle = '#331a3c';
@@ -191,18 +226,21 @@
       }
     }
 
-    /* Sidewalk + curb */
+    /* Sidewalk + curb, spanning the whole view so the pavement runs on
+       under the bezel on tablets. */
+    var vx0 = VIEW.x, vx1 = VIEW.x + VIEW.w, vBottom = VIEW.y + VIEW.h;
     var walk = c.createLinearGradient(0, STREET_Y, 0, H);
     walk.addColorStop(0, '#4a2a44');
     walk.addColorStop(1, '#22122a');
     c.fillStyle = walk;
-    c.fillRect(0, STREET_Y, W, H - STREET_Y);
+    c.fillRect(vx0, STREET_Y, vx1 - vx0, vBottom - STREET_Y);
     c.fillStyle = '#8a5a6a';
-    c.fillRect(0, STREET_Y, W, 2);
+    c.fillRect(vx0, STREET_Y, vx1 - vx0, 2);
     c.strokeStyle = 'rgba(0, 0, 0, 0.25)';
     c.lineWidth = 1;
-    for (var sx2 = 30; sx2 < W; sx2 += 60) {
-      c.beginPath(); c.moveTo(sx2, STREET_Y + 2); c.lineTo(sx2 - 14, H); c.stroke();
+    var slant = -14 * (vBottom - STREET_Y - 2) / (H - STREET_Y - 2);
+    for (var sx2 = Math.floor(vx0 / 60) * 60 + 30; sx2 < vx1; sx2 += 60) {
+      c.beginPath(); c.moveTo(sx2, STREET_Y + 2); c.lineTo(sx2 + slant, vBottom); c.stroke();
     }
 
     /* Street lamps with a slow, warm breathing glow */
@@ -416,19 +454,30 @@
     grad.addColorStop(0.5, '#4a2858');
     grad.addColorStop(1, '#7a3a58');
     c.fillStyle = grad;
-    c.fillRect(0, 0, W, H);
+    c.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
     for (var i = 0; i < titleBubbles.length; i++) {
-      var b = titleBubbles[i];
-      b.wobble += 0.04;
-      var twinkle = 0.3 + 0.7 * Math.abs(Math.sin(b.wobble));
-      c.save();
-      c.globalAlpha = twinkle * starAlpha;
-      c.fillStyle = i % 13 === 0 ? '#ffd24a' : (i % 17 === 0 ? '#ff99cc' : '#ffffff');
-      c.beginPath();
-      c.arc(b.x, b.y, 0.8 + b.r * 0.3 * twinkle, 0, Math.PI * 2);
-      c.fill();
-      c.restore();
+      drawDuskStar(c, titleBubbles[i], i, starAlpha);
     }
+    if (VIEW.w > W || VIEW.h > H) {
+      var extra = viewBezelStars();
+      for (var j = 0; j < extra.length; j++) {
+        /* The street covers the sky from STREET_Y down inside the
+           viewport; keep the bezel stars to the sky above it too. */
+        if (extra[j].y < STREET_Y) drawDuskStar(c, extra[j], j, starAlpha);
+      }
+    }
+  }
+
+  function drawDuskStar(c, b, i, starAlpha) {
+    b.wobble += 0.04;
+    var twinkle = 0.3 + 0.7 * Math.abs(Math.sin(b.wobble));
+    c.save();
+    c.globalAlpha = twinkle * starAlpha;
+    c.fillStyle = i % 13 === 0 ? '#ffd24a' : (i % 17 === 0 ? '#ff99cc' : '#ffffff');
+    c.beginPath();
+    c.arc(b.x, b.y, 0.8 + b.r * 0.3 * twinkle, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
   }
 
   /* Plum panel with a brass edge – the modal style used by the elevator
@@ -475,6 +524,7 @@
 
     drawDuskBackdrop(c, 0.9);
     drawTitleStreet(c, titleAnimTimer);
+    clipGame(c);
     drawTitleHotel(c, titleAnimTimer);
     drawTitleGuests(c, titleAnimTimer);
 
@@ -1470,6 +1520,7 @@
 
   function drawCustomizeScreen(c) {
     drawDuskBackdrop(c, 0.45);
+    clipGame(c);
     drawHotelHeading(c, Game.i18n.t('customize'), 30, 26);
 
     /* Preview stage – a warm spotlight and a round brass-edged rug, like
@@ -1715,6 +1766,7 @@
     introAnimTimer++;
 
     drawDuskBackdrop(c, 0.6);
+    clipGame(c);
     drawHotelHeading(c, Game.i18n.t('introTitle'), 42, 28);
 
     /* Momoko portrait (left), standing on a little welcome mat */
@@ -8582,6 +8634,7 @@
 
   window.Game.ui = {
     beginFrame: function () { anyHot = false; },
+    setView: setView,
     isHot: function () { return anyHot; },
     drawTitleScreen: function (c) {
       drawTitleScreen(c);
