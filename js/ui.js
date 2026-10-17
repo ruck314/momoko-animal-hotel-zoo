@@ -141,95 +141,342 @@
   }
 
   /* ---- Title Screen ---- */
-  function drawTitleScreen(c) {
-    titleAnimTimer++;
+  var STREET_Y = 432;
 
-    /* Warm dusk-sky gradient over a hotel street */
+  /* Distant skyline, a crescent moon, the occasional shooting star, the
+     sidewalk and two street lamps. Everything is laid out around the
+     button column (x 270..530) so nothing competes with it. */
+  function drawTitleStreet(c, t) {
+    /* Moon with a soft halo */
+    var halo = c.createRadialGradient(132, 178, 10, 132, 178, 70);
+    halo.addColorStop(0, 'rgba(255, 236, 190, 0.35)');
+    halo.addColorStop(1, 'rgba(255, 236, 190, 0)');
+    c.fillStyle = halo;
+    c.fillRect(60, 108, 144, 144);
+    /* Crescent: clip the bite out so the sky gradient shows through */
+    c.save();
+    c.beginPath();
+    c.rect(100, 146, 64, 64);
+    c.arc(144, 170, 21, 0, Math.PI * 2, true);
+    c.clip('evenodd');
+    c.fillStyle = '#fff1c8';
+    c.beginPath(); c.arc(132, 178, 24, 0, Math.PI * 2); c.fill();
+    c.restore();
+
+    /* Shooting star every ~7s, crossing the upper sky */
+    var st = t % 420;
+    if (st < 40) {
+      var p = st / 40;
+      var sx = 220 + p * 260, sy = 30 + p * 70;
+      var trail = c.createLinearGradient(sx - 60, sy - 16, sx, sy);
+      trail.addColorStop(0, 'rgba(255, 255, 255, 0)');
+      trail.addColorStop(1, 'rgba(255, 255, 255, ' + (0.9 * (1 - p)) + ')');
+      c.strokeStyle = trail;
+      c.lineWidth = 2;
+      c.beginPath(); c.moveTo(sx - 60, sy - 16); c.lineTo(sx, sy); c.stroke();
+    }
+
+    /* Skyline silhouettes with a few warm windows */
+    var blocks = [[0, 352, 56], [52, 330, 40], [96, 362, 70], [170, 318, 46],
+                  [222, 372, 60], [500, 340, 54], [548, 300, 44]];
+    for (var i = 0; i < blocks.length; i++) {
+      var bx = blocks[i][0], by = blocks[i][1], bw = blocks[i][2];
+      c.fillStyle = '#331a3c';
+      c.fillRect(bx, by, bw, STREET_Y - by);
+      c.fillStyle = 'rgba(255, 210, 120, 0.55)';
+      for (var wy = by + 10; wy < STREET_Y - 16; wy += 16) {
+        for (var wx = bx + 8; wx < bx + bw - 8; wx += 12) {
+          if (((wx * 7 + wy * 13 + i * 5) % 9) < 2) c.fillRect(wx, wy, 4, 6);
+        }
+      }
+    }
+
+    /* Sidewalk + curb */
+    var walk = c.createLinearGradient(0, STREET_Y, 0, H);
+    walk.addColorStop(0, '#4a2a44');
+    walk.addColorStop(1, '#22122a');
+    c.fillStyle = walk;
+    c.fillRect(0, STREET_Y, W, H - STREET_Y);
+    c.fillStyle = '#8a5a6a';
+    c.fillRect(0, STREET_Y, W, 2);
+    c.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+    c.lineWidth = 1;
+    for (var sx2 = 30; sx2 < W; sx2 += 60) {
+      c.beginPath(); c.moveTo(sx2, STREET_Y + 2); c.lineTo(sx2 - 14, H); c.stroke();
+    }
+
+    /* Street lamps with a slow, warm breathing glow */
+    var lamps = [34, 560];
+    for (var li = 0; li < lamps.length; li++) {
+      var lx = lamps[li];
+      var glow = 0.75 + 0.25 * Math.sin(t * 0.03 + li * 2);
+      var lg = c.createRadialGradient(lx, 344, 4, lx, 344, 60);
+      lg.addColorStop(0, 'rgba(255, 214, 130, ' + (0.45 * glow) + ')');
+      lg.addColorStop(1, 'rgba(255, 214, 130, 0)');
+      c.fillStyle = lg;
+      c.fillRect(lx - 60, 284, 120, 120);
+      c.fillStyle = 'rgba(255, 214, 130, ' + (0.18 * glow) + ')';
+      c.beginPath(); c.ellipse(lx, STREET_Y + 10, 34, 6, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#2a1626';
+      c.fillRect(lx - 2, 350, 4, STREET_Y - 350);
+      c.fillRect(lx - 6, STREET_Y - 6, 12, 6);
+      c.fillStyle = '#e8b860';
+      c.fillRect(lx - 7, 334, 14, 3);
+      c.fillStyle = '#fff0b8';
+      roundRect(c, lx - 5, 337, 10, 13, 3);
+      c.fill();
+    }
+  }
+
+  /* The hotel itself, standing on the sidewalk at the right. Three window
+     columns over four guest floors, a lobby with an awning, and a few
+     guests peeking out. Lights in two windows fade on and off slowly. */
+  var TITLE_PEEKS = [
+    { col: 0, floor: 0, species: 'giraffe' }, { col: 2, floor: 0, species: 'penguin' },
+    { col: 1, floor: 1, species: 'panda' }, { col: 0, floor: 2, species: 'lion' },
+    { col: 2, floor: 2, species: 'cat' }, { col: 1, floor: 3, species: 'unicorn' },
+  ];
+  function drawTitleHotel(c, t) {
+    var hx = 604, hw = 172, top = 150;
+    /* Body with a little vertical shading so it reads as a solid block */
+    var body = c.createLinearGradient(hx, 0, hx + hw, 0);
+    body.addColorStop(0, '#5a3226');
+    body.addColorStop(0.5, '#6e3e2c');
+    body.addColorStop(1, '#4a281e');
+    c.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    c.fillRect(hx + 6, top + 6, hw, STREET_Y - top - 6);
+    c.fillStyle = body;
+    c.fillRect(hx, top, hw, STREET_Y - top);
+    /* Brick courses */
+    c.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+    c.lineWidth = 1;
+    for (var by = top + 6; by < STREET_Y; by += 6) {
+      c.beginPath(); c.moveTo(hx, by + 0.5); c.lineTo(hx + hw, by + 0.5); c.stroke();
+    }
+    /* Floor cornices */
+    c.fillStyle = '#e8b860';
+    for (var f = 0; f <= 4; f++) c.fillRect(hx - 3, top + f * 52 - 1, hw + 6, 3);
+
+    /* Mansard roof + waving flag */
+    c.fillStyle = '#7a2840';
+    c.beginPath();
+    c.moveTo(hx - 8, top); c.lineTo(hx + 14, top - 22);
+    c.lineTo(hx + hw - 14, top - 22); c.lineTo(hx + hw + 8, top);
+    c.closePath(); c.fill();
+    c.fillStyle = '#e8b860';
+    c.fillRect(hx + 10, top - 24, hw - 20, 3);
+    var fx = hx + hw / 2;
+    c.fillStyle = '#c89a48';
+    c.fillRect(fx - 1, top - 52, 2, 30);
+    var wave = Math.sin(t * 0.08) * 2;
+    c.fillStyle = '#ff66cc';
+    c.beginPath();
+    c.moveTo(fx + 1, top - 52);
+    c.quadraticCurveTo(fx + 8, top - 52 + wave, fx + 16, top - 48);
+    c.quadraticCurveTo(fx + 8, top - 44 - wave, fx + 1, top - 42);
+    c.closePath(); c.fill();
+
+    /* Guest windows */
+    for (var floor = 0; floor < 4; floor++) {
+      for (var col = 0; col < 3; col++) {
+        var wx = hx + 16 + col * 52, wy = top + 10 + floor * 52, ww = 36, wh = 34;
+        var lit = 1;
+        if ((floor === 1 && col === 0) || (floor === 3 && col === 2)) {
+          lit = 0.5 + 0.5 * Math.sin(t * 0.012 + floor);
+        }
+        c.fillStyle = '#2a1a30';
+        c.fillRect(wx, wy, ww, wh);
+        c.fillStyle = 'rgba(255, 226, 140, ' + lit + ')';
+        c.fillRect(wx, wy, ww, wh);
+        var peek = null;
+        for (var pi = 0; pi < TITLE_PEEKS.length; pi++) {
+          if (TITLE_PEEKS[pi].col === col && TITLE_PEEKS[pi].floor === floor) peek = TITLE_PEEKS[pi];
+        }
+        if (peek && Game.entities && Game.entities.drawAnimalSprite) {
+          c.save();
+          c.beginPath(); c.rect(wx, wy, ww, wh); c.clip();
+          var bob = Math.sin(t * 0.05 + floor * 1.7 + col) * 1.2;
+          c.translate(wx + ww / 2 - 17, wy + 8 + bob);
+          c.scale(0.72, 0.72);
+          Game.entities.drawAnimalSprite(c, peek.species, 0, 0);
+          c.restore();
+        }
+        /* Curtains, frame and mullion */
+        c.fillStyle = '#c03a6a';
+        c.fillRect(wx, wy, 5, wh);
+        c.fillRect(wx + ww - 5, wy, 5, wh);
+        c.strokeStyle = '#e8b860';
+        c.lineWidth = 2;
+        c.strokeRect(wx, wy, ww, wh);
+        c.fillStyle = '#e8b860';
+        c.fillRect(wx - 3, wy + wh, ww + 6, 3);
+      }
+    }
+
+    /* Lobby: double doors, striped awning, paw-print plaque with blinking
+       marquee bulbs, and a red carpet out to the kerb. */
+    var ly = top + 208;
+    var dx = hx + hw / 2 - 20;
+    c.fillStyle = 'rgba(255, 220, 140, 0.9)';
+    c.fillRect(dx, ly + 26, 40, STREET_Y - ly - 26);
+    c.strokeStyle = '#e8b860';
+    c.lineWidth = 2;
+    c.strokeRect(dx, ly + 26, 40, STREET_Y - ly - 26);
+    c.beginPath(); c.moveTo(dx + 20, ly + 26); c.lineTo(dx + 20, STREET_Y); c.stroke();
+    for (var s = 0; s < 6; s++) {
+      c.fillStyle = s % 2 ? '#fff0e0' : '#c03a6a';
+      c.beginPath();
+      c.moveTo(dx - 16 + s * 12, ly + 12); c.lineTo(dx - 4 + s * 12, ly + 12);
+      c.lineTo(dx - 4 + s * 12, ly + 22); c.lineTo(dx - 16 + s * 12, ly + 22);
+      c.closePath(); c.fill();
+    }
+    c.fillStyle = '#c03a6a';
+    for (var sc = 0; sc < 6; sc++) {
+      c.beginPath(); c.arc(dx - 10 + sc * 12, ly + 22, 6, 0, Math.PI); c.fill();
+    }
+    var plX = hx + 14, plY = ly + 30;
+    c.fillStyle = '#3a2418';
+    roundRect(c, plX, plY, 36, 30, 5); c.fill();
+    c.strokeStyle = '#e8b860';
+    roundRect(c, plX, plY, 36, 30, 5); c.stroke();
+    c.fillStyle = '#ffd24a';
+    c.beginPath(); c.ellipse(plX + 18, plY + 19, 6, 5, 0, 0, Math.PI * 2); c.fill();
+    var toes = [[-7, -4], [-2.5, -8], [2.5, -8], [7, -4]];
+    for (var ti = 0; ti < toes.length; ti++) {
+      c.beginPath(); c.arc(plX + 18 + toes[ti][0], plY + 17 + toes[ti][1], 2.4, 0, Math.PI * 2); c.fill();
+    }
+    for (var bi = 0; bi < 8; bi++) {
+      var on = (Math.floor(t / 12) + bi) % 2 === 0;
+      c.fillStyle = on ? '#fff6c0' : '#8a6a30';
+      var ang = (bi / 8) * Math.PI * 2;
+      c.beginPath();
+      c.arc(plX + 18 + Math.cos(ang) * 21, plY + 15 + Math.sin(ang) * 17, 1.6, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.fillStyle = '#b02848';
+    c.beginPath();
+    c.moveTo(dx + 2, STREET_Y); c.lineTo(dx + 38, STREET_Y);
+    c.lineTo(dx + 50, H); c.lineTo(dx - 10, H);
+    c.closePath(); c.fill();
+  }
+
+  /* Momoko arriving with her suitcase, and two guests waiting to greet
+     her. Fills the lower-left so the title has a story, not empty sky. */
+  function drawTitleGuests(c, t) {
+    if (!Game.entities) return;
+    /* Suitcase */
+    c.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    c.beginPath(); c.ellipse(76, STREET_Y + 2, 20, 4, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#e06088';
+    roundRect(c, 60, STREET_Y - 30, 32, 30, 5); c.fill();
+    c.fillStyle = '#a03a60';
+    c.fillRect(60, STREET_Y - 18, 32, 4);
+    c.strokeStyle = '#3a2418';
+    c.lineWidth = 2;
+    c.beginPath(); c.moveTo(70, STREET_Y - 30); c.lineTo(70, STREET_Y - 36);
+    c.lineTo(82, STREET_Y - 36); c.lineTo(82, STREET_Y - 30); c.stroke();
+    c.fillStyle = '#ffd24a';
+    c.beginPath(); c.arc(84, STREET_Y - 8, 4, 0, Math.PI * 2); c.fill();
+
+    /* Momoko, with a gentle idle bob */
+    var bob = Math.round(Math.sin(t * 0.06) * 1.5);
+    c.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    c.beginPath(); c.ellipse(134, STREET_Y + 2, 26, 5, 0, 0, Math.PI * 2); c.fill();
+    if (Game.entities.drawMomokoSprite) {
+      c.save();
+      c.translate(98, STREET_Y - 86 + bob);
+      c.scale(2.6, 2.6);
+      Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, 0);
+      c.restore();
+    }
+
+    /* Waiting guests */
+    if (Game.entities.drawAnimalSprite) {
+      var guests = [{ s: 'bunny', x: 178, k: 1.2 }, { s: 'elephant', x: 216, k: 1.15 }];
+      for (var i = 0; i < guests.length; i++) {
+        var g = guests[i];
+        var hop = g.s === 'bunny' ? Math.max(0, Math.sin(t * 0.09)) * 4 : 0;
+        c.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        c.beginPath(); c.ellipse(g.x + 24 * g.k, STREET_Y + 2, 22 * g.k, 4, 0, 0, Math.PI * 2); c.fill();
+        c.save();
+        c.translate(g.x, STREET_Y - 46 * g.k - hop);
+        c.scale(g.k, g.k);
+        Game.entities.drawAnimalSprite(c, g.s, 0, 0);
+        c.restore();
+      }
+    }
+  }
+
+  /* Warm dusk sky with twinkling stars – the hotel's signature backdrop,
+     shared by the title and every pre-game screen so they read as one
+     place. `starAlpha` lets busier screens tone the stars down. */
+  function drawDuskBackdrop(c, starAlpha) {
     var grad = c.createLinearGradient(0, 0, 0, H);
     grad.addColorStop(0, '#241430');
     grad.addColorStop(0.5, '#4a2858');
     grad.addColorStop(1, '#7a3a58');
     c.fillStyle = grad;
     c.fillRect(0, 0, W, H);
-
-    /* Twinkling stars over the dusk sky */
     for (var i = 0; i < titleBubbles.length; i++) {
       var b = titleBubbles[i];
       b.wobble += 0.04;
       var twinkle = 0.3 + 0.7 * Math.abs(Math.sin(b.wobble));
       c.save();
-      c.globalAlpha = twinkle * 0.9;
+      c.globalAlpha = twinkle * starAlpha;
       c.fillStyle = i % 13 === 0 ? '#ffd24a' : (i % 17 === 0 ? '#ff99cc' : '#ffffff');
       c.beginPath();
       c.arc(b.x, b.y, 0.8 + b.r * 0.3 * twinkle, 0, Math.PI * 2);
       c.fill();
       c.restore();
     }
+  }
 
-    /* Hotel facade in upper-right (replaces ringed planet). Drawn at 3/4
-       scale, pinned to the right edge, so it clears the title text. */
+  /* Plum panel with a brass edge – the modal style used by the elevator
+     menu and passport, so overlays all look like hotel stationery. */
+  function drawHotelPanel(c, x, y, w, h) {
     c.save();
-    c.translate(W - 12, 18);
-    c.scale(0.75, 0.75);
-    c.translate(-(W - 12), -18);
-    var hx = W - 200, hy = 30;
-    /* Building body */
-    c.fillStyle = '#3a2418';
-    c.fillRect(hx, hy, 160, 180);
-    /* Roof */
-    c.fillStyle = '#7a2840';
-    c.beginPath();
-    c.moveTo(hx - 8, hy);
-    c.lineTo(hx + 80, hy - 24);
-    c.lineTo(hx + 168, hy);
-    c.closePath();
+    c.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    roundRect(c, x, y + 4, w, h, 14);
     c.fill();
-    /* Roof finial flag */
-    c.fillStyle = '#ffd24a';
-    c.fillRect(hx + 78, hy - 40, 2, 16);
-    c.fillStyle = '#ff66cc';
-    c.beginPath();
-    c.moveTo(hx + 80, hy - 40);
-    c.lineTo(hx + 92, hy - 36);
-    c.lineTo(hx + 80, hy - 32);
-    c.closePath();
+    var g = c.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, 'rgba(58, 30, 76, 0.96)');
+    g.addColorStop(1, 'rgba(36, 18, 50, 0.96)');
+    c.fillStyle = g;
+    roundRect(c, x, y, w, h, 14);
     c.fill();
-    /* Windows — 4 floors x 4 windows; some lit yellow, some with animal silhouettes */
-    var animalEmojis = ['🐘','🦁','🐯','🐻','🦒','🦓','🐺','🦅','🐼','🐧','🐰','🐱','🐶','🦦','🦘','🦄','👽','🐒'];
-    for (var floor = 0; floor < 4; floor++) {
-      for (var col = 0; col < 4; col++) {
-        var wx = hx + 8 + col * 38;
-        var wy = hy + 14 + floor * 40;
-        c.fillStyle = '#fff0a0';
-        c.fillRect(wx, wy, 26, 26);
-        c.strokeStyle = '#5a3a18';
-        c.lineWidth = 1;
-        c.strokeRect(wx, wy, 26, 26);
-        c.beginPath();
-        c.moveTo(wx + 13, wy); c.lineTo(wx + 13, wy + 26);
-        c.moveTo(wx, wy + 13); c.lineTo(wx + 26, wy + 13);
-        c.stroke();
-        /* Sprinkle some animal emojis behind a few windows */
-        var idx = floor * 4 + col;
-        if (idx < animalEmojis.length && idx % 2 === 0) {
-          c.font = '18px sans-serif';
-          c.textAlign = 'center';
-          c.fillStyle = '#000000';
-          c.fillText(animalEmojis[idx], wx + 13, wy + 20);
-        }
-      }
-    }
-    /* Hotel sign */
-    c.fillStyle = '#ffd24a';
-    c.fillRect(hx + 30, hy + 184, 100, 14);
-    c.strokeStyle = '#5a3a18';
-    c.strokeRect(hx + 30, hy + 184, 100, 14);
-    c.fillStyle = '#1a1a1a';
-    c.font = 'bold 9px "M PLUS Rounded 1c", sans-serif';
-    c.textAlign = 'center';
-    c.fillText('🏨 HOTEL', hx + 80, hy + 194);
-    c.textAlign = 'left';
+    c.strokeStyle = '#e8b860';
+    c.lineWidth = 2.5;
+    roundRect(c, x, y, w, h, 14);
+    c.stroke();
+    c.strokeStyle = 'rgba(232, 184, 96, 0.35)';
+    c.lineWidth = 1;
+    roundRect(c, x + 6, y + 6, w - 12, h - 12, 10);
+    c.stroke();
     c.restore();
+  }
+
+  /* Gold page heading with a soft warm glow. */
+  function drawHotelHeading(c, text, y, size) {
+    c.save();
+    fitFont(c, text, 560, size || 28, 'bold');
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillStyle = '#220044';
+    c.fillText(text, W / 2 + 1, y + 2);
+    c.shadowColor = 'rgba(255, 140, 60, 0.6)';
+    c.shadowBlur = 10;
+    c.fillStyle = '#ffd24a';
+    c.fillText(text, W / 2, y);
+    c.restore();
+  }
+
+  function drawTitleScreen(c) {
+    titleAnimTimer++;
+
+    drawDuskBackdrop(c, 0.9);
+    drawTitleStreet(c, titleAnimTimer);
+    drawTitleHotel(c, titleAnimTimer);
+    drawTitleGuests(c, titleAnimTimer);
 
     /* Title text */
     var title = Game.i18n.t('title');
@@ -267,7 +514,7 @@
     /* Version stamp (bottom-right) – helps us know which build is running */
     if (Game.VERSION) {
       c.save();
-      c.fillStyle = '#4a6a8a';
+      c.fillStyle = 'rgba(255, 230, 200, 0.45)';
       c.font = '11px "M PLUS Rounded 1c", sans-serif';
       c.textAlign = 'right';
       c.textBaseline = 'alphabetic';
@@ -281,56 +528,43 @@
   }
 
   var showInstructions = false;
+  var HOWTO_OK_Y = 312;
 
   function drawInstructionsOverlay(c) {
     c.save();
     /* The title buttons underneath aren't clickable while this is up. */
     anyHot = false;
-    /* Full opaque scrim so the underlying menu buttons don't read through.
-       Title-screen background is already dusk-purple; we want the overlay
-       to feel like its own modal. */
-    c.fillStyle = 'rgba(8, 4, 20, 0.97)';
+    /* Scrim so the underlying menu buttons don't read through, while the
+       dusk sky still glows faintly behind the modal. */
+    c.fillStyle = 'rgba(16, 6, 26, 0.82)';
     c.fillRect(0, 0, W, H);
 
-    /* Soft star-field on top so the modal still feels cozy, not jarring. */
-    for (var i = 0; i < titleBubbles.length; i++) {
-      var b = titleBubbles[i];
-      c.save();
-      c.globalAlpha = 0.18;
-      c.fillStyle = '#ffffff';
-      c.beginPath();
-      c.arc(b.x, b.y, 0.6 + b.r * 0.2, 0, Math.PI * 2);
-      c.fill();
-      c.restore();
-    }
+    var pX = W / 2 - 290, pY = 84, pW = 580, pH = 290;
+    drawHotelPanel(c, pX, pY, pW, pH);
+    drawHotelHeading(c, Game.i18n.t('howToPlay'), pY + 40, 26);
 
-    /* Framed panel so the text has a clear container */
-    var pX = W / 2 - 290, pY = 60, pW = 580, pH = 320;
-    c.fillStyle = 'rgba(20, 12, 36, 0.98)';
-    roundRect(c, pX, pY, pW, pH, 14);
-    c.fill();
-    c.strokeStyle = '#66ccff';
-    c.lineWidth = 2;
-    roundRect(c, pX, pY, pW, pH, 14);
-    c.stroke();
-
-    c.fillStyle = '#66ccff';
-    c.font = 'bold 24px "M PLUS Rounded 1c", sans-serif';
-    c.textAlign = 'center';
-    c.fillText(Game.i18n.t('howToPlay'), W / 2, 100);
-    c.fillStyle = '#ccddee';
+    /* One instruction per row, each with a brass bullet. */
+    var lines = Game.i18n.t('instructions').split('\n');
     c.font = '16px "M PLUS Rounded 1c", sans-serif';
-    c.textAlign = 'center';
-    wrapText(c, Game.i18n.t('instructions'), W / 2, 150, 540, 28);
-    /* Inside the panel, near its bottom edge */
-    drawButton(c, 'OK', W / 2 - 60, 318, 120, 40);
+    c.textAlign = 'left';
+    c.textBaseline = 'middle';
+    for (var li = 0; li < lines.length; li++) {
+      var ly = pY + 92 + li * 36;
+      c.fillStyle = '#e8b860';
+      c.beginPath(); c.arc(pX + 56, ly, 4, 0, Math.PI * 2); c.fill();
+      c.fillStyle = li === lines.length - 1 ? '#ffd24a' : '#f4e6f4';
+      fitFont(c, lines[li], pW - 120, 16, li === lines.length - 1 ? 'bold' : '');
+      c.fillText(lines[li], pX + 72, ly);
+    }
+    c.textBaseline = 'alphabetic';
+    drawButton(c, 'OK', W / 2 - 60, HOWTO_OK_Y, 120, 40);
     c.restore();
   }
 
   /* Title click handler – returns action string or null */
   function handleTitleClick(mx, my) {
     if (showInstructions) {
-      if (hitButton(mx, my, W / 2 - 60, 318, 120, 40)) {
+      if (hitButton(mx, my, W / 2 - 60, HOWTO_OK_Y, 120, 40)) {
         showInstructions = false;
         Game.audio.play('select');
         return null;
@@ -353,11 +587,16 @@
     c.save();
     c.fillStyle = 'rgba(10, 4, 32, 0.82)';
     c.fillRect(0, 0, W, H);
-    c.fillStyle = '#44ffff';
     c.font = 'bold 32px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
-    /* Centred over the button column (Momoko dances on the left). */
+    /* Centred over the button column (Momoko dances on the left). Gold
+       with a warm glow, like every other in-hotel heading. */
+    c.save();
+    c.shadowColor = 'rgba(255, 140, 60, 0.6)';
+    c.shadowBlur = 10;
+    c.fillStyle = '#ffd24a';
     c.fillText(Game.i18n.t('paused'), W / 2 + 100, 110);
+    c.restore();
 
     /* Floss-dance Momoko – phase advances at ~1.7Hz and the pose math
        smooths the beat with a tanh sigmoid so she transitions between
@@ -590,7 +829,8 @@
      line of guests bouncing either side, confetti and sparkles. All
      motion is a function of victoryTimer and seeded per-piece offsets. */
   var victoryTimer = 0;
-  var VICTORY_GUESTS = ['lion', 'elephant', 'penguin', 'panda', 'bunny', 'unicorn', 'owl', 'frog'];
+  /* Floor-standing guests only – the frog's lily pad reads oddly on carpet. */
+  var VICTORY_GUESTS = ['lion', 'elephant', 'penguin', 'panda', 'bunny', 'unicorn', 'owl', 'cat'];
   var VICTORY_BTN = { x: W / 2 - 110, y: 206, w: 220, h: 50 };
 
   function drawVictory(c) {
@@ -1229,26 +1469,24 @@
   }
 
   function drawCustomizeScreen(c) {
-    /* Background */
-    var grad = c.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#0a1628');
-    grad.addColorStop(1, '#162e50');
-    c.fillStyle = grad;
-    c.fillRect(0, 0, W, H);
+    drawDuskBackdrop(c, 0.45);
+    drawHotelHeading(c, Game.i18n.t('customize'), 30, 26);
 
-    /* Title */
-    c.fillStyle = '#66ccff';
-    c.font = 'bold 26px "M PLUS Rounded 1c", sans-serif';
-    c.textAlign = 'center';
-    c.fillText(Game.i18n.t('customize'), W / 2, 36);
-
-    /* Preview stage – soft radial glow so Momoko pops against the bg */
+    /* Preview stage – a warm spotlight and a round brass-edged rug, like
+       a fitting-room mirror in the hotel boutique. */
     var stageCX = 160, stageCY = 240;
     var stageGrad = c.createRadialGradient(stageCX, stageCY, 20, stageCX, stageCY, 150);
-    stageGrad.addColorStop(0, 'rgba(110,180,255,0.22)');
-    stageGrad.addColorStop(1, 'rgba(110,180,255,0)');
+    stageGrad.addColorStop(0, 'rgba(255,190,220,0.26)');
+    stageGrad.addColorStop(1, 'rgba(255,190,220,0)');
     c.fillStyle = stageGrad;
     c.fillRect(10, 70, 300, 340);
+    c.fillStyle = '#7a2840';
+    c.beginPath(); c.ellipse(stageCX, 324, 96, 18, 0, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#e8b860';
+    c.lineWidth = 2;
+    c.beginPath(); c.ellipse(stageCX, 324, 88, 14, 0, 0, Math.PI * 2); c.stroke();
+    c.fillStyle = 'rgba(0,0,0,0.3)';
+    c.beginPath(); c.ellipse(stageCX, 322, 50, 8, 0, 0, Math.PI * 2); c.fill();
 
     /* Momoko preview */
     c.save();
@@ -1263,7 +1501,7 @@
       var tab = customTabs[ti];
       var active = customSelection.tab === tab.id;
       var tabHot = pointerOver(c, tx, TAB_Y, TAB_W, TAB_H);
-      c.fillStyle = active ? '#3388cc' : tabHot ? '#2a5480' : '#1a3a5a';
+      c.fillStyle = active ? '#8a46b8' : tabHot ? '#55286e' : '#3a1c4e';
       roundRect(c, tx, TAB_Y, TAB_W, TAB_H, 6);
       c.fill();
       if (active) {
@@ -1272,7 +1510,7 @@
         roundRect(c, tx, TAB_Y, TAB_W, TAB_H, 6);
         c.stroke();
       }
-      c.fillStyle = active ? '#ffffff' : '#aaccee';
+      c.fillStyle = active ? '#ffffff' : '#dcc4e4';
       fitFont(c, Game.i18n.t(tab.label), TAB_W - 8, 12, 'bold');
       c.textAlign = 'center';
       c.textBaseline = 'middle';
@@ -1292,7 +1530,7 @@
       var selected = v.id === currentVariantId;
       /* Tile bg */
       var tileHot = pointerOver(c, gx, gy, GRID_TILE_W, GRID_TILE_H);
-      c.fillStyle = selected ? '#2b5580' : tileHot ? '#1d3a5c' : '#12253d';
+      c.fillStyle = selected ? '#6a3490' : tileHot ? '#4a2464' : '#2e1640';
       roundRect(c, gx, gy, GRID_TILE_W, GRID_TILE_H, 8);
       c.fill();
       if (selected) {
@@ -1304,7 +1542,7 @@
       /* Icon (left side of tile) */
       drawVariantIcon(c, activeTab.id, v.id, gx + 32, gy + GRID_TILE_H / 2 - 2, Game.customization);
       /* Label (right side) */
-      c.fillStyle = '#eef6ff';
+      c.fillStyle = '#fbeefa';
       fitFont(c, Game.i18n.t(v.label), GRID_TILE_W - 72, 12, 'bold');
       c.textAlign = 'left';
       c.textBaseline = 'middle';
@@ -1320,8 +1558,8 @@
       var labelKey = activeTab.colorField === 'hair' ? 'hairColor'
                    : activeTab.colorField === 'suit' ? 'suitColor'
                    : 'skinTone';
-      c.fillStyle = '#88aacc';
-      c.font = '13px "M PLUS Rounded 1c", sans-serif';
+      c.fillStyle = '#e8c890';
+      c.font = 'bold 13px "M PLUS Rounded 1c", sans-serif';
       c.textAlign = 'left';
       c.fillText(Game.i18n.t(labelKey), COLOR_X, colorY - 8);
       var selColor = Game.customization[activeTab.colorField];
@@ -1347,8 +1585,8 @@
 
     /* Skin tones – always visible regardless of tab (it's the only axis
        that doesn't belong to a category but still matters) */
-    c.fillStyle = '#88aacc';
-    c.font = '13px "M PLUS Rounded 1c", sans-serif';
+    c.fillStyle = '#e8c890';
+    c.font = 'bold 13px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'left';
     c.fillText(Game.i18n.t('skinTone'), COLOR_X, colorY + 48);
     for (var ki = 0; ki < skinTones.length; ki++) {
@@ -1375,7 +1613,7 @@
 
     /* Keyboard hint so kids on a laptop don't have to reach for the mouse.
        Sits above the Start button to stay within the 480-tall canvas. */
-    c.fillStyle = '#88aacc';
+    c.fillStyle = '#dcc4e4';
     c.font = '11px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
     c.fillText(
@@ -1476,69 +1714,62 @@
   function drawIntroScreen(c) {
     introAnimTimer++;
 
-    /* Background – same deep-sea gradient as title for continuity */
-    var grad = c.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#0a1628');
-    grad.addColorStop(0.5, '#0d2847');
-    grad.addColorStop(1, '#162e50');
-    c.fillStyle = grad;
-    c.fillRect(0, 0, W, H);
+    drawDuskBackdrop(c, 0.6);
+    drawHotelHeading(c, Game.i18n.t('introTitle'), 42, 28);
 
-    /* Drifting ambient bubbles */
-    for (var i = 0; i < titleBubbles.length; i++) {
-      var b = titleBubbles[i];
-      b.wobble += 0.02;
-      b.y -= b.speed * 0.4;
-      if (b.y < -10) { b.y = H + 10; b.x = Math.random() * W; }
-      c.save();
-      c.globalAlpha = 0.2;
-      c.fillStyle = '#66bbee';
-      c.beginPath();
-      c.arc(b.x + Math.sin(b.wobble) * 15, b.y, b.r, 0, Math.PI * 2);
-      c.fill();
-      c.restore();
-    }
-
-    /* Momoko portrait (left) */
+    /* Momoko portrait (left), standing on a little welcome mat */
+    c.fillStyle = '#7a2840';
+    c.beginPath(); c.ellipse(166, 312, 62, 12, 0, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#e8b860';
+    c.lineWidth = 2;
+    c.beginPath(); c.ellipse(166, 312, 55, 9, 0, 0, Math.PI * 2); c.stroke();
     c.save();
-    c.translate(120, 200);
+    c.translate(120, 202);
     c.scale(3.2, 3.2);
     if (Game.entities && Game.entities.drawMomokoSprite) {
       Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, Math.floor(introAnimTimer / 8) % 4);
     }
     c.restore();
 
-    /* Title */
-    c.fillStyle = '#ffcc66';
-    c.font = 'bold 28px "M PLUS Rounded 1c", sans-serif';
-    c.textAlign = 'center';
-    c.shadowColor = '#884400';
-    c.shadowBlur = 6;
-    c.fillText(Game.i18n.t('introTitle'), W / 2, 46);
-    c.shadowBlur = 0;
-
-    /* Story panel */
-    var panelX = 240, panelY = 72, panelW = 540, panelH = 320;
-    c.fillStyle = 'rgba(8, 24, 48, 0.75)';
-    roundRect(c, panelX, panelY, panelW, panelH, 10);
-    c.fill();
-    c.strokeStyle = '#2a5580';
-    c.lineWidth = 2;
-    roundRect(c, panelX, panelY, panelW, panelH, 10);
-    c.stroke();
-
-    /* Story text */
-    c.fillStyle = '#dfeeff';
-    c.font = '14px "M PLUS Rounded 1c", sans-serif';
+    /* Story panel – sized to the text so it never sits half-empty */
+    c.font = '16px "M PLUS Rounded 1c", sans-serif';
+    var panelX = 260, panelW = 510;
+    var storyLines = layoutLines(c, Game.i18n.t('introText'), panelW - 48);
+    var panelH = storyLines.length * 26 + 40;
+    var panelY = Math.max(76, 230 - panelH / 2);
+    drawHotelPanel(c, panelX, panelY, panelW, panelH);
+    c.fillStyle = '#f4e6f4';
     c.textAlign = 'left';
-    wrapText(c, Game.i18n.t('introText'), panelX + 18, panelY + 28, panelW - 36, 20);
+    c.textBaseline = 'middle';
+    for (var sl = 0; sl < storyLines.length; sl++) {
+      c.fillText(storyLines[sl], panelX + 24, panelY + 33 + sl * 26);
+    }
+    c.textBaseline = 'alphabetic';
+
+    /* A little parade of guests strolling along the bottom */
+    if (Game.entities && Game.entities.drawAnimalSprite) {
+      var parade = ['elephant', 'penguin', 'giraffe', 'bunny', 'panda', 'koala', 'unicorn'];
+      var span = W + 120;
+      for (var pi = 0; pi < parade.length; pi++) {
+        var px = ((introAnimTimer * 0.5 + pi * (span / parade.length)) % span) - 60;
+        var step = Math.abs(Math.sin(introAnimTimer * 0.12 + pi)) * 2;
+        c.save();
+        c.globalAlpha = 0.9;
+        c.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        c.beginPath(); c.ellipse(px + 19, 410, 17, 3, 0, 0, Math.PI * 2); c.fill();
+        c.translate(px, 375 - step);
+        c.scale(0.8, 0.8);
+        Game.entities.drawAnimalSprite(c, parade[pi], 0, 0);
+        c.restore();
+      }
+    }
 
     /* Continue button */
-    drawButton(c, Game.i18n.t('continueBtn'), W / 2 - 90, H - 60, 180, 44);
+    drawPrimaryButton(c, Game.i18n.t('continueBtn'), W / 2 - 100, H - 58, 200, 46, introAnimTimer);
   }
 
   function handleIntroClick(mx, my) {
-    if (hitButton(mx, my, W / 2 - 90, H - 60, 180, 44)) {
+    if (hitButton(mx, my, W / 2 - 100, H - 58, 200, 46)) {
       Game.audio.play('select');
       introAnimTimer = 0;
       return 'start';
@@ -2488,19 +2719,32 @@
       c.restore();
     }
 
-    /* Floor number */
-    c.fillStyle = '#1a1a1a';
-    c.font = 'bold 32px "M PLUS Rounded 1c", sans-serif';
-    c.textAlign = 'left';
-    c.fillText(String(idx + 1), x + 14, y + 44);
+    /* Floor number on a cream badge, readable on every card colour */
+    c.fillStyle = 'rgba(0,0,0,0.25)';
+    c.beginPath(); c.arc(x + 31, y + 34, 19, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#fff8e0';
+    c.beginPath(); c.arc(x + 30, y + 32, 19, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = info.accent;
+    c.lineWidth = 2;
+    c.stroke();
+    c.fillStyle = '#3a2418';
+    c.font = 'bold 24px "M PLUS Rounded 1c", sans-serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(String(idx + 1), x + 30, y + 33);
+    c.textBaseline = 'alphabetic';
 
     /* Floor icon: the lobby's brass desk bell, or a resident guest */
     drawFloorIcon(c, info.icon, x + w - 48, y + 34);
 
-    /* Label */
-    c.fillStyle = '#fff8e0';
+    /* Label, with a dark outline so it holds up on the pale safari card */
     c.font = 'bold 16px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
+    c.lineJoin = 'round';
+    c.strokeStyle = 'rgba(40, 20, 10, 0.7)';
+    c.lineWidth = 4;
+    c.strokeText(Game.i18n.t(info.key), x + w / 2, y + 80);
+    c.fillStyle = '#fff8e0';
     c.fillText(Game.i18n.t(info.key), x + w / 2, y + 80);
 
     /* Confirm button (or "You are here") */

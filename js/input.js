@@ -297,8 +297,12 @@
     var bEdge = gy + GAME_H;
 
     c.save();
-    /* Bezel fill across the entire canvas */
-    c.fillStyle = '#081224';
+    /* Bezel fill across the entire canvas – deep plum, the hotel's night
+       colour, so the frame belongs to the game rather than the device. */
+    var bz = c.createLinearGradient(0, 0, 0, ch);
+    bz.addColorStop(0, '#1e0e26');
+    bz.addColorStop(1, '#140818');
+    c.fillStyle = bz;
     c.fillRect(0, 0, cw, ch);
 
     /* Inner-edge glow framing the game viewport so the bezel reads as a
@@ -312,7 +316,7 @@
     /* Hairline border at the game viewport edges (drawn in bezel space –
        the state renderer will paint over the inside of the rect). */
     if (gx > 0 || gy > 0 || rEdge < cw || bEdge < ch) {
-      c.strokeStyle = '#1a3a60';
+      c.strokeStyle = '#8a6430';
       c.lineWidth = 2;
       if (gx > 0) {
         c.beginPath(); c.moveTo(gx + 0.5, 0); c.lineTo(gx + 0.5, ch); c.stroke();
@@ -343,11 +347,11 @@
       grad = c.createLinearGradient(0, y, 0, y + h);
     }
     if (inward) {
-      grad.addColorStop(0, 'rgba(100,160,220,0.25)');
-      grad.addColorStop(1, 'rgba(10,22,40,0)');
+      grad.addColorStop(0, 'rgba(232,184,96,0.22)');
+      grad.addColorStop(1, 'rgba(30,14,38,0)');
     } else {
-      grad.addColorStop(0, 'rgba(10,22,40,0)');
-      grad.addColorStop(1, 'rgba(100,160,220,0.25)');
+      grad.addColorStop(0, 'rgba(30,14,38,0)');
+      grad.addColorStop(1, 'rgba(232,184,96,0.22)');
     }
     c.fillStyle = grad;
     c.fillRect(x, y, w, h);
@@ -358,63 +362,73 @@
     c.save();
     c.globalAlpha = 0.9;
 
-    /* D-pad buttons */
+    /* D-pad center – computed from button positions so it matches layout.
+       Drawn first as a plum cross-plate the four buttons sit on. */
+    var centerX = (touchButtons.left.x + touchButtons.right.x) / 2;
+    var centerY = (touchButtons.up.y + touchButtons.down.y) / 2;
+    c.fillStyle = '#2a1436';
+    c.beginPath();
+    c.arc(centerX, centerY, 26, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = 'rgba(232,184,96,0.5)';
+    c.lineWidth = 2;
+    c.stroke();
+
+    /* D-pad buttons – the same plum-and-brass as the menu buttons */
     var btns = ['up', 'down', 'left', 'right'];
     var arrows = ['\u25B2', '\u25BC', '\u25C0', '\u25B6'];
     for (var i = 0; i < btns.length; i++) {
       var b = touchButtons[btns[i]];
-      c.fillStyle = b.active ? '#88ccff' : '#2a4a6e';
-      c.beginPath();
-      c.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-      c.fill();
-      c.strokeStyle = '#66aadd';
-      c.lineWidth = 2;
-      c.stroke();
-      c.fillStyle = '#ffffff';
-      c.font = 'bold 34px "M PLUS Rounded 1c", sans-serif';
+      paintRoundButton(c, b, b.active ? ['#a868d8', '#6a34a0'] : ['#6c3a9c', '#3e1a64'], '#e8b860');
+      c.fillStyle = b.active ? '#ffffff' : '#fbe8ff';
+      c.font = 'bold 30px "M PLUS Rounded 1c", sans-serif';
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      c.fillText(arrows[i], b.x, b.y);
+      c.fillText(arrows[i], b.x, b.y + (b.active ? 2 : 0));
     }
 
-    /* D-pad center – computed from button positions so it matches layout */
-    var centerX = (touchButtons.left.x + touchButtons.right.x) / 2;
-    var centerY = (touchButtons.up.y + touchButtons.down.y) / 2;
-    c.fillStyle = '#334455';
-    c.beginPath();
-    c.arc(centerX, centerY, 22, 0, Math.PI * 2);
-    c.fill();
-
-    /* Action button */
+    /* Action button – the pink call-to-action colour, gold rim */
     var ab = touchButtons.action;
-    c.fillStyle = ab.active ? '#ff88aa' : '#cc4466';
-    c.beginPath();
-    c.arc(ab.x, ab.y, ab.r, 0, Math.PI * 2);
-    c.fill();
-    c.strokeStyle = '#ffaacc';
-    c.lineWidth = 2;
-    c.stroke();
+    paintRoundButton(c, ab, ab.active ? ['#ffb8e4', '#f052b0'] : ['#ff8ad0', '#d0308c'], '#ffe6a0');
     c.fillStyle = '#ffffff';
     c.font = 'bold 24px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
     c.textBaseline = 'middle';
+    c.shadowColor = 'rgba(110, 10, 70, 0.6)';
+    c.shadowOffsetY = 2;
     var bubbleLabel = (window.Game && Game.i18n) ? Game.i18n.t('bubbleBtn') : 'BUBBLE';
-    c.fillText(bubbleLabel, ab.x, ab.y);
+    c.fillText(bubbleLabel, ab.x, ab.y + (ab.active ? 2 : 0));
+    c.shadowColor = 'transparent';
+    c.shadowOffsetY = 0;
 
     /* Pause button */
     var pb = touchButtons.pause;
-    c.fillStyle = pb.active ? '#88aabb' : '#556677';
-    c.beginPath();
-    c.arc(pb.x, pb.y, pb.r, 0, Math.PI * 2);
-    c.fill();
-    c.strokeStyle = '#99aabb';
-    c.lineWidth = 2;
-    c.stroke();
-    c.fillStyle = '#ffffff';
-    c.font = 'bold 20px "M PLUS Rounded 1c", sans-serif';
-    c.fillText('II', pb.x, pb.y);
+    paintRoundButton(c, pb, pb.active ? ['#8a52c4', '#55268a'] : ['#4e2a6e', '#2e1444'], '#c89a48');
+    c.fillStyle = '#fbe8ff';
+    c.fillRect(pb.x - 6, pb.y - 7, 4, 14);
+    c.fillRect(pb.x + 2, pb.y - 7, 4, 14);
 
     c.restore();
+  }
+
+  /* Glossy round touch button: drop shadow, vertical gradient, top
+     highlight and a metallic rim. Sinks 2px while held. */
+  function paintRoundButton(c, b, cols, rim) {
+    var oy = b.active ? 2 : 0;
+    if (!b.active) {
+      c.fillStyle = 'rgba(0,0,0,0.4)';
+      c.beginPath(); c.arc(b.x, b.y + 3, b.r, 0, Math.PI * 2); c.fill();
+    }
+    var g = c.createLinearGradient(0, b.y - b.r + oy, 0, b.y + b.r + oy);
+    g.addColorStop(0, cols[0]);
+    g.addColorStop(1, cols[1]);
+    c.fillStyle = g;
+    c.beginPath(); c.arc(b.x, b.y + oy, b.r, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.16)';
+    c.beginPath(); c.ellipse(b.x, b.y + oy - b.r * 0.45, b.r * 0.7, b.r * 0.35, 0, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = rim;
+    c.lineWidth = 2;
+    c.beginPath(); c.arc(b.x, b.y + oy, b.r, 0, Math.PI * 2); c.stroke();
   }
 
   /* Click handling for menus. Returns game-space coordinates (0..GAME_W,
