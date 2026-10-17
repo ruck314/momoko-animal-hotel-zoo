@@ -2863,13 +2863,20 @@
   function drawElephantSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.elephant;
     drawCreatureBase(c, sx, sy, p.body, p.shade);
-    /* Large floppy ears with inner pink and shading */
+    /* Large floppy ears with inner pink, set out to either side of the
+       head and then covered by a redrawn face disc, so the eye sits on
+       the face instead of on an ear. */
     c.fillStyle = p.shade;
-    c.beginPath(); c.ellipse(sx + 3, sy + 14, 8, 11, -0.3, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.ellipse(sx + 17, sy + 14, 8, 11, 0.3, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx - 1, sy + 15, 8, 11, -0.3, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 21, sy + 14, 8, 11, 0.3, 0, Math.PI * 2); c.fill();
     c.fillStyle = p.accent;
-    c.beginPath(); c.ellipse(sx + 4, sy + 16, 4, 6, -0.3, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.ellipse(sx + 16, sy + 16, 4, 6, 0.3, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx - 2, sy + 16, 4, 6, -0.3, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 22, sy + 15, 4, 6, 0.3, 0, Math.PI * 2); c.fill();
+    var faceGrad = c.createLinearGradient(sx + 10, sy + 8, sx + 10, sy + 28);
+    faceGrad.addColorStop(0, p.body);
+    faceGrad.addColorStop(1, p.shade);
+    c.fillStyle = faceGrad;
+    c.beginPath(); c.arc(sx + 10, sy + 18, 10, 0, Math.PI * 2); c.fill();
     /* Trunk — long, forward-curling, segmented so it reads
        unambiguously as an elephant trunk and not just a snout. */
     var trunkGrad = c.createLinearGradient(sx, sy + 14, sx + 4, sy + 44);

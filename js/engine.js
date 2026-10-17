@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.9.0';
+  Game.VERSION = 'v0.10.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -122,7 +122,6 @@
   var npcs = []; /* { entity, type } */
   var pickups = [];
   var particles = [];
-  var ambientBubbles = [];
   var wolfe = null;
   var npcCooldowns = {};
   /* Rings-view cutscene trigger arming. Fires when the player floats above
@@ -161,98 +160,840 @@
      the bottom bezel instead of covering gameplay. */
   var pendingDialogue = null;
 
-  /* ---- Background parallax layers ---- */
-  var bgLayers = [];
-  var bgFishSchools = [];
-  var currentMotes = [];
-  /* World-space x of the background UFO. Persisted across frames so the UFO
-     glides smoothly. Reset whenever a level loads. */
-  var bgUfoX = 0;
-
-  function initBgLayers() {
-    bgLayers = [];
-    /* Layer 0 – distant nebula clouds (soft violet/magenta blobs) */
-    var layer0 = [];
-    var bgColors0 = level && level.bgLayer0 ? level.bgLayer0 : ['#3a1860', '#2a1050', '#4a1a70'];
-    for (var i = 0; i < 30; i++) {
-      layer0.push({
-        x: i * 200 + Math.random() * 100,
-        y: 120 + Math.random() * 200,
-        w: 120 + Math.random() * 180,
-        h: 60 + Math.random() * 80,
-        color: bgColors0[Math.floor(Math.random() * bgColors0.length)],
-        blobSeed: Math.random() * 100,
-      });
+  /* ---- Hotel interior backdrop ----
+     Every floor is a hotel corridor seen side-on: ceiling + crown
+     moulding, a wallpapered wall with windows and pendant lamps, a
+     wainscot below the chair rail, and a flat floor whose top edge is
+     level.floorY (so entities, doors and the elevator never shift).
+     level.wing picks the palette, wallpaper motif, window view and lamp.
+     Wallpaper is a pattern tile painted once per wing; everything else
+     is either fixed geometry or seeded from world x, so no scenery calls
+     Math.random() per frame. */
+  var CEIL_Y = 34;   /* bottom edge of the ceiling plane */
+  var WALL_Y = 54;   /* bottom edge of the crown moulding */
+  var RAIL_Y = 340;  /* top of the chair rail */
+  var BASE_Y = 428;  /* top of the skirting board */
+  var WINGS = {
+    lobby: {
+      ceil: '#3e1018', ceilHi: '#6a2030', wall: '#eedbb2', motif: '#d6b468',
+      trim: '#caa040', trimHi: '#fcd870', trimLo: '#7a5a18',
+      wains: '#6a2a24', wainsHi: '#8e4034', wainsLo: '#3e1410',
+      floor: 'marble', carpet: '#8a1c2c', carpetHi: '#b23446', carpetEdge: '#ffd24a',
+      curtain: '#8a1c2c', curtainHi: '#b8344a', view: 'city', lamp: 'none',
+      tileW: 60, tileH: 84
+    },
+    safari: {
+      ceil: '#5a3a1c', ceilHi: '#7e5428', wall: '#efce94', motif: '#5a3a1c',
+      trim: '#9a6a32', trimHi: '#d8a860', trimLo: '#5a3a1c',
+      wains: '#8a5a2c', wainsHi: '#aa7840', wainsLo: '#5a3818',
+      floor: 'carpet', carpet: '#b0502c', carpetHi: '#d06a3a', carpetEdge: '#f0c060',
+      curtain: '#c87a34', curtainHi: '#e8a050', view: 'savanna', lamp: 'rattan',
+      tileW: 96, tileH: 96
+    },
+    wild: {
+      ceil: '#22301e', ceilHi: '#3a4a2e', wall: '#3f6a4a', motif: '#5a8a62',
+      trim: '#6a4424', trimHi: '#9a6a3a', trimLo: '#3a2210',
+      wains: '#5a3a22', wainsHi: '#7a5434', wainsLo: '#341e0e',
+      floor: 'carpet', carpet: '#7a2a24', carpetHi: '#9a3a2e', carpetEdge: '#e8d8a0',
+      curtain: '#8a3a2a', curtainHi: '#b05a3a', view: 'forest', lamp: 'lantern',
+      tileW: 72, tileH: 96
+    },
+    magic: {
+      ceil: '#3a2862', ceilHi: '#5a3a8a', wall: '#cdb8ec', motif: '#ffffff',
+      trim: '#caa040', trimHi: '#fcd870', trimLo: '#7a5a18',
+      wains: '#7a5ab8', wainsHi: '#9a7ad4', wainsLo: '#4a3080',
+      floor: 'carpet', carpet: '#4a2c8a', carpetHi: '#6a44b0', carpetEdge: '#ff99dd',
+      curtain: '#e88ac8', curtainHi: '#ffb8e4', view: 'rainbow', lamp: 'orb',
+      tileW: 80, tileH: 80
     }
-    bgLayers.push({ items: layer0, parallax: 0.15 });
+  };
+  var wallPatterns = {}; /* wing -> CanvasPattern, built on first use */
 
-    /* Layer 1 – mid-distance planets & moons */
-    var layer1 = [];
-    var bgColors1 = level && level.bgLayer1 ? level.bgLayer1 : ['#4a2878', '#5a2888', '#3a1868'];
-    for (var j = 0; j < 12; j++) {
-      layer1.push({
-        x: j * 460 + Math.random() * 80,
-        y: 80 + Math.random() * 180,
-        w: 40 + Math.random() * 60,
-        h: 40 + Math.random() * 60,
-        color: bgColors1[Math.floor(Math.random() * bgColors1.length)],
-        blobSeed: Math.random() * 100,
-        isPlanet: true,
-      });
+  /* Stable pseudo-random 0..1 from a number (for seeded scenery). */
+  function hash01(n) {
+    var s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+    return s - Math.floor(s);
+  }
+
+  function wingTheme() {
+    return WINGS[(level && level.wing) || 'lobby'];
+  }
+
+  /* -- Wallpaper tiles (painted once into an offscreen canvas) -- */
+  function paintDamask(t, cx, cy, col, bg) {
+    t.fillStyle = col;
+    t.beginPath();
+    t.moveTo(cx, cy - 22);
+    t.bezierCurveTo(cx + 11, cy - 10, cx + 14, cy + 6, cx, cy + 22);
+    t.bezierCurveTo(cx - 14, cy + 6, cx - 11, cy - 10, cx, cy - 22);
+    t.fill();
+    for (var s = -1; s <= 1; s += 2) {
+      t.beginPath();
+      t.moveTo(cx, cy + 6);
+      t.quadraticCurveTo(cx + s * 22, cy, cx + s * 17, cy - 15);
+      t.quadraticCurveTo(cx + s * 12, cy - 4, cx, cy + 10);
+      t.fill();
+      t.beginPath();
+      t.arc(cx + s * 17, cy - 16, 2.4, 0, Math.PI * 2);
+      t.fill();
     }
-    bgLayers.push({ items: layer1, parallax: 0.3 });
+    t.beginPath(); t.arc(cx, cy - 27, 3, 0, Math.PI * 2); t.fill();
+    t.beginPath(); t.arc(cx, cy + 27, 2, 0, Math.PI * 2); t.fill();
+    /* Hollow the centre so it reads as damask, not a blob */
+    t.fillStyle = bg;
+    t.beginPath();
+    t.moveTo(cx, cy - 11);
+    t.bezierCurveTo(cx + 5, cy - 4, cx + 6, cy + 4, cx, cy + 11);
+    t.bezierCurveTo(cx - 6, cy + 4, cx - 5, cy - 4, cx, cy - 11);
+    t.fill();
+    t.fillStyle = col;
+    t.beginPath(); t.arc(cx, cy, 2.2, 0, Math.PI * 2); t.fill();
+  }
 
-    /* Layer 2 – closer asteroid silhouettes */
-    var layer2 = [];
-    var bgColors2 = level && level.bgLayer2 ? level.bgLayer2 : ['#2d1a4a', '#321d52', '#28154a'];
-    for (var k = 0; k < 20; k++) {
-      layer2.push({
-        x: k * 280 + Math.random() * 120,
-        y: 340 + Math.random() * 60,
-        w: 40 + Math.random() * 60,
-        h: 25 + Math.random() * 35,
-        color: bgColors2[Math.floor(Math.random() * bgColors2.length)],
-        blobSeed: Math.random() * 100,
-      });
-    }
-    bgLayers.push({ items: layer2, parallax: 0.5 });
+  function paintLeaf(t, x, y, ang, len, col) {
+    t.save();
+    t.translate(x, y);
+    t.rotate(ang);
+    t.fillStyle = col;
+    t.beginPath();
+    t.moveTo(0, -len);
+    t.quadraticCurveTo(len * 0.55, 0, 0, len);
+    t.quadraticCurveTo(-len * 0.55, 0, 0, -len);
+    t.fill();
+    t.strokeStyle = 'rgba(255,255,255,0.35)';
+    t.lineWidth = 1;
+    t.beginPath(); t.moveTo(0, -len + 2); t.lineTo(0, len - 2); t.stroke();
+    t.restore();
+  }
 
-    /* Background UFO trails (tiny lights in formation — replaces fish schools) */
-    bgFishSchools = [];
-    for (var fs = 0; fs < 3; fs++) {
-      var school = { x: Math.random() * (level ? level.width : 5600), y: 80 + Math.random() * 140, speed: 0.15 + Math.random() * 0.3, dir: Math.random() > 0.5 ? 1 : -1, fish: [] };
-      var count = 4 + Math.floor(Math.random() * 3);
-      for (var fi = 0; fi < count; fi++) {
-        school.fish.push({ ox: fi * 14 - count * 7, oy: Math.random() * 10 - 5, phase: Math.random() * Math.PI * 2 });
-      }
-      bgFishSchools.push(school);
-    }
-
-    /* Twinkling stars – dense field, per-star twinkle phase */
-    currentMotes = [];
-    for (var cm = 0; cm < 80; cm++) {
-      currentMotes.push({
-        x: Math.random() * W,
-        y: Math.random() * H * 0.75, /* upper 3/4 of screen */
-        speed: 0, /* stars don't drift — they twinkle in place */
-        alpha: 0.4 + Math.random() * 0.5,
-        size: 0.6 + Math.random() * 1.4,
-        twinkle: Math.random() * Math.PI * 2,
-        twinkleSpeed: 0.02 + Math.random() * 0.04,
-        color: cm % 13 === 0 ? '#44ffff' : (cm % 17 === 0 ? '#ff66cc' : '#ffffff'),
-      });
+  function paintPine(t, x, y, col) {
+    t.fillStyle = col;
+    t.fillRect(x - 1.5, y + 10, 3, 6);
+    for (var k = 0; k < 3; k++) {
+      var ty = y - 12 + k * 7, hw = 5 + k * 3.5;
+      t.beginPath();
+      t.moveTo(x, ty - 4);
+      t.lineTo(x + hw, ty + 8);
+      t.lineTo(x - hw, ty + 8);
+      t.closePath();
+      t.fill();
     }
   }
 
-  /* ---- Ambient bubbles ---- */
-  function initAmbientBubbles() {
-    ambientBubbles = [];
-    for (var i = 0; i < 70; i++) {
-      ambientBubbles.push(new Game.entities.AmbientBubble(
-        Math.random() * (level ? level.width : W),
-        Math.random() * H
-      ));
+  function paintPaw(t, x, y, col) {
+    t.fillStyle = col;
+    t.beginPath(); t.ellipse(x, y + 3, 6, 5, 0, 0, Math.PI * 2); t.fill();
+    var toes = [[-6, -4], [-2, -8], [2.5, -8], [6.5, -4]];
+    for (var k = 0; k < toes.length; k++) {
+      t.beginPath(); t.ellipse(x + toes[k][0], y + toes[k][1], 2.2, 2.8, 0, 0, Math.PI * 2); t.fill();
     }
+  }
+
+  function paintStar(t, x, y, r, col) {
+    t.fillStyle = col;
+    t.beginPath();
+    for (var k = 0; k < 10; k++) {
+      var a = -Math.PI / 2 + k * Math.PI / 5;
+      var rr = k % 2 === 0 ? r : r * 0.45;
+      if (k === 0) t.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+      else t.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    }
+    t.closePath();
+    t.fill();
+  }
+
+  function wallPattern(wing) {
+    if (wallPatterns[wing]) return wallPatterns[wing];
+    var th = WINGS[wing];
+    var tc = document.createElement('canvas');
+    var tw = th.tileW, tH = th.tileH;
+    tc.width = tw;
+    tc.height = tH;
+    var t = tc.getContext('2d');
+    t.fillStyle = th.wall;
+    t.fillRect(0, 0, tw, tH);
+    if (wing === 'lobby') {
+      /* Cream-and-gold damask, half-drop repeat, between pinstripes */
+      t.globalAlpha = 0.55;
+      paintDamask(t, tw / 2, tH / 2, th.motif, th.wall);
+      paintDamask(t, 0, 0, th.motif, th.wall);
+      paintDamask(t, tw, 0, th.motif, th.wall);
+      paintDamask(t, 0, tH, th.motif, th.wall);
+      paintDamask(t, tw, tH, th.motif, th.wall);
+      t.globalAlpha = 0.25;
+      t.fillStyle = th.motif;
+      t.fillRect(tw / 4 - 0.5, 0, 1, tH);
+      t.fillRect(tw * 3 / 4 - 0.5, 0, 1, tH);
+    } else if (wing === 'safari') {
+      /* A band of zebra stripes, then a column of palm leaves */
+      t.globalAlpha = 0.16;
+      t.fillStyle = th.motif;
+      for (var zs = 0; zs < 6; zs++) {
+        var zy = 4 + zs * 16;
+        t.beginPath();
+        t.moveTo(6, zy);
+        t.quadraticCurveTo(20, zy - 7, 36, zy + 3);
+        t.lineTo(36, zy + 8);
+        t.quadraticCurveTo(20, zy - 1, 6, zy + 6);
+        t.closePath();
+        t.fill();
+      }
+      t.globalAlpha = 0.3;
+      t.fillStyle = '#c08a3a';
+      t.fillRect(2, 0, 1.5, tH);
+      t.fillRect(40, 0, 1.5, tH);
+      t.globalAlpha = 0.32;
+      paintLeaf(t, 68, 24, 0.5, 13, '#7a8a3a');
+      paintLeaf(t, 68, 72, -0.5, 13, '#7a8a3a');
+      paintLeaf(t, 80, 48, 1.1, 9, '#8a9a48');
+    } else if (wing === 'wild') {
+      /* Pines and paw prints, alternating rows */
+      t.globalAlpha = 0.5;
+      paintPine(t, 18, 26, th.motif);
+      paintPaw(t, 54, 30, th.motif);
+      paintPaw(t, 18, 78, th.motif);
+      paintPine(t, 54, 74, th.motif);
+    } else {
+      /* Lilac with stars and tiny rainbows */
+      t.globalAlpha = 0.75;
+      paintStar(t, 20, 20, 6, '#ffffff');
+      t.globalAlpha = 0.5;
+      paintStar(t, 62, 30, 2.5, '#fff4b0');
+      paintStar(t, 22, 62, 2.5, '#ffe0f4');
+      t.globalAlpha = 0.55;
+      var rbc = ['#ff8ac0', '#ffd870', '#88d0ff'];
+      t.lineWidth = 2.4;
+      for (var rb = 0; rb < 3; rb++) {
+        t.strokeStyle = rbc[rb];
+        t.beginPath();
+        t.arc(60, 66, 10 - rb * 2.6, Math.PI, 0);
+        t.stroke();
+      }
+      t.fillStyle = '#ffffff';
+      t.beginPath(); t.arc(50, 66, 3, 0, Math.PI * 2); t.arc(70, 66, 3, 0, Math.PI * 2); t.fill();
+    }
+    t.globalAlpha = 1;
+    wallPatterns[wing] = ctx.createPattern(tc, 'repeat');
+    return wallPatterns[wing];
+  }
+
+  /* -- Views (window scenes and painted wall art) --
+     Painted into the rect (x, y, w, h) with the caller's clip active.
+     `ox` shifts the scene for window parallax; `seed` keeps each
+     window's skyline / trees stable. */
+  function drawView(c, kind, x, y, w, h, ox, seed) {
+    var g = c.createLinearGradient(0, y, 0, y + h);
+    var cx = x + w / 2 + ox;
+    var gy = y + h; /* ground line */
+    var i, bx, r;
+    if (kind === 'city') {
+      g.addColorStop(0, '#2c2c6a');
+      g.addColorStop(0.6, '#a85a8a');
+      g.addColorStop(1, '#f6a878');
+      c.fillStyle = g;
+      c.fillRect(x, y, w, h);
+      /* A few early stars */
+      c.fillStyle = '#fff8e0';
+      for (i = 0; i < 8; i++) {
+        c.fillRect(x + hash01(seed + i) * w, y + hash01(seed + i + 20) * h * 0.35, 1.2, 1.2);
+      }
+      /* Far then near skyline, with lit windows */
+      var rows = [{ col: '#5a4478', lit: 0.25, hMin: 0.3, hMax: 0.6, step: 18 },
+                  { col: '#2e2448', lit: 0.4, hMin: 0.15, hMax: 0.45, step: 24 }];
+      for (var rw = 0; rw < 2; rw++) {
+        var row = rows[rw];
+        for (i = -6; i < 8; i++) {
+          bx = cx + i * row.step - 6;
+          var bw = row.step - 4 + hash01(seed * 3 + i + rw * 50) * 6;
+          var bh = h * (row.hMin + hash01(seed + i * 7 + rw * 31) * (row.hMax - row.hMin));
+          c.fillStyle = row.col;
+          c.fillRect(bx, gy - bh, bw, bh);
+          if (hash01(seed + i * 13 + rw) > 0.7) c.fillRect(bx + bw / 2 - 1, gy - bh - 8, 2, 8); /* spire */
+          c.fillStyle = '#ffd88a';
+          for (var wy = gy - bh + 5; wy < gy - 4; wy += 7) {
+            for (var wx = bx + 3; wx < bx + bw - 3; wx += 5) {
+              if (hash01(wx * 0.37 + wy * 1.31 + seed) < row.lit) c.fillRect(wx, wy, 2, 3);
+            }
+          }
+        }
+      }
+      /* Park treetops along the bottom */
+      c.fillStyle = '#2a4a34';
+      for (i = -8; i < 10; i++) {
+        c.beginPath(); c.arc(cx + i * 12, gy + 2, 8 + hash01(seed + i) * 3, Math.PI, 0); c.fill();
+      }
+    } else if (kind === 'savanna') {
+      g.addColorStop(0, '#ff9a5a');
+      g.addColorStop(0.7, '#ffd08a');
+      g.addColorStop(1, '#ffe8b0');
+      c.fillStyle = g;
+      c.fillRect(x, y, w, h);
+      /* Low sun with a soft halo */
+      var sunX = cx + 18, sunY = gy - h * 0.38;
+      var sg = c.createRadialGradient(sunX, sunY, 4, sunX, sunY, 40);
+      sg.addColorStop(0, 'rgba(255,250,220,0.9)');
+      sg.addColorStop(1, 'rgba(255,250,220,0)');
+      c.fillStyle = sg;
+      c.fillRect(sunX - 40, sunY - 40, 80, 80);
+      c.fillStyle = '#fff4cc';
+      c.beginPath(); c.arc(sunX, sunY, 13, 0, Math.PI * 2); c.fill();
+      /* Distant hills */
+      c.fillStyle = '#d89850';
+      c.beginPath(); c.ellipse(cx - 40, gy, 90, h * 0.22, 0, Math.PI, 0); c.fill();
+      c.fillStyle = '#c47e3a';
+      c.beginPath(); c.ellipse(cx + 60, gy + 4, 100, h * 0.18, 0, Math.PI, 0); c.fill();
+      /* Acacia silhouette */
+      var ax = cx - 22 + hash01(seed) * 20;
+      c.fillStyle = '#5a3418';
+      c.beginPath();
+      c.moveTo(ax - 2, gy); c.lineTo(ax - 1, gy - 30); c.lineTo(ax - 10, gy - 40);
+      c.lineTo(ax - 8, gy - 41); c.lineTo(ax + 1, gy - 33); c.lineTo(ax + 9, gy - 42);
+      c.lineTo(ax + 11, gy - 41); c.lineTo(ax + 3, gy - 30); c.lineTo(ax + 3, gy);
+      c.closePath(); c.fill();
+      c.beginPath(); c.ellipse(ax, gy - 44, 26, 6, 0, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.ellipse(ax - 10, gy - 47, 13, 4, 0, 0, Math.PI * 2); c.fill();
+      /* Far-off giraffe in some windows */
+      if (hash01(seed + 5) > 0.45) {
+        var gx = cx + 40;
+        c.fillRect(gx - 6, gy - 16, 12, 6);
+        c.fillRect(gx - 5, gy - 10, 2, 10);
+        c.fillRect(gx + 3, gy - 10, 2, 10);
+        c.beginPath(); c.moveTo(gx + 3, gy - 15); c.lineTo(gx + 8, gy - 34); c.lineTo(gx + 11, gy - 33); c.lineTo(gx + 6, gy - 14); c.closePath(); c.fill();
+        c.fillRect(gx + 8, gy - 37, 6, 3);
+      }
+      /* Grass line */
+      c.fillStyle = '#a0682a';
+      c.fillRect(x, gy - 4, w, 4);
+    } else if (kind === 'forest') {
+      g.addColorStop(0, '#16224a');
+      g.addColorStop(1, '#4a6a8e');
+      c.fillStyle = g;
+      c.fillRect(x, y, w, h);
+      c.fillStyle = '#fff8e0';
+      for (i = 0; i < 12; i++) {
+        r = hash01(seed + i * 3) > 0.8 ? 1.6 : 1;
+        c.fillRect(x + hash01(seed + i) * w, y + hash01(seed + i + 40) * h * 0.5, r, r);
+      }
+      /* Moon with a soft glow — part of the view, not the wall */
+      var mx = cx + 20, my = y + h * 0.26;
+      var mg = c.createRadialGradient(mx, my, 6, mx, my, 34);
+      mg.addColorStop(0, 'rgba(255,248,210,0.5)');
+      mg.addColorStop(1, 'rgba(255,248,210,0)');
+      c.fillStyle = mg;
+      c.fillRect(mx - 34, my - 34, 68, 68);
+      c.fillStyle = '#fff4cc';
+      c.beginPath(); c.arc(mx, my, 10, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(200,190,150,0.6)';
+      c.beginPath(); c.arc(mx - 3, my - 2, 2.2, 0, Math.PI * 2); c.arc(mx + 4, my + 3, 1.6, 0, Math.PI * 2); c.fill();
+      /* Mountains */
+      c.fillStyle = '#2e4462';
+      c.beginPath();
+      c.moveTo(cx - 140, gy);
+      c.lineTo(cx - 70, gy - h * 0.5); c.lineTo(cx - 20, gy - h * 0.25);
+      c.lineTo(cx + 40, gy - h * 0.55); c.lineTo(cx + 140, gy);
+      c.closePath(); c.fill();
+      c.fillStyle = '#dfe8f4';
+      c.beginPath();
+      c.moveTo(cx + 40, gy - h * 0.55); c.lineTo(cx + 30, gy - h * 0.45); c.lineTo(cx + 50, gy - h * 0.46);
+      c.closePath(); c.fill();
+      /* Pine silhouettes */
+      c.fillStyle = '#14261c';
+      for (i = -7; i < 8; i++) {
+        var px = cx + i * 14 + hash01(seed + i) * 6;
+        var ph = 24 + hash01(seed + i * 5) * 22;
+        c.beginPath(); c.moveTo(px, gy - ph); c.lineTo(px + 9, gy); c.lineTo(px - 9, gy); c.closePath(); c.fill();
+      }
+    } else if (kind === 'sea') {
+      g.addColorStop(0, '#8ad0f4');
+      g.addColorStop(1, '#e0f4ff');
+      c.fillStyle = g;
+      c.fillRect(x, y, w, h);
+      c.fillStyle = '#ffffff';
+      c.beginPath(); c.arc(cx - 14, y + h * 0.25, 6, 0, Math.PI * 2); c.arc(cx - 6, y + h * 0.22, 8, 0, Math.PI * 2); c.arc(cx + 3, y + h * 0.26, 5, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#3a8ac8';
+      c.fillRect(x, y + h * 0.55, w, h * 0.45);
+      c.fillStyle = '#5aaae0';
+      c.fillRect(x, y + h * 0.55, w, 3);
+      c.strokeStyle = 'rgba(255,255,255,0.6)';
+      c.lineWidth = 1;
+      for (i = 0; i < 4; i++) {
+        var wvy = y + h * (0.66 + i * 0.09);
+        c.beginPath(); c.moveTo(x + 4 + i * 6, wvy); c.quadraticCurveTo(x + 10 + i * 6, wvy - 2, x + 16 + i * 6, wvy); c.stroke();
+      }
+      /* Sailboat */
+      c.fillStyle = '#ffffff';
+      c.beginPath(); c.moveTo(cx + 4, y + h * 0.53); c.lineTo(cx + 4, y + h * 0.25); c.lineTo(cx + 16, y + h * 0.53); c.closePath(); c.fill();
+      c.fillStyle = '#c83a3a';
+      c.fillRect(cx - 4, y + h * 0.53, 24, 4);
+    } else {
+      /* 'rainbow' — the Magic Wing's candy sky */
+      g.addColorStop(0, '#b8a8ff');
+      g.addColorStop(0.6, '#ffc8ec');
+      g.addColorStop(1, '#fff0d8');
+      c.fillStyle = g;
+      c.fillRect(x, y, w, h);
+      var arcs = ['#ff7aa8', '#ffb060', '#ffe670', '#88e088', '#78c0ff', '#b088ff'];
+      c.lineWidth = 4;
+      for (i = 0; i < arcs.length; i++) {
+        c.strokeStyle = arcs[i];
+        c.globalAlpha = 0.85;
+        c.beginPath(); c.arc(cx - 10, gy + 6, 56 - i * 4, Math.PI, 0); c.stroke();
+      }
+      c.globalAlpha = 1;
+      /* Floating castle on a cloud */
+      var kx = cx + 34, ky = y + h * 0.42;
+      c.fillStyle = '#fff4ff';
+      c.fillRect(kx - 10, ky - 8, 20, 10);
+      c.fillRect(kx - 13, ky - 16, 6, 18);
+      c.fillRect(kx + 7, ky - 16, 6, 18);
+      c.fillStyle = '#ff99dd';
+      c.beginPath(); c.moveTo(kx - 14, ky - 16); c.lineTo(kx - 10, ky - 24); c.lineTo(kx - 6, ky - 16); c.fill();
+      c.beginPath(); c.moveTo(kx + 6, ky - 16); c.lineTo(kx + 10, ky - 24); c.lineTo(kx + 14, ky - 16); c.fill();
+      c.fillStyle = '#ffffff';
+      c.beginPath(); c.arc(kx - 12, ky + 4, 7, 0, Math.PI * 2); c.arc(kx, ky + 6, 9, 0, Math.PI * 2); c.arc(kx + 12, ky + 4, 7, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(cx - 64, gy, 10, 0, Math.PI * 2); c.arc(cx - 50, gy - 2, 12, 0, Math.PI * 2); c.arc(cx + 40, gy, 12, 0, Math.PI * 2); c.arc(cx + 56, gy + 2, 10, 0, Math.PI * 2); c.fill();
+      /* Twinkling sparkles at fixed spots */
+      var tw = Date.now() * 0.003;
+      for (i = 0; i < 6; i++) {
+        c.globalAlpha = 0.5 + 0.5 * Math.sin(tw + i * 1.7);
+        paintStar(c, x + hash01(seed + i) * w, y + hash01(seed + i + 9) * h * 0.5, 3, '#ffffff');
+      }
+      c.globalAlpha = 1;
+    }
+  }
+
+  /* -- Window: view + mullions + sill + drapes, all in screen space -- */
+  function drawHotelWindow(sx, wx, th, wing) {
+    var lobby = wing === 'lobby';
+    var w = lobby ? 92 : 80;
+    var top = lobby ? 82 : 96;
+    var h = lobby ? 170 : 136;
+    var x = sx - w / 2;
+    var archR = lobby ? w / 2 : 0;
+    var c = ctx;
+    function glassPath(inset) {
+      c.beginPath();
+      if (archR) {
+        c.moveTo(x + inset, top + h - inset);
+        c.lineTo(x + inset, top + archR);
+        c.arc(sx, top + archR, archR - inset, Math.PI, 0);
+        c.lineTo(x + w - inset, top + h - inset);
+        c.closePath();
+      } else {
+        c.rect(x + inset, top + inset, w - inset * 2, h - inset * 2);
+      }
+    }
+    /* Recess shadow + trim */
+    c.save();
+    c.shadowColor = 'rgba(0,0,0,0.3)';
+    c.shadowBlur = 8;
+    c.shadowOffsetY = 3;
+    c.fillStyle = th.trimLo;
+    glassPath(-6);
+    c.fill();
+    c.restore();
+    c.fillStyle = th.trim;
+    glassPath(-4);
+    c.fill();
+    /* View, with gentle parallax as the window slides past */
+    c.save();
+    glassPath(2);
+    c.clip();
+    drawView(c, th.view, x, top, w, h, (W / 2 - sx) * 0.12, Math.floor(wx));
+    /* Glass sheen */
+    c.fillStyle = 'rgba(255,255,255,0.12)';
+    c.beginPath();
+    c.moveTo(x + 8, top + h); c.lineTo(x + 26, top + h); c.lineTo(x + w - 10, top); c.lineTo(x + w - 28, top);
+    c.closePath(); c.fill();
+    c.restore();
+    /* Mullions */
+    c.fillStyle = th.trim;
+    c.fillRect(sx - 1.5, top + (archR ? archR * 0.4 : 0), 3, h - (archR ? archR * 0.4 : 0));
+    c.fillRect(x, top + h * (lobby ? 0.58 : 0.5) - 1.5, w, 3);
+    c.fillStyle = th.trimHi;
+    c.fillRect(sx - 0.5, top + (archR ? archR * 0.4 : 0), 1, h - (archR ? archR * 0.4 : 0));
+    /* Sill */
+    c.fillStyle = th.trimLo;
+    c.fillRect(x - 10, top + h + 2, w + 20, 7);
+    c.fillStyle = th.trimHi;
+    c.fillRect(x - 10, top + h + 2, w + 20, 2);
+    /* Drapes: pleated panels gathered by a tie-back, under a valance */
+    var dTop = top - (lobby ? 4 : 8);
+    var dBot = lobby ? RAIL_Y - 6 : top + h + 26;
+    for (var s = -1; s <= 1; s += 2) {
+      var ex = s < 0 ? x - 12 : x + w + 12;   /* outer edge */
+      var ix = s < 0 ? x + 8 : x + w - 8;     /* inner edge at the top */
+      var tieY = top + h * 0.62;
+      var dg = c.createLinearGradient(ex, 0, ix, 0);
+      dg.addColorStop(0, th.curtain);
+      dg.addColorStop(0.5, th.curtainHi);
+      dg.addColorStop(1, th.curtain);
+      c.fillStyle = dg;
+      c.beginPath();
+      c.moveTo(ex, dTop);
+      c.lineTo(ix, dTop);
+      c.quadraticCurveTo(ix - s * 4, tieY - 20, ex + s * 7, tieY);
+      c.quadraticCurveTo(ex + s * 12, dBot - 20, ex + s * 16, dBot);
+      c.lineTo(ex - s * 2, dBot);
+      c.closePath();
+      c.fill();
+      /* Pleat lines */
+      c.strokeStyle = 'rgba(0,0,0,0.18)';
+      c.lineWidth = 1;
+      for (var pl = 1; pl < 3; pl++) {
+        c.beginPath();
+        c.moveTo(ex + s * pl * 5, dTop + 2);
+        c.quadraticCurveTo(ex + s * (pl * 2 + 2), tieY, ex + s * (pl * 4 + 2), dBot - 2);
+        c.stroke();
+      }
+      /* Tie-back */
+      c.fillStyle = th.trimHi;
+      c.fillRect(ex + s * 2 - 3, tieY - 2, 9, 4);
+    }
+    /* Valance + rod */
+    c.fillStyle = th.trimLo;
+    c.fillRect(x - 18, dTop - 4, w + 36, 4);
+    c.fillStyle = th.curtain;
+    c.beginPath();
+    c.moveTo(x - 16, dTop);
+    for (var sc = 0; sc <= 4; sc++) {
+      var vx = x - 16 + sc * (w + 32) / 4;
+      if (sc > 0) c.quadraticCurveTo(vx - (w + 32) / 8, dTop + 16, vx, dTop);
+    }
+    c.closePath();
+    c.fill();
+    c.fillStyle = th.trimHi;
+    c.beginPath(); c.arc(x - 18, dTop - 2, 3, 0, Math.PI * 2); c.arc(x + w + 18, dTop - 2, 3, 0, Math.PI * 2); c.fill();
+  }
+
+  /* Back half of the corridor: ceiling, moulding, wallpaper, windows,
+     wainscot and floor. Drawn before the level's decorations. */
+  function drawHotelBackdrop() {
+    var wing = (level && level.wing) || 'lobby';
+    var th = WINGS[wing];
+    var camX = camera.x;
+    var floorY = level.floorY - camera.y;
+    var c = ctx;
+    var i, sx, wxs;
+
+    /* Ceiling plane, lit from below */
+    var cg = c.createLinearGradient(0, 0, 0, CEIL_Y);
+    cg.addColorStop(0, th.ceil);
+    cg.addColorStop(1, th.ceilHi);
+    c.fillStyle = cg;
+    c.fillRect(0, 0, W, CEIL_Y);
+    /* Coffer joints every 160 world px */
+    c.fillStyle = 'rgba(0,0,0,0.2)';
+    for (wxs = Math.floor(camX / 160) * 160; wxs < camX + W + 160; wxs += 160) {
+      c.fillRect(wxs - camX, 0, 3, CEIL_Y);
+    }
+
+    /* Wallpaper */
+    c.save();
+    c.translate(-(camX % th.tileW), 0);
+    c.fillStyle = wallPattern(wing);
+    c.fillRect(0, WALL_Y, W + th.tileW, RAIL_Y - WALL_Y);
+    c.restore();
+    /* Shade the wall: darker up under the moulding */
+    var wg = c.createLinearGradient(0, WALL_Y, 0, RAIL_Y);
+    wg.addColorStop(0, 'rgba(30,10,0,0.28)');
+    wg.addColorStop(0.35, 'rgba(30,10,0,0.04)');
+    wg.addColorStop(1, 'rgba(30,10,0,0.1)');
+    c.fillStyle = wg;
+    c.fillRect(0, WALL_Y, W, RAIL_Y - WALL_Y);
+
+    /* Crown moulding: stepped profile + dentils */
+    c.fillStyle = th.trimLo;
+    c.fillRect(0, CEIL_Y, W, 4);
+    c.fillStyle = th.trim;
+    c.fillRect(0, CEIL_Y + 4, W, 9);
+    c.fillStyle = th.trimHi;
+    c.fillRect(0, CEIL_Y + 5, W, 1.5);
+    c.fillStyle = th.trimLo;
+    for (wxs = Math.floor(camX / 14) * 14; wxs < camX + W + 14; wxs += 14) {
+      c.fillRect(wxs - camX + 2, CEIL_Y + 13, 8, 4);
+    }
+    c.fillStyle = th.trim;
+    c.fillRect(0, CEIL_Y + 17, W, 3);
+
+    /* Windows */
+    var wins = level.windows || [];
+    for (i = 0; i < wins.length; i++) {
+      sx = wins[i] - camX;
+      if (sx < -80 || sx > W + 80) continue;
+      drawHotelWindow(sx, wins[i], th, wing);
+    }
+
+    /* Wainscot: chair rail, raised panels, skirting */
+    c.fillStyle = th.wains;
+    c.fillRect(0, RAIL_Y, W, BASE_Y - RAIL_Y);
+    var pTop = RAIL_Y + 22, pBot = BASE_Y - 12;
+    for (wxs = Math.floor(camX / 80) * 80; wxs < camX + W + 80; wxs += 80) {
+      sx = wxs - camX;
+      c.fillStyle = th.wainsLo;
+      c.fillRect(sx + 10, pTop, 60, pBot - pTop);
+      c.fillStyle = th.wainsHi;
+      c.fillRect(sx + 10, pTop, 59, pBot - pTop - 1);
+      c.fillStyle = th.wains;
+      c.fillRect(sx + 13, pTop + 3, 54, pBot - pTop - 6);
+    }
+    c.fillStyle = th.trimLo;
+    c.fillRect(0, RAIL_Y, W, 10);
+    c.fillStyle = th.trim;
+    c.fillRect(0, RAIL_Y, W, 6);
+    c.fillStyle = th.trimHi;
+    c.fillRect(0, RAIL_Y + 1, W, 1.5);
+    /* Skirting board */
+    c.fillStyle = th.wainsLo;
+    c.fillRect(0, BASE_Y, W, floorY - BASE_Y);
+    c.fillStyle = th.trimLo;
+    c.fillRect(0, BASE_Y, W, 2);
+
+    /* Floor */
+    var fH = H - floorY;
+    if (th.floor === 'marble') {
+      var mg = c.createLinearGradient(0, floorY, 0, H);
+      mg.addColorStop(0, '#e2d6c0');
+      mg.addColorStop(1, '#f6efe2');
+      c.fillStyle = mg;
+      c.fillRect(0, floorY, W, fH);
+      /* Checker tiles with perspective joints (they fan out toward
+         the viewer, so the floor reads as a plane, not a stripe). */
+      for (wxs = Math.floor(camX / 60) * 60 - 60; wxs < camX + W + 120; wxs += 60) {
+        sx = wxs - camX;
+        var bx0 = sx + (sx - W / 2) * 0.22;
+        var bx1 = sx + 60 + (sx + 60 - W / 2) * 0.22;
+        if ((wxs / 60) % 2 === 0) {
+          c.fillStyle = 'rgba(160,130,100,0.18)';
+          c.beginPath();
+          c.moveTo(sx, floorY); c.lineTo(sx + 60, floorY); c.lineTo(bx1, H); c.lineTo(bx0, H);
+          c.closePath(); c.fill();
+        }
+        c.strokeStyle = 'rgba(140,110,80,0.35)';
+        c.lineWidth = 1;
+        c.beginPath(); c.moveTo(sx, floorY); c.lineTo(bx0, H); c.stroke();
+        /* One seeded vein per tile */
+        c.strokeStyle = 'rgba(150,130,110,0.3)';
+        var vs = hash01(wxs);
+        c.beginPath();
+        c.moveTo(sx + 10 + vs * 20, floorY + 2);
+        c.quadraticCurveTo(sx + 30, floorY + 12 + vs * 10, sx + 50 - vs * 10, H);
+        c.stroke();
+      }
+    } else {
+      /* Wall-to-wall carpet, darker where it meets the wall */
+      var fg = c.createLinearGradient(0, floorY, 0, H);
+      fg.addColorStop(0, th.carpet);
+      fg.addColorStop(1, th.carpetHi);
+      c.fillStyle = fg;
+      c.fillRect(0, floorY, W, fH);
+    }
+    /* Runner along the corridor, with a border and a repeat motif */
+    var rTop = floorY + 12, rBot = H - 4;
+    c.fillStyle = th.floor === 'marble' ? th.carpet : th.carpetHi;
+    c.fillRect(0, rTop, W, rBot - rTop);
+    c.fillStyle = th.carpetEdge;
+    c.fillRect(0, rTop + 2, W, 1.5);
+    c.fillRect(0, rBot - 3.5, W, 1.5);
+    c.fillStyle = 'rgba(0,0,0,0.25)';
+    c.fillRect(0, rTop, W, 1);
+    var my = (rTop + rBot) / 2;
+    for (wxs = Math.floor(camX / 40) * 40; wxs < camX + W + 40; wxs += 40) {
+      sx = wxs - camX + 20;
+      c.fillStyle = th.carpetEdge;
+      if (wing === 'magic') {
+        paintStar(c, sx, my, 4.5, th.carpetEdge);
+      } else if (wing === 'wild') {
+        /* Lodge chevrons */
+        c.strokeStyle = th.carpetEdge;
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(sx - 8, my + 3); c.lineTo(sx - 2, my - 3); c.lineTo(sx + 4, my + 3);
+        c.moveTo(sx + 2, my + 3); c.lineTo(sx + 8, my - 3); c.lineTo(sx + 14, my + 3);
+        c.stroke();
+      } else {
+        c.beginPath();
+        c.moveTo(sx, my - 5); c.lineTo(sx + 6, my); c.lineTo(sx, my + 5); c.lineTo(sx - 6, my);
+        c.closePath(); c.fill();
+        if (wing === 'safari') {
+          c.fillRect(sx + 12, my - 1, 6, 2);
+          c.fillRect(sx - 18, my - 1, 6, 2);
+        }
+      }
+    }
+    /* Contact shadow where the floor meets the wall */
+    var sg = c.createLinearGradient(0, floorY, 0, floorY + 10);
+    sg.addColorStop(0, 'rgba(0,0,0,0.3)');
+    sg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = sg;
+    c.fillRect(0, floorY, W, 10);
+  }
+
+  /* Pendant lamp painted per wing style at (sx, y) — y is the shade's top. */
+  function drawPendant(c, style, sx, y, th) {
+    c.strokeStyle = th.trimLo;
+    c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(sx, CEIL_Y + 20); c.lineTo(sx, y); c.stroke();
+    c.fillStyle = th.trim;
+    c.fillRect(sx - 5, CEIL_Y + 18, 10, 3);
+    if (style === 'rattan') {
+      c.fillStyle = '#c8964a';
+      c.beginPath(); c.ellipse(sx, y + 14, 15, 14, 0, Math.PI, 0); c.fill();
+      c.strokeStyle = '#8a5a24';
+      c.lineWidth = 0.8;
+      for (var k = -2; k <= 2; k++) {
+        c.beginPath(); c.moveTo(sx + k * 5, y + 1); c.lineTo(sx + k * 6.5, y + 14); c.stroke();
+      }
+      c.beginPath(); c.moveTo(sx - 13, y + 8); c.lineTo(sx + 13, y + 8); c.stroke();
+      c.fillStyle = '#8a5a24';
+      c.fillRect(sx - 15, y + 13, 30, 2);
+      c.fillStyle = '#fff2c0';
+      c.beginPath(); c.ellipse(sx, y + 15, 8, 2.5, 0, 0, Math.PI * 2); c.fill();
+    } else if (style === 'lantern') {
+      c.fillStyle = '#2a2a2a';
+      c.beginPath(); c.moveTo(sx - 9, y + 4); c.lineTo(sx, y - 2); c.lineTo(sx + 9, y + 4); c.closePath(); c.fill();
+      c.fillStyle = '#ffd890';
+      c.fillRect(sx - 7, y + 4, 14, 16);
+      c.fillStyle = '#fff6d8';
+      c.fillRect(sx - 3, y + 7, 6, 10);
+      c.strokeStyle = '#2a2a2a';
+      c.lineWidth = 1.4;
+      c.strokeRect(sx - 7, y + 4, 14, 16);
+      c.beginPath(); c.moveTo(sx, y + 4); c.lineTo(sx, y + 20); c.stroke();
+      c.fillStyle = '#2a2a2a';
+      c.fillRect(sx - 8, y + 20, 16, 3);
+    } else {
+      /* Magic orb: glass globe with a star inside */
+      var og = c.createRadialGradient(sx - 3, y + 7, 1, sx, y + 10, 10);
+      og.addColorStop(0, '#ffffff');
+      og.addColorStop(0.6, '#ffd8f4');
+      og.addColorStop(1, '#c8a0ff');
+      c.fillStyle = og;
+      c.beginPath(); c.arc(sx, y + 10, 10, 0, Math.PI * 2); c.fill();
+      paintStar(c, sx, y + 10, 4.5, '#ffd24a');
+      c.fillStyle = th.trim;
+      c.fillRect(sx - 4, y - 1, 8, 3);
+    }
+  }
+
+  /* Front half of the lighting: pendant lamps over each guest door and
+     warm light pools on the wall and floor (additive). Drawn after the
+     decorations, before the NPCs. */
+  function drawHotelLighting() {
+    var wing = (level && level.wing) || 'lobby';
+    var th = WINGS[wing];
+    var c = ctx;
+    var floorY = level.floorY - camera.y;
+    var lights = [];
+    var i, n, sx;
+    if (th.lamp !== 'none') {
+      for (n = 0; n < level.spawns.npcs.length; n++) {
+        var nd = level.spawns.npcs[n];
+        if (nd.type === 'animalDoor') lights.push({ x: nd.x + 24, y: 150, pendant: true });
+      }
+    } else {
+      for (i = 0; i < level.decorations.length; i++) {
+        if (level.decorations[i].type === 'chandelier') {
+          lights.push({ x: level.decorations[i].x, y: level.decorations[i].y + 26, pendant: false });
+        }
+      }
+    }
+    var flick = 0.94 + 0.06 * Math.sin(Date.now() * 0.004);
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    for (i = 0; i < lights.length; i++) {
+      sx = lights[i].x - camera.x;
+      if (sx < -160 || sx > W + 160) continue;
+      var ly = lights[i].y + 14;
+      /* Wall wash around the lamp */
+      var wg = c.createRadialGradient(sx, ly, 4, sx, ly, 110);
+      wg.addColorStop(0, 'rgba(255,200,120,' + (0.2 * flick) + ')');
+      wg.addColorStop(1, 'rgba(255,200,120,0)');
+      c.fillStyle = wg;
+      c.fillRect(sx - 110, ly - 110, 220, 220);
+      /* Faint cone down to the guest door below (pendants only) */
+      if (lights[i].pendant) {
+        var cg = c.createLinearGradient(0, ly, 0, floorY);
+        cg.addColorStop(0, 'rgba(255,220,150,0.07)');
+        cg.addColorStop(1, 'rgba(255,220,150,0)');
+        c.fillStyle = cg;
+        c.beginPath();
+        c.moveTo(sx - 10, ly); c.lineTo(sx + 10, ly); c.lineTo(sx + 60, floorY); c.lineTo(sx - 60, floorY);
+        c.closePath(); c.fill();
+      }
+      /* Pool on the floor */
+      c.save();
+      c.translate(sx, floorY + 16);
+      c.scale(1, 0.18);
+      var fg = c.createRadialGradient(0, 0, 4, 0, 0, 80);
+      fg.addColorStop(0, 'rgba(255,220,150,0.3)');
+      fg.addColorStop(1, 'rgba(255,220,150,0)');
+      c.fillStyle = fg;
+      c.beginPath(); c.arc(0, 0, 80, 0, Math.PI * 2); c.fill();
+      c.restore();
+    }
+    c.restore();
+    for (i = 0; i < lights.length; i++) {
+      if (!lights[i].pendant) continue;
+      sx = lights[i].x - camera.x;
+      if (sx < -40 || sx > W + 40) continue;
+      drawPendant(c, th.lamp, sx, lights[i].y, th);
+    }
+  }
+
+  /* Recessed casing around a doorway (guest doors, stairs, elevator):
+     a soft drop shadow so it sits in the wall, a moulded frame in the
+     wing's trim, and a dark reveal just inside. */
+  function drawDoorCasing(c, x, top, w, bottom, accent, transom) {
+    var th = wingTheme();
+    if (transom) {
+      /* Fanlight over the door: arched glass glowing with the room's
+         lamplight, so the doorway reads taller than the wainscot */
+      var tcx = x + w / 2, tr = w / 2 + 2, tby = top - 10;
+      c.save();
+      c.shadowColor = 'rgba(0,0,0,0.35)';
+      c.shadowBlur = 8;
+      c.shadowOffsetY = 2;
+      c.fillStyle = th.trimLo;
+      c.beginPath(); c.arc(tcx, tby, tr + 8, Math.PI, 0); c.closePath(); c.fill();
+      c.restore();
+      c.fillStyle = th.trim;
+      c.beginPath(); c.arc(tcx, tby, tr + 6, Math.PI, 0); c.closePath(); c.fill();
+      var fg = c.createRadialGradient(tcx, tby, 2, tcx, tby, tr);
+      fg.addColorStop(0, '#fff2c8');
+      fg.addColorStop(1, accent || '#e8b860');
+      c.fillStyle = fg;
+      c.beginPath(); c.arc(tcx, tby, tr, Math.PI, 0); c.closePath(); c.fill();
+      c.strokeStyle = th.trim;
+      c.lineWidth = 2;
+      for (var sp = 1; sp < 4; sp++) {
+        var sa = Math.PI + sp * Math.PI / 4;
+        c.beginPath(); c.moveTo(tcx, tby); c.lineTo(tcx + Math.cos(sa) * tr, tby + Math.sin(sa) * tr); c.stroke();
+      }
+      c.fillStyle = th.trim;
+      c.beginPath(); c.arc(tcx, tby, 5, Math.PI, 0); c.fill();
+    }
+    c.save();
+    c.shadowColor = 'rgba(0,0,0,0.4)';
+    c.shadowBlur = 10;
+    c.shadowOffsetY = 3;
+    c.fillStyle = th.trimLo;
+    c.fillRect(x - 8, top - 10, w + 16, bottom - top + 10);
+    c.restore();
+    c.fillStyle = th.trim;
+    c.fillRect(x - 6, top - 8, w + 12, bottom - top + 8);
+    c.fillStyle = th.trimHi;
+    c.fillRect(x - 6, top - 8, w + 12, 1.5);
+    c.fillRect(x - 6, top - 8, 1.5, bottom - top + 8);
+    /* Header cap with the species accent */
+    c.fillStyle = th.trimLo;
+    c.fillRect(x - 10, top - 12, w + 20, 4);
+    if (accent) {
+      c.fillStyle = accent;
+      c.fillRect(x - 6, top - 6, w + 12, 3);
+    }
+    c.fillStyle = 'rgba(0,0,0,0.55)';
+    c.fillRect(x - 2, top - 2, w + 4, bottom - top + 2);
   }
 
   /* ---- Level loading ---- */
@@ -330,68 +1071,6 @@
     /* Bubbles & particles */
     bubbles = [];
     particles = [];
-
-    initBgLayers();
-    initAmbientBubbles();
-    bgUfoX = (level && level.bgUfo && level.bgUfo.dir === -1) ? level.width : -100;
-  }
-
-  /* Friendly background UFO — saucer with a glowing dome and running lights. */
-  function drawBgUfo(c, sx, sy) {
-    c.save();
-    /* Glow halo */
-    var glow = c.createRadialGradient(sx, sy + 4, 6, sx, sy + 4, 60);
-    glow.addColorStop(0, 'rgba(180,255,255,0.35)');
-    glow.addColorStop(1, 'rgba(180,255,255,0)');
-    c.fillStyle = glow;
-    c.beginPath();
-    c.arc(sx, sy + 4, 60, 0, Math.PI * 2);
-    c.fill();
-    /* Saucer disc */
-    c.fillStyle = '#bbcdd8';
-    c.beginPath();
-    c.ellipse(sx, sy + 6, 36, 8, 0, 0, Math.PI * 2);
-    c.fill();
-    c.fillStyle = '#7d8896';
-    c.beginPath();
-    c.ellipse(sx, sy + 9, 30, 4, 0, 0, Math.PI * 2);
-    c.fill();
-    /* Dome */
-    c.fillStyle = '#88ddee';
-    c.beginPath();
-    c.ellipse(sx, sy + 4, 16, 11, 0, Math.PI, 0);
-    c.fill();
-    /* Dome shine */
-    c.fillStyle = 'rgba(255,255,255,0.55)';
-    c.beginPath();
-    c.ellipse(sx - 5, sy - 2, 5, 2.4, -0.4, 0, Math.PI * 2);
-    c.fill();
-    /* Running lights */
-    var t = Date.now() * 0.005;
-    var lightCols = ['#ff66cc', '#ffd24a', '#44ffff', '#44ff88'];
-    for (var rl = 0; rl < 5; rl++) {
-      var lx = sx - 24 + rl * 12;
-      var on = (Math.sin(t + rl) + 1) * 0.5;
-      c.globalAlpha = 0.6 + on * 0.4;
-      c.fillStyle = lightCols[rl % lightCols.length];
-      c.beginPath();
-      c.arc(lx, sy + 9, 1.8, 0, Math.PI * 2);
-      c.fill();
-    }
-    c.globalAlpha = 1;
-    /* Tractor beam — soft wedge below */
-    var beam = c.createLinearGradient(sx, sy + 10, sx, sy + 60);
-    beam.addColorStop(0, 'rgba(180,255,255,0.35)');
-    beam.addColorStop(1, 'rgba(180,255,255,0)');
-    c.fillStyle = beam;
-    c.beginPath();
-    c.moveTo(sx - 8, sy + 11);
-    c.lineTo(sx + 8, sy + 11);
-    c.lineTo(sx + 22, sy + 60);
-    c.lineTo(sx - 22, sy + 60);
-    c.closePath();
-    c.fill();
-    c.restore();
   }
 
   /* If both quests have completed, drop into VICTORY after a short beat. */
@@ -493,11 +1172,6 @@
 
         /* Wolfe */
         if (wolfe) wolfe.update();
-
-        /* Ambient bubbles */
-        for (var ab = 0; ab < ambientBubbles.length; ab++) {
-          ambientBubbles[ab].update(level.height);
-        }
 
         /* Particles */
         for (var pa = particles.length - 1; pa >= 0; pa--) {
@@ -1064,180 +1738,14 @@
   function renderGame() {
     if (!level) return;
 
-    /* Background gradient */
-    var grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, level.bgTop);
-    grad.addColorStop(0.5, level.bgMid);
-    grad.addColorStop(1, level.bgBottom);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-
-    /* Distant planet rings arcing across the sky (home planet only) */
-    if (level.showRings) {
-      ctx.save();
-      ctx.globalAlpha = 0.22;
-      ctx.strokeStyle = '#ffd24a';
-      ctx.lineWidth = 3;
-      var ringCx = W * 0.8 - camera.x * 0.08;
-      var ringCy = 60;
-      for (var ri = 0; ri < 3; ri++) {
-        ctx.beginPath();
-        ctx.ellipse(ringCx, ringCy, 420 - ri * 40, 40 - ri * 8, -0.2, Math.PI * 1.05, Math.PI * 1.95);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    /* Parallax background – nebula blobs, distant planets, asteroid silhouettes */
-    for (var li = 0; li < bgLayers.length; li++) {
-      var layer = bgLayers[li];
-      ctx.save();
-      ctx.globalAlpha = li === 0 ? 0.35 : 0.55;
-      for (var it = 0; it < layer.items.length; it++) {
-        var item = layer.items[it];
-        var bx = item.x - camera.x * layer.parallax;
-        if (bx + item.w > 0 && bx < W) {
-          ctx.fillStyle = item.color;
-          if (item.isPlanet) {
-            /* Round planet with a lighter crescent highlight */
-            var pcx = bx + item.w / 2;
-            var pcy = item.y;
-            ctx.beginPath();
-            ctx.arc(pcx, pcy, item.w / 2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.save();
-            ctx.globalAlpha = 0.25;
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(pcx - item.w * 0.15, pcy - item.w * 0.15, item.w / 3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-          } else {
-            ctx.beginPath();
-            var cx = bx + item.w / 2;
-            var hw = item.w / 2;
-            var hh = item.h / 2;
-            var seed = item.blobSeed || 0;
-            ctx.moveTo(cx - hw, item.y);
-            ctx.bezierCurveTo(
-              cx - hw, item.y - hh - Math.sin(seed) * 8,
-              cx - hw * 0.3, item.y - hh - Math.cos(seed * 2) * 12,
-              cx, item.y - hh
-            );
-            ctx.bezierCurveTo(
-              cx + hw * 0.3, item.y - hh - Math.sin(seed * 3) * 10,
-              cx + hw, item.y - hh - Math.cos(seed) * 6,
-              cx + hw, item.y
-            );
-            ctx.closePath();
-            ctx.fill();
-          }
-        }
-      }
-      ctx.restore();
-    }
-
-    /* Background drifting UFO — large hero-friendly one floating across the sky */
-    if (level.bgUfo) {
-      var bgU = level.bgUfo;
-      bgUfoX += bgU.speed * (bgU.dir || 1);
-      var ufoSpan = level.width + 240;
-      if (bgUfoX > ufoSpan) bgUfoX = -120;
-      if (bgUfoX < -120) bgUfoX = ufoSpan;
-      var ufoSx = bgUfoX - camera.x * 0.35;
-      var ufoSy = bgU.y + Math.sin(Date.now() * 0.001) * 6;
-      drawBgUfo(ctx, ufoSx, ufoSy);
-    }
-
-    /* Distant UFO trails (tiny running lights in formation) */
-    ctx.save();
-    ctx.globalAlpha = 0.55;
-    var now = Date.now();
-    for (var fsi = 0; fsi < bgFishSchools.length; fsi++) {
-      var school = bgFishSchools[fsi];
-      school.x += school.speed * school.dir;
-      if (school.x > (level ? level.width : 5600) + 100) school.x = -100;
-      if (school.x < -100) school.x = (level ? level.width : 5600) + 100;
-      var schX = school.x - camera.x * 0.4;
-      for (var sfi = 0; sfi < school.fish.length; sfi++) {
-        var sf = school.fish[sfi];
-        var fx = schX + sf.ox + Math.sin(now * 0.001 + sf.phase) * 2;
-        var fy = school.y + sf.oy + Math.cos(now * 0.0012 + sf.phase) * 1.5;
-        if (fx > -10 && fx < W + 10) {
-          ctx.fillStyle = sfi % 2 === 0 ? '#44ffff' : '#ff66cc';
-          ctx.beginPath();
-          ctx.arc(fx, fy, 1.4, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-    }
-    ctx.restore();
-
-    /* Ambient bubbles (behind everything) */
-    for (var ab = 0; ab < ambientBubbles.length; ab++) {
-      ambientBubbles[ab].draw(ctx, camera.x * 0.6, 0);
-    }
+    /* Hotel corridor: ceiling, wallpaper, windows, wainscot, floor */
+    drawHotelBackdrop();
 
     /* Decorations */
     renderDecorations();
 
-    /* Asteroid/moon surface – undulating contour */
-    var floorBase = level.floorY - camera.y;
-    var floorColorA = level.floorColorA || '#2d1a0a';
-    var floorColorB = level.floorColorB || '#3d2b12';
-    ctx.fillStyle = floorColorA;
-    ctx.beginPath();
-    ctx.moveTo(0, H + 10);
-    for (var fx = 0; fx <= W; fx += 4) {
-      var worldX = fx + camera.x;
-      var undulation = Math.sin(worldX * 0.008) * 6 + Math.sin(worldX * 0.02) * 3;
-      ctx.lineTo(fx, floorBase + undulation);
-    }
-    ctx.lineTo(W, H + 10);
-    ctx.closePath();
-    ctx.fill();
-    /* Dust layer */
-    ctx.fillStyle = floorColorB;
-    ctx.beginPath();
-    ctx.moveTo(0, H + 10);
-    for (var sx = 0; sx <= W; sx += 4) {
-      var swx = sx + camera.x;
-      var ripple = Math.sin(swx * 0.008) * 6 + Math.sin(swx * 0.02) * 3 + Math.sin(swx * 0.05) * 1.5;
-      ctx.lineTo(sx, floorBase + ripple + 2);
-    }
-    ctx.lineTo(W, H + 10);
-    ctx.closePath();
-    ctx.fill();
-    /* Star pebbles on the surface — tiny white specks that read as glinting crystal */
-    ctx.save();
-    var pebbleSeed = 42;
-    for (var pb = 0; pb < 20; pb++) {
-      pebbleSeed = (pebbleSeed * 1103515245 + 12345) & 0x7fffffff;
-      var pbx = (pebbleSeed % 800);
-      var worldPbx = pbx + Math.floor(camera.x / 800) * 800;
-      var screenPbx = worldPbx - camera.x;
-      if (screenPbx < -10 || screenPbx > W + 10) { screenPbx += 800; worldPbx += 800; }
-      if (screenPbx < -10 || screenPbx > W + 10) continue;
-      var pby = floorBase + Math.sin(worldPbx * 0.008) * 6 + 4;
-      if (pb < 3) {
-        /* Tardigrade alien — little plump critter */
-        ctx.fillStyle = '#aaccff';
-        ctx.beginPath();
-        ctx.ellipse(screenPbx, pby - 1, 3.5, 2.2, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#222244';
-        ctx.beginPath();
-        ctx.arc(screenPbx - 1.2, pby - 1, 0.6, 0, Math.PI * 2);
-        ctx.arc(screenPbx + 1.2, pby - 1, 0.6, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        ctx.fillStyle = pb % 2 === 0 ? '#e8dfff' : '#ffd24a';
-        ctx.beginPath();
-        ctx.arc(screenPbx, pby, 0.8 + (pb % 2) * 0.6, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    ctx.restore();
+    /* Lamps and their warm light pools sit over the decorations */
+    drawHotelLighting();
 
     /* (No collision platforms — Momoko floats freely through open space.) */
 
@@ -1354,36 +1862,10 @@
       particles[pa].draw(ctx, camera.x, camera.y);
     }
 
-    /* Twinkling stars (in screen-space so they stay still while camera scrolls) */
-    ctx.save();
-    for (var mi = 0; mi < currentMotes.length; mi++) {
-      var mote = currentMotes[mi];
-      mote.twinkle += mote.twinkleSpeed;
-      var pulse = 0.5 + 0.5 * Math.sin(mote.twinkle);
-      ctx.globalAlpha = mote.alpha * (0.4 + pulse * 0.6);
-      ctx.fillStyle = mote.color || '#ffffff';
-      ctx.beginPath();
-      ctx.arc(mote.x, mote.y, mote.size * (0.6 + pulse * 0.4), 0, Math.PI * 2);
-      ctx.fill();
-      /* Plus-cross sparkle for brighter stars */
-      if (mote.size > 1.6) {
-        ctx.globalAlpha = mote.alpha * pulse * 0.7;
-        ctx.strokeStyle = mote.color || '#ffffff';
-        ctx.lineWidth = 0.6;
-        ctx.beginPath();
-        ctx.moveTo(mote.x - mote.size * 2.5, mote.y);
-        ctx.lineTo(mote.x + mote.size * 2.5, mote.y);
-        ctx.moveTo(mote.x, mote.y - mote.size * 2.5);
-        ctx.lineTo(mote.x, mote.y + mote.size * 2.5);
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
-
-    /* Space vignette – subtle deep-purple darkening at edges */
-    var fogGrad = ctx.createRadialGradient(W / 2, H / 2, 120, W / 2, H / 2, W * 0.7);
-    fogGrad.addColorStop(0, 'rgba(10, 4, 32, 0)');
-    fogGrad.addColorStop(1, 'rgba(10, 4, 32, 0.3)');
+    /* Warm vignette so the corridor feels lamp-lit at the edges */
+    var fogGrad = ctx.createRadialGradient(W / 2, H / 2, 160, W / 2, H / 2, W * 0.72);
+    fogGrad.addColorStop(0, 'rgba(40, 18, 6, 0)');
+    fogGrad.addColorStop(1, 'rgba(40, 18, 6, 0.32)');
     ctx.fillStyle = fogGrad;
     ctx.fillRect(0, 0, W, H);
   }
@@ -1886,29 +2368,33 @@
         ctx.beginPath();
         ctx.arc(dx - 0.8, dy - 81, 1.4, 0, Math.PI * 2);
         ctx.fill();
-      } else if (d.type === 'neonSign') {
-        /* Holographic billboard on a stand */
-        var nsC = d.color || '#44ffff';
-        var nsTxt = d.text || 'SHOP';
-        /* Pole */
-        ctx.fillStyle = '#556677';
-        ctx.fillRect(dx - 1.2, dy - 60, 2.4, 60);
-        /* Frame */
-        ctx.fillStyle = '#1a1a2a';
-        ctx.fillRect(dx - 36, dy - 96, 72, 36);
-        ctx.strokeStyle = nsC;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(dx - 36, dy - 96, 72, 36);
-        /* Flicker */
+      } else if (d.type === 'wingPlaque') {
+        /* Brass wall plaque naming the wing */
+        var wpq = wingTheme();
+        var wpText = Game.i18n.t(d.textKey);
+        ctx.font = 'bold 15px "M PLUS Rounded 1c", sans-serif';
+        var wpW = Math.max(150, ctx.measureText(wpText).width + 36);
         ctx.save();
-        ctx.globalAlpha = 0.85 + Math.sin(Date.now() * 0.012 + d.x * 0.03) * 0.15;
-        ctx.fillStyle = nsC;
-        ctx.font = 'bold 14px "M PLUS Rounded 1c", sans-serif';
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetY = 3;
+        ctx.fillStyle = wpq.trimLo;
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(dx - wpW / 2, dy - 20, wpW, 40, 8); ctx.fill(); }
+        else ctx.fillRect(dx - wpW / 2, dy - 20, wpW, 40);
+        ctx.restore();
+        var wpg = ctx.createLinearGradient(0, dy - 16, 0, dy + 16);
+        wpg.addColorStop(0, '#fcd870');
+        wpg.addColorStop(1, '#b08a30');
+        ctx.fillStyle = wpg;
+        ctx.fillRect(dx - wpW / 2 + 4, dy - 16, wpW - 8, 32);
+        ctx.fillStyle = '#5a3a10';
+        ctx.beginPath(); ctx.arc(dx - wpW / 2 + 11, dy, 2, 0, Math.PI * 2); ctx.arc(dx + wpW / 2 - 11, dy, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#3a2008';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(nsTxt, dx, dy - 78);
-        ctx.restore();
+        ctx.fillText(wpText, dx, dy + 1);
         ctx.textBaseline = 'alphabetic';
+        ctx.textAlign = 'left';
       } else if (d.type === 'rooftopSign') {
         /* Compact neon sign mounted on the rooftop of the cafe/shop building
            — sits above the awning so it doesn't obscure the storefront. */
@@ -2175,40 +2661,21 @@
         ctx.restore();
       }
       /* ---- Hotel zoo decorations ---- */
-      else if (d.type === 'corridorCarpet') {
-        /* Long red runner along the floor */
-        ctx.save();
-        ctx.fillStyle = '#7a2030';
-        ctx.fillRect(dx, dy - 6, d.w || 1200, 6);
-        ctx.fillStyle = '#aa3a48';
-        ctx.fillRect(dx, dy - 6, d.w || 1200, 1.6);
-        /* Diamond pattern */
-        ctx.fillStyle = '#ffd24a';
-        for (var ccx = 0; ccx < (d.w || 1200); ccx += 40) {
-          ctx.beginPath();
-          ctx.moveTo(dx + ccx + 20, dy - 4);
-          ctx.lineTo(dx + ccx + 24, dy - 2);
-          ctx.lineTo(dx + ccx + 20, dy);
-          ctx.lineTo(dx + ccx + 16, dy - 2);
-          ctx.closePath();
-          ctx.fill();
-        }
-        ctx.restore();
-      } else if (d.type === 'ceilingBeam') {
-        ctx.fillStyle = '#3a2418';
-        ctx.fillRect(dx - 30, dy, 60, 8);
-        ctx.fillStyle = '#5a3a22';
-        ctx.fillRect(dx - 30, dy + 6, 60, 2);
-      } else if (d.type === 'chandelier') {
+      else if (d.type === 'chandelier') {
         /* Three-tier crystal chandelier — much more ornate. */
         ctx.save();
         /* Chain */
         ctx.strokeStyle = '#caa040';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(dx, dy - 20);
+        ctx.moveTo(dx, CEIL_Y);
         ctx.lineTo(dx, dy);
         ctx.stroke();
+        /* Ceiling rose */
+        ctx.fillStyle = '#caa040';
+        ctx.beginPath();
+        ctx.ellipse(dx, CEIL_Y, 12, 4, 0, 0, Math.PI);
+        ctx.fill();
         /* Top brass cap */
         ctx.fillStyle = '#fcd870';
         ctx.beginPath();
@@ -2329,22 +2796,29 @@
         ctx.fillStyle = '#ffd24a';
         ctx.fillRect(dx - 78, dy - 4, 156, 1);
       } else if (d.type === 'wallPainting') {
-        ctx.fillStyle = '#5a3a18';
-        ctx.fillRect(dx - 30, dy - 30, 60, 50);
-        ctx.fillStyle = '#fff8e0';
-        ctx.fillRect(dx - 26, dy - 26, 52, 42);
-        var artEmoji = { savanna: '🌅', forest: '🌳', sea: '🌊', rainbow: '🌈' };
-        ctx.fillStyle = '#000000';
-        ctx.font = '28px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(artEmoji[d.art] || '🖼️', dx, dy);
-        ctx.textAlign = 'left';
+        /* Small framed painting — same painted scenes as the windows */
+        var wpTh = wingTheme();
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetY = 3;
+        ctx.fillStyle = wpTh.trimLo;
+        ctx.fillRect(dx - 32, dy - 30, 64, 50);
+        ctx.restore();
+        ctx.fillStyle = wpTh.trim;
+        ctx.fillRect(dx - 30, dy - 28, 60, 46);
+        ctx.fillStyle = wpTh.trimHi;
+        ctx.fillRect(dx - 30, dy - 28, 60, 1.5);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(dx - 25, dy - 23, 50, 36);
+        ctx.clip();
+        drawView(ctx, d.art === 'savanna' || d.art === 'forest' || d.art === 'sea' ? d.art : 'rainbow',
+                 dx - 25, dy - 23, 50, 36, 0, d.x);
+        ctx.restore();
       } else if (d.type === 'roomDoorFrame') {
-        /* A subtle door-frame painted behind the actual door NPC. */
-        ctx.fillStyle = d.color || '#7a3a30';
-        ctx.fillRect(dx - 4, dy - 4, 56, 60);
-        ctx.fillStyle = '#3a2418';
-        ctx.fillRect(dx, dy, 48, 52);
+        /* Recessed casing behind the door NPC so it sits in the wall */
+        drawDoorCasing(ctx, dx, dy, 48, level.floorY - camera.y, d.color, true);
       } else if (d.type === 'commonArea') {
         /* A small floor lounge / themed garden landmark that breaks up
            the long hallways. d.theme picks the visual treatment:
@@ -2463,73 +2937,35 @@
           ctx.textAlign = 'left';
         }
       } else if (d.type === 'elevatorShaft') {
-        /* Tall shaft column */
-        ctx.fillStyle = '#1a1208';
-        ctx.fillRect(dx - 6, dy - 80, 76, 80);
-        ctx.fillStyle = '#caa040';
-        ctx.fillRect(dx - 4, dy - 82, 72, 4);
-        /* Floor indicator lights */
+        /* Brass-framed recess around the elevator doors, with the
+           floor-indicator dial above it */
+        drawDoorCasing(ctx, dx + 2, dy - 54, 60, dy, null);
+        var esTh = wingTheme();
+        ctx.fillStyle = esTh.trimLo;
+        ctx.beginPath();
+        ctx.arc(dx + 32, dy - 70, 22, Math.PI, 0);
+        ctx.fill();
+        ctx.fillStyle = '#2a1a10';
+        ctx.beginPath();
+        ctx.arc(dx + 32, dy - 70, 18, Math.PI, 0);
+        ctx.fill();
         for (var fl = 0; fl < 4; fl++) {
-          var fc = (fl === ((Game.engine && Game.engine.getCurrentZone && Game.engine.getCurrentZone()) || 0))
-            ? '#ffd24a' : '#5a3a18';
-          ctx.fillStyle = fc;
+          var lit = fl === ((Game.engine && Game.engine.getCurrentZone && Game.engine.getCurrentZone()) || 0);
+          var fa = Math.PI + (fl + 0.5) * Math.PI / 4;
+          ctx.fillStyle = lit ? '#ffd24a' : '#6a4a22';
           ctx.beginPath();
-          ctx.arc(dx + 30 - fl * 12, dy - 90, 2.4, 0, Math.PI * 2);
+          ctx.arc(dx + 32 + Math.cos(fa) * 13, dy - 70 + Math.sin(fa) * 13, 2.6, 0, Math.PI * 2);
           ctx.fill();
         }
       } else if (d.type === 'stairwellDoor') {
-        ctx.fillStyle = '#3a2418';
-        ctx.fillRect(dx, dy - 70, 50, 70);
-        ctx.fillStyle = '#5a3a22';
-        ctx.fillRect(dx + 4, dy - 66, 42, 62);
-        /* Step lines */
-        ctx.fillStyle = '#7a5a32';
-        for (var sl = 0; sl < 5; sl++) {
-          ctx.fillRect(dx + 6 + sl * 2, dy - 56 + sl * 6, 36 - sl * 4, 2);
-        }
-      } else if (d.type === 'marbleFloor') {
-        /* Marble base with veining */
-        ctx.fillStyle = '#fbf3e6';
-        ctx.fillRect(dx, dy - 6, d.w || 1200, 6);
-        ctx.strokeStyle = '#cfc0a4';
-        ctx.lineWidth = 0.6;
-        for (var mfx = 0; mfx < (d.w || 1200); mfx += 50) {
-          ctx.beginPath();
-          ctx.moveTo(dx + mfx, dy - 5);
-          ctx.bezierCurveTo(dx + mfx + 12, dy - 1, dx + mfx + 22, dy - 4, dx + mfx + 30, dy - 2);
-          ctx.stroke();
-        }
-        /* Brass strip */
-        ctx.fillStyle = '#caa040';
-        ctx.fillRect(dx, dy - 6, d.w || 1200, 1);
-      } else if (d.type === 'crownMolding') {
-        /* Gilded crown molding strip */
-        ctx.fillStyle = '#caa040';
-        ctx.fillRect(dx, dy, d.w || 1200, 6);
-        ctx.fillStyle = '#fcd870';
-        ctx.fillRect(dx, dy + 1, d.w || 1200, 1);
-        /* Decorative dentils */
-        ctx.fillStyle = '#7a5a18';
-        for (var dnt = 0; dnt < (d.w || 1200); dnt += 16) {
-          ctx.fillRect(dx + dnt + 2, dy + 6, 8, 4);
-        }
-      } else if (d.type === 'wainscoting') {
-        /* Lower wall wood paneling, painted cream */
-        ctx.fillStyle = '#e6dcc8';
-        ctx.fillRect(dx, dy, d.w || 1200, 120);
-        /* Panel borders */
-        ctx.strokeStyle = '#b8a878';
-        ctx.lineWidth = 1.2;
-        for (var pna = 0; pna < (d.w || 1200); pna += 80) {
-          ctx.strokeRect(dx + pna + 8, dy + 14, 64, 92);
-        }
-        /* Top trim */
-        ctx.fillStyle = '#caa040';
-        ctx.fillRect(dx, dy, d.w || 1200, 3);
+        /* Casing around the stairs doorway (the Stairs NPC sits 10px in) */
+        drawDoorCasing(ctx, dx + 10, dy - 56, 50, dy, null);
       } else if (d.type === 'fancyColumn') {
         /* Tall marble column with capital + base */
-        var colTop = dy - 360;
+        var colTop = WALL_Y;
         var colW = 26;
+        ctx.fillStyle = 'rgba(40,20,0,0.18)';
+        ctx.fillRect(dx - colW / 2 + 6, colTop, colW + 4, dy - colTop);
         /* Shaft */
         var colGrad = ctx.createLinearGradient(dx - colW / 2, 0, dx + colW / 2, 0);
         colGrad.addColorStop(0, '#cfc0a4');
@@ -2600,12 +3036,13 @@
         /* Inner art */
         ctx.fillStyle = '#fff8e0';
         ctx.fillRect(dx - fw / 2 + 4, dy - fh / 2 + 4, fw - 8, fh - 8);
-        var artEmoji = { cityscape: '🌆', jungle: '🌴', sea: '🌊', savanna: '🌅', forest: '🌲', rainbow: '🌈' };
-        ctx.fillStyle = '#000000';
-        ctx.font = '24px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(artEmoji[d.art] || '🖼️', dx, dy + 2);
-        ctx.textAlign = 'left';
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(dx - fw / 2 + 5, dy - fh / 2 + 5, fw - 10, fh - 10);
+        ctx.clip();
+        drawView(ctx, d.art === 'cityscape' ? 'city' : (d.art === 'jungle' ? 'savanna' : d.art),
+                 dx - fw / 2 + 5, dy - fh / 2 + 5, fw - 10, fh - 10, 0, d.x);
+        ctx.restore();
       } else if (d.type === 'marqueeSign') {
         /* Big gilded marquee sign with bulb lights */
         var mw = 220, mh = 36;
@@ -2720,11 +3157,20 @@
         var px = dx + slide;
         var py = dy + bob + pkDuck * 14;
         ctx.save();
-        /* Column / pillar to peek from behind */
-        ctx.fillStyle = '#3a2418';
-        ctx.fillRect(dx - side * 8, dy - 30, 16, 80);
-        ctx.fillStyle = '#5a3a22';
-        ctx.fillRect(dx - side * 6, dy - 28, 12, 76);
+        /* Wall pilaster to peek from behind (the lobby peekers hide
+           behind its marble columns instead) */
+        if (level.wing !== 'lobby') {
+          var pkTh = wingTheme();
+          ctx.fillStyle = 'rgba(0,0,0,0.18)';
+          ctx.fillRect(dx - 6, WALL_Y, 18, RAIL_Y - WALL_Y);
+          ctx.fillStyle = pkTh.trim;
+          ctx.fillRect(dx - 8, WALL_Y, 16, RAIL_Y - WALL_Y);
+          ctx.fillStyle = pkTh.trimHi;
+          ctx.fillRect(dx - 6, WALL_Y, 2, RAIL_Y - WALL_Y);
+          ctx.fillStyle = pkTh.trimLo;
+          ctx.fillRect(dx - 11, WALL_Y, 22, 6);
+          ctx.fillRect(dx - 11, RAIL_Y - 6, 22, 6);
+        }
         /* Top of head */
         ctx.fillStyle = pp.body;
         ctx.beginPath();
@@ -3022,6 +3468,7 @@
       sleepCutsceneTimer = 0;
       Game.currentRoom = null;
       if (Game.audio && Game.audio.stopMusic) Game.audio.stopMusic();
+      stageVictoryInLobby();
       state = State.VICTORY;
       return;
     }
@@ -3080,8 +3527,21 @@
     if (state === State.ANIMAL_ROOM) state = State.PLAYING;
     if (state === State.PLAYING) {
       if (Game.audio && Game.audio.stopMusic) Game.audio.stopMusic();
+      stageVictoryInLobby();
       state = State.VICTORY;
     }
+  }
+
+  /* The ending party always happens in the lobby: load it if needed,
+     frame its left end (bedroom door, chandelier, window) and park the
+     corridor Momoko off-screen, since ui.drawVictory paints her dancing. */
+  function stageVictoryInLobby() {
+    if (currentZone !== 0) {
+      currentZone = 0;
+      loadLevel(0);
+    }
+    camera = { x: 0, y: 0 };
+    if (player) { player.x = -200; player.vx = 0; }
   }
 
   /* ---- Hotel zoo: bookshelf cutscene (Little Red Riding Hood) ---- */

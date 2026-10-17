@@ -584,74 +584,182 @@
     return null;
   }
 
-  /* ---- Victory Screen ---- */
-  var victoryParticles = [];
+  /* ---- Victory Screen ----
+     A party in the lobby (the engine renders the lobby underneath):
+     bunting, a ribbon banner, Momoko flossing in a spotlight with a
+     line of guests bouncing either side, confetti and sparkles. All
+     motion is a function of victoryTimer and seeded per-piece offsets. */
   var victoryTimer = 0;
+  var VICTORY_GUESTS = ['lion', 'elephant', 'penguin', 'panda', 'bunny', 'unicorn', 'owl', 'frog'];
+  var VICTORY_BTN = { x: W / 2 - 110, y: 206, w: 220, h: 50 };
 
   function drawVictory(c) {
     victoryTimer++;
-
+    var t = victoryTimer;
+    var floorY = 440;
     c.save();
-    c.fillStyle = 'rgba(0, 10, 30, 0.85)';
+
+    /* Warm party dimming over the lobby, darker at the top for text */
+    var dim = c.createLinearGradient(0, 0, 0, H);
+    dim.addColorStop(0, 'rgba(40, 8, 30, 0.72)');
+    dim.addColorStop(0.5, 'rgba(40, 8, 30, 0.35)');
+    dim.addColorStop(1, 'rgba(40, 8, 30, 0.2)');
+    c.fillStyle = dim;
     c.fillRect(0, 0, W, H);
 
-    /* Fireworks particles */
-    if (victoryTimer % 10 === 0) {
-      var fx = 100 + Math.random() * 600;
-      var fy = 100 + Math.random() * 200;
-      var colors = ['#ff4466', '#44ff66', '#4488ff', '#ffcc33', '#ff66cc', '#66ffcc'];
-      for (var i = 0; i < 12; i++) {
-        var angle = (Math.PI * 2 * i) / 12;
-        var sp = 1 + Math.random() * 2;
-        victoryParticles.push({
-          x: fx, y: fy,
-          vx: Math.cos(angle) * sp,
-          vy: Math.sin(angle) * sp,
-          life: 40 + Math.random() * 20,
-          maxLife: 60,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          size: 2 + Math.random() * 3
-        });
+    /* Spotlight on the dance floor */
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    var spot = c.createRadialGradient(W / 2, floorY - 40, 10, W / 2, floorY - 40, 220);
+    spot.addColorStop(0, 'rgba(255, 220, 160, 0.35)');
+    spot.addColorStop(1, 'rgba(255, 220, 160, 0)');
+    c.fillStyle = spot;
+    c.beginPath();
+    c.moveTo(W / 2 - 40, 0); c.lineTo(W / 2 + 40, 0);
+    c.lineTo(W / 2 + 200, floorY + 30); c.lineTo(W / 2 - 200, floorY + 30);
+    c.closePath(); c.fill();
+    c.restore();
+
+    /* Bunting: two swags of pennants across the top */
+    var flagCols = ['#ff5a8a', '#ffd24a', '#5ac8ff', '#88e070', '#b088ff'];
+    for (var sw = 0; sw < 2; sw++) {
+      var x0 = sw * W / 2, x1 = x0 + W / 2;
+      c.strokeStyle = '#fff0c8';
+      c.lineWidth = 1.5;
+      c.beginPath(); c.moveTo(x0, 8); c.quadraticCurveTo((x0 + x1) / 2, 56, x1, 8); c.stroke();
+      for (var fl = 1; fl < 10; fl++) {
+        var ft = fl / 10;
+        var fx = x0 + (x1 - x0) * ft;
+        var fy = 8 + (56 - 8) * 2 * ft * (1 - ft);
+        var flutter = Math.sin(t * 0.08 + fl + sw * 3) * 1.5;
+        c.fillStyle = flagCols[(fl + sw) % flagCols.length];
+        c.beginPath();
+        c.moveTo(fx - 9, fy); c.lineTo(fx + 9, fy); c.lineTo(fx + flutter, fy + 18);
+        c.closePath(); c.fill();
       }
     }
 
-    for (var p = victoryParticles.length - 1; p >= 0; p--) {
-      var part = victoryParticles[p];
-      part.x += part.vx;
-      part.y += part.vy;
-      part.vy += 0.03;
-      part.life--;
-      if (part.life <= 0) { victoryParticles.splice(p, 1); continue; }
-      c.globalAlpha = part.life / part.maxLife;
-      c.fillStyle = part.color;
-      c.fillRect(part.x - part.size / 2, part.y - part.size / 2, part.size, part.size);
+    /* Ribbon banner with the title */
+    var title = Game.i18n.t('victoryTitle');
+    var bw = 520, bh = 58, bx = W / 2 - bw / 2, by = 62;
+    c.fillStyle = '#a01c48';
+    for (var tail = -1; tail <= 1; tail += 2) {
+      var tx = tail < 0 ? bx - 26 : bx + bw + 26;
+      var ix = tail < 0 ? bx + 20 : bx + bw - 20;
+      c.beginPath();
+      c.moveTo(ix, by + 12); c.lineTo(tx, by + 12); c.lineTo(tx + tail * -14, by + bh / 2 + 12);
+      c.lineTo(tx, by + bh + 12); c.lineTo(ix, by + bh + 12);
+      c.closePath(); c.fill();
     }
-    c.globalAlpha = 1;
-
-    c.fillStyle = '#ffcc33';
-    c.font = 'bold 40px "M PLUS Rounded 1c", sans-serif';
+    var bannerG = c.createLinearGradient(0, by, 0, by + bh);
+    bannerG.addColorStop(0, '#ff4a7e');
+    bannerG.addColorStop(1, '#d02a60');
+    c.fillStyle = bannerG;
+    roundRect(c, bx, by, bw, bh, 8);
+    c.fill();
+    c.strokeStyle = '#ffe6a0';
+    c.lineWidth = 3;
+    roundRect(c, bx + 5, by + 5, bw - 10, bh - 10, 6);
+    c.stroke();
+    c.fillStyle = '#fff8e0';
+    fitFont(c, title, bw - 40, 34, 'bold');
     c.textAlign = 'center';
-    c.shadowColor = '#ffaa00';
-    c.shadowBlur = 20;
-    c.fillText(Game.i18n.t('victoryTitle'), W / 2, 120);
-    c.shadowBlur = 0;
+    c.textBaseline = 'middle';
+    c.shadowColor = 'rgba(90, 0, 30, 0.7)';
+    c.shadowOffsetY = 2;
+    c.fillText(title, W / 2, by + bh / 2 + 1);
+    c.shadowOffsetY = 0;
+    c.shadowColor = 'rgba(0,0,0,0)';
 
-    c.fillStyle = '#88ddff';
-    c.font = '18px "M PLUS Rounded 1c", sans-serif';
-    c.fillText(Game.i18n.t('victorySubtitle'), W / 2, 168);
+    /* Subtitle + thanks */
+    c.fillStyle = '#ffe6f2';
+    fitFont(c, Game.i18n.t('victorySubtitle'), W - 120, 18, 'bold');
+    c.fillText(Game.i18n.t('victorySubtitle'), W / 2, 152);
+    c.fillStyle = '#ffd6a0';
+    fitFont(c, Game.i18n.t('thanks'), W - 120, 15);
+    c.fillText(Game.i18n.t('thanks'), W / 2, 180);
+    c.textBaseline = 'alphabetic';
 
-    c.fillStyle = '#ccddee';
-    c.font = '14px "M PLUS Rounded 1c", sans-serif';
-    c.fillText(Game.i18n.t('thanks'), W / 2, 200);
+    drawPrimaryButton(c, Game.i18n.t('playAgain'), VICTORY_BTN.x, VICTORY_BTN.y, VICTORY_BTN.w, VICTORY_BTN.h, t);
 
-    drawButton(c, Game.i18n.t('playAgain'), W / 2 - 90, 250, 180, 44);
+    /* Guests bouncing in a line either side of Momoko */
+    var draw = Game.entities && Game.entities.drawAnimalSprite;
+    if (draw) {
+      var gs = 1.35;
+      for (var g = 0; g < VICTORY_GUESTS.length; g++) {
+        var left = g < VICTORY_GUESTS.length / 2;
+        var slot = left ? g : g - VICTORY_GUESTS.length / 2;
+        var gx = left ? 70 + slot * 70 : W / 2 + 110 + slot * 70;
+        var hop = Math.max(0, Math.sin(t * 0.12 + g * 0.9)) * 14;
+        c.save();
+        c.fillStyle = 'rgba(0,0,0,0.25)';
+        c.beginPath(); c.ellipse(gx, floorY + 2, 26 - hop * 0.6, 4, 0, 0, Math.PI * 2); c.fill();
+        c.translate(gx, floorY - hop);
+        c.scale(left ? -gs : gs, gs);
+        c.translate(-24, -44);
+        draw(c, VICTORY_GUESTS[g], 0, 0);
+        c.restore();
+      }
+    }
+
+    /* Momoko flossing centre stage */
+    if (Game.entities && Game.entities.drawMomokoFloss) {
+      var ms = 2.6;
+      c.fillStyle = 'rgba(0,0,0,0.3)';
+      c.beginPath(); c.ellipse(W / 2, floorY + 2, 30, 5, 0, 0, Math.PI * 2); c.fill();
+      c.save();
+      c.translate(W / 2 - 14 * ms, floorY - 35 * ms);
+      c.scale(ms, ms);
+      Game.entities.drawMomokoFloss(c, 0, 0, Game.customization, t * 0.18);
+      c.restore();
+    }
+
+    /* Confetti: seeded pieces falling and tumbling */
+    for (var p = 0; p < 70; p++) {
+      var spd = 0.6 + hash01(p * 3) * 1.2;
+      var cx = hash01(p) * W + Math.sin(t * 0.03 + p) * 18;
+      var cy = (hash01(p + 100) * (H + 40) + t * spd) % (H + 40) - 20;
+      var rot = t * 0.06 * (p % 2 ? 1 : -1) + p;
+      c.save();
+      c.translate(cx, cy);
+      c.rotate(rot);
+      c.scale(1, Math.abs(Math.cos(rot * 1.3)) * 0.8 + 0.2);
+      c.fillStyle = flagCols[p % flagCols.length];
+      c.fillRect(-3.5, -2, 7, 4);
+      c.restore();
+    }
+
+    /* Sparkles twinkling round the spotlight (additive) */
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    for (var s = 0; s < 14; s++) {
+      var a = s / 14 * Math.PI * 2 + t * 0.01;
+      var sr = 70 + hash01(s + 7) * 90;
+      var sx = W / 2 + Math.cos(a) * sr * 1.6;
+      var sy = 350 + Math.sin(a) * sr * 0.5;
+      var tw = Math.max(0, Math.sin(t * 0.09 + s * 2.1));
+      if (tw <= 0) continue;
+      var sg = c.createRadialGradient(sx, sy, 0, sx, sy, 10 * tw + 2);
+      sg.addColorStop(0, 'rgba(255, 250, 220, 0.9)');
+      sg.addColorStop(1, 'rgba(255, 200, 240, 0)');
+      c.fillStyle = sg;
+      c.beginPath(); c.arc(sx, sy, 10 * tw + 2, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = 'rgba(255, 255, 255, ' + (0.8 * tw) + ')';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(sx - 8 * tw, sy); c.lineTo(sx + 8 * tw, sy);
+      c.moveTo(sx, sy - 8 * tw); c.lineTo(sx, sy + 8 * tw);
+      c.stroke();
+    }
+    c.restore();
+
+    c.textAlign = 'left';
     c.restore();
   }
 
   function handleVictoryClick(mx, my) {
-    if (hitButton(mx, my, W / 2 - 90, 250, 180, 44)) {
+    if (hitButton(mx, my, VICTORY_BTN.x, VICTORY_BTN.y, VICTORY_BTN.w, VICTORY_BTN.h)) {
       Game.audio.play('select');
-      victoryParticles = [];
       victoryTimer = 0;
       return 'restart';
     }
@@ -2282,10 +2390,10 @@
   /* ============================================================ */
   /* Elevator floor menu — 2x2 grid of floors. */
   var FLOOR_CARDS = [
-    { key: 'destHerosPlanet', emoji: '🏨', body: '#aa6a2a', accent: '#ffd24a' },
-    { key: 'destCheeseMoon',  emoji: '🦁', body: '#c89a4a', accent: '#a07832' },
-    { key: 'destFloor3',      emoji: '🐺', body: '#4a6838', accent: '#88ff88' },
-    { key: 'destFloor4',      emoji: '🦄', body: '#a468d4', accent: '#ff66cc' },
+    { key: 'destHerosPlanet', icon: 'bell',    body: '#aa6a2a', accent: '#ffd24a' },
+    { key: 'destCheeseMoon',  icon: 'lion',    body: '#c89a4a', accent: '#a07832' },
+    { key: 'destFloor3',      icon: 'wolf',    body: '#4a6838', accent: '#88ff88' },
+    { key: 'destFloor4',      icon: 'unicorn', body: '#a468d4', accent: '#ff66cc' },
   ];
 
   function drawTravelMenu(c) {
@@ -2329,6 +2437,34 @@
     c.restore();
   }
 
+  /* Small in-game art for an elevator-menu card, centred on (cx, cy). */
+  function drawFloorIcon(c, icon, cx, cy) {
+    c.save();
+    if (icon === 'bell') {
+      c.fillStyle = 'rgba(0,0,0,0.25)';
+      c.beginPath(); c.ellipse(cx, cy + 16, 24, 4, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#7a5418';
+      c.fillRect(cx - 22, cy + 8, 44, 6);
+      var bg = c.createRadialGradient(cx - 7, cy - 6, 2, cx, cy, 22);
+      bg.addColorStop(0, '#fff2b0');
+      bg.addColorStop(0.5, '#e8b840');
+      bg.addColorStop(1, '#9a6a18');
+      c.fillStyle = bg;
+      c.beginPath(); c.arc(cx, cy + 8, 18, Math.PI, 0); c.closePath(); c.fill();
+      c.fillStyle = '#caa040';
+      c.fillRect(cx - 3, cy - 16, 6, 6);
+      c.beginPath(); c.arc(cx, cy - 16, 4, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.7)';
+      c.beginPath(); c.ellipse(cx - 7, cy - 2, 3, 6, -0.5, 0, Math.PI * 2); c.fill();
+    } else if (Game.entities && Game.entities.drawAnimalSprite) {
+      c.translate(cx, cy + 16);
+      c.scale(1.05, 1.05);
+      c.translate(-24, -44);
+      Game.entities.drawAnimalSprite(c, icon, 0, 0);
+    }
+    c.restore();
+  }
+
   function drawFloorCard(c, x, y, w, h, idx, info) {
     var current = (Game.engine && Game.engine.getCurrentZone && Game.engine.getCurrentZone()) || 0;
     var isCurrent = idx === current;
@@ -2358,10 +2494,8 @@
     c.textAlign = 'left';
     c.fillText(String(idx + 1), x + 14, y + 44);
 
-    /* Emoji */
-    c.font = '40px sans-serif';
-    c.textAlign = 'right';
-    c.fillText(info.emoji, x + w - 14, y + 50);
+    /* Floor icon: the lobby's brass desk bell, or a resident guest */
+    drawFloorIcon(c, info.icon, x + w - 48, y + 34);
 
     /* Label */
     c.fillStyle = '#fff8e0';
@@ -5608,6 +5742,12 @@
     bedroom: 'bedroom',
   };
 
+  /* Stable pseudo-random 0..1 from a number (seeded room props). */
+  function hash01(n) {
+    var s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+    return s - Math.floor(s);
+  }
+
   function paintSky(c, top, mid, bot) {
     var grad = c.createLinearGradient(0, 0, 0, ROOM_FLOOR_TOP);
     grad.addColorStop(0, top);
@@ -5615,47 +5755,173 @@
     grad.addColorStop(1, bot);
     c.fillStyle = grad;
     c.fillRect(0, 0, W, ROOM_FLOOR_TOP);
+    /* Haze along the horizon so far props sit back in the air */
+    var hz = c.createLinearGradient(0, ROOM_FLOOR_TOP - 60, 0, ROOM_FLOOR_TOP);
+    hz.addColorStop(0, 'rgba(255,255,255,0)');
+    hz.addColorStop(1, 'rgba(255,255,255,0.18)');
+    c.fillStyle = hz;
+    c.fillRect(0, ROOM_FLOOR_TOP - 60, W, 60);
   }
 
+  /* Floor plane: gradient, a shaded back edge, texture flecks that
+     shrink and tighten toward the back (so it recedes), and a darker
+     front lip. */
   function paintGround(c, top, bot, stripe) {
     var g = c.createLinearGradient(0, ROOM_FLOOR_TOP, 0, H);
     g.addColorStop(0, top);
     g.addColorStop(1, bot);
     c.fillStyle = g;
     c.fillRect(0, ROOM_FLOOR_TOP, W, H - ROOM_FLOOR_TOP);
+    var be = c.createLinearGradient(0, ROOM_FLOOR_TOP, 0, ROOM_FLOOR_TOP + 18);
+    be.addColorStop(0, 'rgba(0,0,0,0.2)');
+    be.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = be;
+    c.fillRect(0, ROOM_FLOOR_TOP, W, 18);
+    c.fillStyle = 'rgba(0,0,0,0.09)';
+    for (var r = 0; r < 5; r++) {
+      var ry = ROOM_FLOOR_TOP + 12 + r * 16 + r * r * 4;
+      var sp = 34 + r * 16, len = 6 + r * 4, th = 1 + r * 0.5;
+      for (var fx = (r * 37) % sp; fx < W; fx += sp) {
+        c.fillRect(fx + hash01(fx + r * 91) * 12, ry + hash01(fx * 3 + r) * 6, len, th);
+      }
+    }
     if (stripe) {
       c.fillStyle = stripe;
       for (var s = 0; s < W; s += 24) {
         c.fillRect(s, ROOM_FLOOR_TOP + 4, 12, 1.6);
       }
     }
+    var fl = c.createLinearGradient(0, H - 40, 0, H);
+    fl.addColorStop(0, 'rgba(0,0,0,0)');
+    fl.addColorStop(1, 'rgba(0,0,0,0.22)');
+    c.fillStyle = fl;
+    c.fillRect(0, H - 40, W, 40);
+  }
+
+  /* Clumps of grass blades (back rows smaller) */
+  function paintGrassTufts(c, col, y, count, size, seed) {
+    c.strokeStyle = col;
+    c.lineWidth = Math.max(1, size * 0.18);
+    c.lineCap = 'round';
+    for (var t = 0; t < count; t++) {
+      var tx = (t + hash01(seed + t) * 0.8) * (W / count);
+      var ty = y + hash01(seed + t * 7) * size * 0.8;
+      for (var b = -2; b <= 2; b++) {
+        c.beginPath();
+        c.moveTo(tx + b * size * 0.12, ty);
+        c.quadraticCurveTo(tx + b * size * 0.2, ty - size * 0.6, tx + b * size * 0.45, ty - size * (1 - Math.abs(b) * 0.15));
+        c.stroke();
+      }
+    }
+    c.lineCap = 'butt';
+  }
+
+  /* Flat-topped acacia with a layered umbrella canopy */
+  function paintAcacia(c, x, groundY, s, dark) {
+    c.fillStyle = dark ? '#6a4a2a' : '#4a2e14';
+    c.beginPath();
+    c.moveTo(x - 6 * s, groundY);
+    c.quadraticCurveTo(x - 3 * s, groundY - 60 * s, x - 34 * s, groundY - 120 * s);
+    c.lineTo(x - 28 * s, groundY - 122 * s);
+    c.quadraticCurveTo(x + 2 * s, groundY - 80 * s, x + 4 * s, groundY - 100 * s);
+    c.quadraticCurveTo(x + 18 * s, groundY - 116 * s, x + 40 * s, groundY - 124 * s);
+    c.lineTo(x + 42 * s, groundY - 120 * s);
+    c.quadraticCurveTo(x + 12 * s, groundY - 90 * s, x + 6 * s, groundY);
+    c.closePath();
+    c.fill();
+    var layers = dark ? [['#9a8a5a', 0]] : [['#3e5a22', 0], ['#5a7e30', -6], ['#7aa040', -11]];
+    for (var l = 0; l < layers.length; l++) {
+      c.fillStyle = layers[l][0];
+      var ly = groundY - 128 * s + layers[l][1] * s;
+      c.beginPath();
+      c.ellipse(x, ly, 90 * s, 14 * s, 0, 0, Math.PI * 2);
+      for (var k = -3; k <= 3; k++) {
+        c.moveTo(x + k * 24 * s + 22 * s, ly - 4 * s);
+        c.ellipse(x + k * 24 * s, ly - 4 * s, 22 * s, (10 + (k % 2 === 0 ? 3 : 0)) * s, 0, 0, Math.PI * 2);
+      }
+      c.fill();
+    }
+  }
+
+  /* Tall bookcase stuffed with seeded books */
+  function paintBookcase(c, x, y, w, h, seed) {
+    var bookCols = ['#c84a4a', '#3a6aa8', '#e0b040', '#4a8a4a', '#8a4aa0', '#e07a30', '#2a8a8a', '#f0e0c0'];
+    c.fillStyle = 'rgba(0,0,0,0.25)';
+    c.fillRect(x + 6, y + 6, w, h);
+    c.fillStyle = '#5a3418';
+    c.fillRect(x, y, w, h);
+    c.fillStyle = '#3a200c';
+    c.fillRect(x + 6, y + 8, w - 12, h - 14);
+    c.fillStyle = '#7a4a24';
+    c.fillRect(x - 4, y - 6, w + 8, 8);
+    var shelves = Math.floor((h - 14) / 40);
+    for (var sh = 0; sh < shelves; sh++) {
+      var sy = y + 8 + (sh + 1) * 40;
+      var bx = x + 8;
+      var n = 0;
+      while (bx < x + w - 12) {
+        var r = hash01(seed + sh * 31 + n * 7);
+        var bw = 6 + Math.floor(r * 6);
+        var bh = 24 + Math.floor(hash01(seed + sh * 13 + n * 3) * 12);
+        if (bx + bw > x + w - 8) break;
+        if (r > 0.9 && bx + bh < x + w - 8) {
+          /* A book lying flat */
+          c.fillStyle = bookCols[(n + sh) % bookCols.length];
+          c.fillRect(bx, sy - 7, bh, 7);
+          bx += bh + 2;
+        } else {
+          c.fillStyle = bookCols[Math.floor(r * 97) % bookCols.length];
+          c.fillRect(bx, sy - bh, bw, bh);
+          c.fillStyle = 'rgba(255,255,255,0.35)';
+          c.fillRect(bx + 1, sy - bh + 4, bw - 2, 1.5);
+          c.fillRect(bx + 1, sy - 7, bw - 2, 1);
+          c.fillStyle = 'rgba(0,0,0,0.2)';
+          c.fillRect(bx + bw - 1.5, sy - bh, 1.5, bh);
+          bx += bw + 1;
+        }
+        n++;
+      }
+      c.fillStyle = '#7a4a24';
+      c.fillRect(x + 4, sy, w - 8, 4);
+      c.fillStyle = '#9a6a3a';
+      c.fillRect(x + 4, sy, w - 8, 1);
+    }
   }
 
   function paintHabitat(c, habitat) {
     if (habitat === 'savanna') {
-      paintSky(c, '#ffb66a', '#ffd28a', '#ffe6b3');
-      paintGround(c, '#caa050', '#7a5018');
-      /* Sun */
-      c.fillStyle = '#fff4c0';
-      c.beginPath(); c.arc(W - 140, 90, 30, 0, Math.PI * 2); c.fill();
-      /* Acacia tree silhouette */
-      c.strokeStyle = '#3a2008'; c.lineWidth = 4;
-      c.beginPath(); c.moveTo(140, ROOM_FLOOR_TOP); c.lineTo(140, 130); c.stroke();
-      c.fillStyle = '#5a8030';
-      c.beginPath(); c.ellipse(140, 110, 60, 18, 0, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#7aa040';
-      c.beginPath(); c.ellipse(140, 104, 50, 12, 0, 0, Math.PI * 2); c.fill();
-      /* Tall grass tufts */
-      c.fillStyle = '#a07820';
-      for (var gt = 0; gt < 12; gt++) {
-        var gx = 60 + gt * 60;
-        c.beginPath();
-        c.moveTo(gx, ROOM_FLOOR_TOP + 10);
-        c.lineTo(gx + 4, ROOM_FLOOR_TOP - 4);
-        c.lineTo(gx + 8, ROOM_FLOOR_TOP + 10);
-        c.closePath();
-        c.fill();
-      }
+      paintSky(c, '#ffa860', '#ffd28a', '#ffe8b8');
+      /* Low sun with halo */
+      var sunG = c.createRadialGradient(W - 150, 110, 10, W - 150, 110, 90);
+      sunG.addColorStop(0, 'rgba(255,248,210,0.9)');
+      sunG.addColorStop(1, 'rgba(255,248,210,0)');
+      c.fillStyle = sunG;
+      c.fillRect(W - 240, 20, 180, 180);
+      c.fillStyle = '#fff4c8';
+      c.beginPath(); c.arc(W - 150, 110, 30, 0, Math.PI * 2); c.fill();
+      /* Distant hills, two layers */
+      c.fillStyle = '#e8b070';
+      c.beginPath(); c.ellipse(200, ROOM_FLOOR_TOP + 10, 300, 70, 0, Math.PI, 0); c.fill();
+      c.beginPath(); c.ellipse(700, ROOM_FLOOR_TOP + 10, 260, 56, 0, Math.PI, 0); c.fill();
+      c.fillStyle = '#d4964e';
+      c.beginPath(); c.ellipse(480, ROOM_FLOOR_TOP + 14, 280, 44, 0, Math.PI, 0); c.fill();
+      /* Tiny far acacias on the ridge */
+      paintAcacia(c, 560, ROOM_FLOOR_TOP - 26, 0.22, true);
+      paintAcacia(c, 640, ROOM_FLOOR_TOP - 22, 0.16, true);
+      paintGround(c, '#d0a454', '#8a5a1e');
+      paintGrassTufts(c, '#b08a3a', ROOM_FLOOR_TOP + 8, 16, 12, 3);
+      /* Big acacia, front-left */
+      paintAcacia(c, 150, ROOM_FLOOR_TOP + 16, 1, false);
+      /* Termite mound */
+      c.fillStyle = '#a8683a';
+      c.beginPath();
+      c.moveTo(W - 300, ROOM_FLOOR_TOP + 24);
+      c.quadraticCurveTo(W - 296, ROOM_FLOOR_TOP - 30, W - 284, ROOM_FLOOR_TOP - 40);
+      c.quadraticCurveTo(W - 272, ROOM_FLOOR_TOP - 20, W - 262, ROOM_FLOOR_TOP + 24);
+      c.closePath(); c.fill();
+      c.fillStyle = 'rgba(0,0,0,0.15)';
+      c.beginPath(); c.ellipse(W - 278, ROOM_FLOOR_TOP - 6, 6, 18, 0.1, 0, Math.PI * 2); c.fill();
+      paintGrassTufts(c, '#9a7428', H - 30, 9, 22, 11);
     } else if (habitat === 'jungle') {
       paintSky(c, '#1a3a18', '#2a5028', '#3a6838');
       paintGround(c, '#3a4818', '#1f2810');
@@ -5769,23 +6035,101 @@
         c.beginPath(); c.ellipse(flx, fly, 3, 2, fal, 0, Math.PI * 2); c.fill();
       }
     } else if (habitat === 'nightTree') {
-      paintSky(c, '#1a1438', '#2a1858', '#3a2868');
-      paintGround(c, '#1a1820', '#0a0810');
-      /* Big moon */
-      c.fillStyle = '#fff8c0';
-      c.beginPath(); c.arc(W - 140, 80, 38, 0, Math.PI * 2); c.fill();
-      /* Stars */
-      c.fillStyle = '#ffffff';
-      for (var stt = 0; stt < 50; stt++) {
-        c.beginPath();
-        c.arc(((stt * 73) % W), ((stt * 31) % ROOM_FLOOR_TOP), 0.8 + (stt % 3) * 0.5, 0, Math.PI * 2);
-        c.fill();
+      /* Owl's reading nook: panelled study, moonlit round window with
+         a branch across it, bookcases, armchair and a reading lamp */
+      var nkG = c.createLinearGradient(0, 0, 0, ROOM_FLOOR_TOP);
+      nkG.addColorStop(0, '#2a3a34');
+      nkG.addColorStop(1, '#3e5048');
+      c.fillStyle = nkG;
+      c.fillRect(0, 0, W, ROOM_FLOOR_TOP);
+      c.fillStyle = 'rgba(255,255,255,0.05)';
+      for (var nkp = 0; nkp < W; nkp += 48) c.fillRect(nkp, 0, 2, ROOM_FLOOR_TOP);
+      c.fillStyle = '#4a2c16';
+      c.fillRect(0, ROOM_FLOOR_TOP - 70, W, 70);
+      c.fillStyle = '#6a4224';
+      c.fillRect(0, ROOM_FLOOR_TOP - 72, W, 6);
+      for (var wp = 0; wp < W; wp += 80) {
+        c.strokeStyle = 'rgba(0,0,0,0.3)';
+        c.lineWidth = 1.5;
+        c.strokeRect(wp + 10, ROOM_FLOOR_TOP - 58, 60, 46);
       }
-      /* Hollow tree (right) */
-      c.fillStyle = '#3a2008';
-      c.fillRect(80, ROOM_FLOOR_TOP - 140, 60, 140);
-      c.fillStyle = '#1a1408';
-      c.beginPath(); c.ellipse(110, ROOM_FLOOR_TOP - 80, 16, 22, 0, 0, Math.PI * 2); c.fill();
+      /* Round window with the moon */
+      var rwx = W / 2, rwy = 108, rwr = 62;
+      c.save();
+      c.beginPath(); c.arc(rwx, rwy, rwr, 0, Math.PI * 2); c.clip();
+      var rwG = c.createLinearGradient(0, rwy - rwr, 0, rwy + rwr);
+      rwG.addColorStop(0, '#141a44');
+      rwG.addColorStop(1, '#3a3a78');
+      c.fillStyle = rwG;
+      c.fillRect(rwx - rwr, rwy - rwr, rwr * 2, rwr * 2);
+      c.fillStyle = '#fff8e0';
+      for (var nst = 0; nst < 14; nst++) {
+        c.fillRect(rwx - rwr + hash01(nst) * rwr * 2, rwy - rwr + hash01(nst + 30) * rwr * 1.4, 1.4, 1.4);
+      }
+      var mnG = c.createRadialGradient(rwx + 20, rwy - 16, 6, rwx + 20, rwy - 16, 46);
+      mnG.addColorStop(0, 'rgba(255,248,200,0.6)');
+      mnG.addColorStop(1, 'rgba(255,248,200,0)');
+      c.fillStyle = mnG;
+      c.fillRect(rwx - 30, rwy - 66, 100, 100);
+      c.fillStyle = '#fff4c0';
+      c.beginPath(); c.arc(rwx + 20, rwy - 16, 18, 0, Math.PI * 2); c.fill();
+      /* Branch silhouette */
+      c.strokeStyle = '#141008';
+      c.lineWidth = 6;
+      c.beginPath(); c.moveTo(rwx - rwr, rwy + 30); c.quadraticCurveTo(rwx - 10, rwy + 14, rwx + rwr, rwy + 34); c.stroke();
+      c.lineWidth = 3;
+      c.beginPath(); c.moveTo(rwx - 20, rwy + 20); c.lineTo(rwx - 36, rwy - 4); c.stroke();
+      c.fillStyle = '#141008';
+      for (var lv = 0; lv < 6; lv++) {
+        c.beginPath(); c.ellipse(rwx - 40 + lv * 16, rwy + 20 + (lv % 2) * 8, 6, 3, lv, 0, Math.PI * 2); c.fill();
+      }
+      c.restore();
+      c.strokeStyle = '#7a4a24'; c.lineWidth = 10;
+      c.beginPath(); c.arc(rwx, rwy, rwr + 3, 0, Math.PI * 2); c.stroke();
+      c.strokeStyle = '#a06a34'; c.lineWidth = 3;
+      c.beginPath(); c.arc(rwx, rwy, rwr + 1, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.moveTo(rwx - rwr, rwy); c.lineTo(rwx + rwr, rwy); c.moveTo(rwx, rwy - rwr); c.lineTo(rwx, rwy + rwr); c.stroke();
+      /* Bookcases either side */
+      paintBookcase(c, 96, 60, 140, ROOM_FLOOR_TOP - 54, 5);
+      paintBookcase(c, W - 250, 60, 140, ROOM_FLOOR_TOP - 54, 17);
+      /* Floor: planks + round rug */
+      paintGround(c, '#7a5030', '#4a2c16');
+      c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = 1;
+      for (var nfl = 0; nfl < 5; nfl++) {
+        var nfy = ROOM_FLOOR_TOP + 10 + nfl * 14 + nfl * nfl * 4;
+        c.beginPath(); c.moveTo(0, nfy); c.lineTo(W, nfy); c.stroke();
+      }
+      c.fillStyle = '#7a2a3a';
+      c.beginPath(); c.ellipse(W / 2, ROOM_FLOOR_BOTTOM - 10, 230, 34, 0, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = '#e0b860'; c.lineWidth = 3;
+      c.beginPath(); c.ellipse(W / 2, ROOM_FLOOR_BOTTOM - 10, 214, 28, 0, 0, Math.PI * 2); c.stroke();
+      /* Armchair + reading lamp by the right bookcase */
+      var acx = W - 330, acy = ROOM_FLOOR_TOP + 40;
+      c.fillStyle = '#5a7a3a';
+      c.beginPath(); c.moveTo(acx - 30, acy); c.lineTo(acx - 26, acy - 52); c.quadraticCurveTo(acx, acy - 64, acx + 26, acy - 52); c.lineTo(acx + 30, acy); c.closePath(); c.fill();
+      c.fillStyle = '#6a8a48';
+      c.fillRect(acx - 36, acy - 22, 72, 22);
+      c.beginPath(); c.arc(acx - 34, acy - 20, 8, 0, Math.PI * 2); c.arc(acx + 34, acy - 20, 8, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#3a2010';
+      c.fillRect(acx - 30, acy, 4, 8); c.fillRect(acx + 26, acy, 4, 8);
+      c.fillStyle = '#c84a4a';
+      c.fillRect(acx - 10, acy - 30, 18, 6); /* open book on the cushion */
+      c.fillStyle = '#fff4dc';
+      c.fillRect(acx - 9, acy - 32, 16, 3);
+      var rlx = acx + 56;
+      c.fillStyle = '#3a2a1a';
+      c.fillRect(rlx - 1.5, acy - 96, 3, 96);
+      c.fillRect(rlx - 10, acy - 2, 20, 4);
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      var rlG = c.createRadialGradient(rlx, acy - 92, 4, rlx, acy - 92, 110);
+      rlG.addColorStop(0, 'rgba(255,200,120,0.35)');
+      rlG.addColorStop(1, 'rgba(255,200,120,0)');
+      c.fillStyle = rlG;
+      c.fillRect(rlx - 110, acy - 202, 220, 220);
+      c.restore();
+      c.fillStyle = '#e8c070';
+      c.beginPath(); c.moveTo(rlx - 14, acy - 90); c.lineTo(rlx - 8, acy - 110); c.lineTo(rlx + 8, acy - 110); c.lineTo(rlx + 14, acy - 90); c.closePath(); c.fill();
     } else if (habitat === 'bamboo') {
       paintSky(c, '#3a5028', '#5a7028', '#88a040');
       paintGround(c, '#5a7028', '#3a4818');
@@ -5809,31 +6153,71 @@
         c.beginPath(); c.ellipse(bmlx, 50 + (bml % 2) * 20, 12, 4, bml * 0.4, 0, Math.PI * 2); c.fill();
       }
     } else if (habitat === 'arctic') {
-      paintSky(c, '#7898c8', '#a8c8e0', '#e0eef8');
-      paintGround(c, '#ffffff', '#cce0ee');
-      /* Iceberg shapes */
-      c.fillStyle = '#cce0ee';
-      c.beginPath();
-      c.moveTo(0, ROOM_FLOOR_TOP);
-      c.lineTo(160, ROOM_FLOOR_TOP - 40);
-      c.lineTo(280, ROOM_FLOOR_TOP);
-      c.closePath();
-      c.fill();
-      c.beginPath();
-      c.moveTo(W - 200, ROOM_FLOOR_TOP);
-      c.lineTo(W - 100, ROOM_FLOOR_TOP - 50);
-      c.lineTo(W, ROOM_FLOOR_TOP);
-      c.closePath();
-      c.fill();
-      /* Aurora glow */
+      paintSky(c, '#5a78b8', '#a0c4e4', '#e4f2fa');
+      /* Aurora ribbons */
       c.save();
-      c.globalAlpha = 0.4;
-      var ag = c.createLinearGradient(0, 0, 0, 100);
-      ag.addColorStop(0, '#88ffaa');
-      ag.addColorStop(1, 'rgba(136,255,170,0)');
-      c.fillStyle = ag;
-      c.fillRect(0, 0, W, 120);
+      c.globalCompositeOperation = 'lighter';
+      var auT = Date.now() * 0.0006;
+      for (var au = 0; au < 3; au++) {
+        c.strokeStyle = au === 1 ? 'rgba(160,120,255,0.1)' : 'rgba(120,255,180,0.12)';
+        c.lineWidth = 30 - au * 6;
+        c.lineJoin = 'round';
+        c.beginPath();
+        for (var aux = -20; aux <= W + 20; aux += 40) {
+          var auy = 50 + au * 22 + Math.sin(aux * 0.012 + auT + au) * 16;
+          if (aux === -20) c.moveTo(aux, auy); else c.lineTo(aux, auy);
+        }
+        c.stroke();
+      }
       c.restore();
+      /* Far icebergs with a lit face and a shadow face */
+      var bergs = [[120, 70, 46], [380, 50, 30], [W - 150, 80, 56]];
+      for (var bg = 0; bg < bergs.length; bg++) {
+        var bgx = bergs[bg][0], bgw = bergs[bg][1], bgh = bergs[bg][2];
+        c.fillStyle = '#f4faff';
+        c.beginPath(); c.moveTo(bgx - bgw, ROOM_FLOOR_TOP); c.lineTo(bgx - bgw * 0.3, ROOM_FLOOR_TOP - bgh); c.lineTo(bgx + bgw * 0.1, ROOM_FLOOR_TOP - bgh * 0.8); c.lineTo(bgx, ROOM_FLOOR_TOP); c.closePath(); c.fill();
+        c.fillStyle = '#b8d4ea';
+        c.beginPath(); c.moveTo(bgx, ROOM_FLOOR_TOP); c.lineTo(bgx + bgw * 0.1, ROOM_FLOOR_TOP - bgh * 0.8); c.lineTo(bgx + bgw * 0.5, ROOM_FLOOR_TOP - bgh * 0.5); c.lineTo(bgx + bgw, ROOM_FLOOR_TOP); c.closePath(); c.fill();
+      }
+      /* Open water band with drifting floes */
+      var wTop = ROOM_FLOOR_TOP, wBot = ROOM_FLOOR_TOP + 40;
+      var awG = c.createLinearGradient(0, wTop, 0, wBot);
+      awG.addColorStop(0, '#4a88b8');
+      awG.addColorStop(1, '#2a5a8a');
+      c.fillStyle = awG;
+      c.fillRect(0, wTop, W, wBot - wTop);
+      var flT = Date.now() * 0.002;
+      c.strokeStyle = 'rgba(255,255,255,0.4)'; c.lineWidth = 1;
+      for (var rp2 = 0; rp2 < 9; rp2++) {
+        var rpx = (rp2 * 97 + flT * 6) % (W + 40) - 20;
+        c.beginPath(); c.moveTo(rpx, wTop + 8 + (rp2 % 3) * 9); c.lineTo(rpx + 18, wTop + 8 + (rp2 % 3) * 9); c.stroke();
+      }
+      var floes = [[70, 12, 34], [250, 22, 46], [430, 10, 28], [600, 24, 40], [740, 14, 30]];
+      for (var fo = 0; fo < floes.length; fo++) {
+        var fox = floes[fo][0] + Math.sin(flT * 0.5 + fo) * 4;
+        var foy = wTop + floes[fo][1] + Math.sin(flT + fo * 1.7) * 1.5;
+        var fow = floes[fo][2];
+        c.fillStyle = '#9ec2de';
+        c.beginPath(); c.ellipse(fox, foy + 3, fow, 5, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#ffffff';
+        c.beginPath(); c.ellipse(fox, foy, fow, 5, 0, 0, Math.PI * 2); c.fill();
+      }
+      /* Ice shelf (the walkable floor) with a crisp edge */
+      var shG = c.createLinearGradient(0, wBot, 0, H);
+      shG.addColorStop(0, '#ffffff');
+      shG.addColorStop(1, '#c4dcee');
+      c.fillStyle = shG;
+      c.beginPath();
+      c.moveTo(0, wBot);
+      for (var sx2 = 0; sx2 <= W; sx2 += 40) c.lineTo(sx2, wBot - 3 + hash01(sx2) * 6);
+      c.lineTo(W, H); c.lineTo(0, H); c.closePath(); c.fill();
+      c.fillStyle = '#8ab4d8';
+      c.fillRect(0, wBot + 2, W, 3);
+      c.strokeStyle = 'rgba(120,160,200,0.45)'; c.lineWidth = 1;
+      for (var ck = 0; ck < 7; ck++) {
+        var ckx = 60 + ck * 110, cky = wBot + 30 + (ck % 3) * 26;
+        c.beginPath(); c.moveTo(ckx, cky); c.lineTo(ckx + 14, cky + 6); c.lineTo(ckx + 30, cky + 2); c.stroke();
+      }
     } else if (habitat === 'meadow') {
       paintSky(c, '#88c8e0', '#cce0ee', '#fff8c0');
       paintGround(c, '#7ac848', '#4a8028');
@@ -5999,24 +6383,50 @@
       c.beginPath(); c.arc(166, ROOM_FLOOR_BOTTOM - 18, 4, 0, Math.PI * 2); c.fill();
       c.beginPath(); c.arc(194, ROOM_FLOOR_BOTTOM - 18, 4, 0, Math.PI * 2); c.fill();
     } else if (habitat === 'kelpForest') {
-      paintSky(c, '#0a3858', '#1a5878', '#3a7898');
-      paintGround(c, '#3a5048', '#1a2820');
-      /* Kelp strands */
-      c.strokeStyle = '#5a8038'; c.lineWidth = 4;
-      for (var kp = 0; kp < 10; kp++) {
-        var kpx = 60 + kp * 70;
-        c.beginPath();
-        c.moveTo(kpx, ROOM_FLOOR_TOP + 10);
-        c.bezierCurveTo(kpx + 10, 200, kpx - 10, 80, kpx, 0);
-        c.stroke();
+      paintSky(c, '#7ec4f0', '#b8e2fa', '#e4f6ff');
+      c.fillStyle = '#ffffff';
+      c.beginPath(); c.arc(160, 70, 18, 0, Math.PI * 2); c.arc(186, 62, 24, 0, Math.PI * 2); c.arc(212, 72, 16, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(W - 220, 96, 14, 0, Math.PI * 2); c.arc(W - 198, 90, 18, 0, Math.PI * 2); c.arc(W - 178, 98, 12, 0, Math.PI * 2); c.fill();
+      /* Sea from the horizon to the shore */
+      var seaTop = 170;
+      var seaG = c.createLinearGradient(0, seaTop, 0, ROOM_FLOOR_TOP);
+      seaG.addColorStop(0, '#2a78b0');
+      seaG.addColorStop(1, '#4aa8c8');
+      c.fillStyle = seaG;
+      c.fillRect(0, seaTop, W, ROOM_FLOOR_TOP - seaTop);
+      /* Distant rocky islet */
+      c.fillStyle = '#4a5a6a';
+      c.beginPath(); c.moveTo(W - 210, seaTop + 2); c.quadraticCurveTo(W - 170, seaTop - 34, W - 120, seaTop + 2); c.closePath(); c.fill();
+      /* Sun glitter + animated ripple arcs */
+      var rT = Date.now() * 0.002;
+      c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 1.4;
+      for (var rr2 = 0; rr2 < 22; rr2++) {
+        var rrx = (hash01(rr2) * W + rT * 8 * (1 + (rr2 % 3))) % W;
+        var rry = seaTop + 10 + hash01(rr2 + 50) * (ROOM_FLOOR_TOP - seaTop - 20);
+        var rrw = 6 + (rry - seaTop) * 0.12;
+        c.beginPath(); c.arc(rrx, rry, rrw, Math.PI * 1.15, Math.PI * 1.85); c.stroke();
       }
-      /* Bubbles */
-      c.fillStyle = 'rgba(255,255,255,0.4)';
-      for (var bub = 0; bub < 12; bub++) {
-        var bbx = 30 + bub * 60;
-        var bby = ((bub * 37 - Date.now() * 0.05) % ROOM_FLOOR_TOP);
-        if (bby < 0) bby += ROOM_FLOOR_TOP;
-        c.beginPath(); c.arc(bbx, bby, 2 + (bub % 3), 0, Math.PI * 2); c.fill();
+      /* Kelp tops bobbing at the surface */
+      for (var kp = 0; kp < 6; kp++) {
+        var kpx = 80 + kp * 130 + hash01(kp) * 40;
+        var kpy = seaTop + 50 + hash01(kp + 9) * 40 + Math.sin(rT + kp) * 2;
+        c.fillStyle = '#6a8a2a';
+        c.beginPath(); c.ellipse(kpx, kpy, 10, 3, 0.2, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#8aa83a';
+        c.beginPath(); c.arc(kpx + 6, kpy - 1, 2.6, 0, Math.PI * 2); c.fill();
+      }
+      /* Pebbly shore (the floor) with lapping foam */
+      paintGround(c, '#e8d4a4', '#b89466');
+      c.fillStyle = 'rgba(255,255,255,0.75)';
+      c.beginPath();
+      c.moveTo(0, ROOM_FLOOR_TOP);
+      for (var fm = 0; fm <= W; fm += 20) c.lineTo(fm, ROOM_FLOOR_TOP + 4 + Math.sin(fm * 0.05 + rT) * 3);
+      c.lineTo(W, ROOM_FLOOR_TOP); c.closePath(); c.fill();
+      for (var pb = 0; pb < 26; pb++) {
+        var pbx = hash01(pb * 3) * W, pby = ROOM_FLOOR_TOP + 16 + hash01(pb * 5) * (H - ROOM_FLOOR_TOP - 24);
+        var pbs = 2 + (pby - ROOM_FLOOR_TOP) * 0.03;
+        c.fillStyle = pb % 3 === 0 ? '#9a8a7a' : (pb % 3 === 1 ? '#c0aa8a' : '#7a7a80');
+        c.beginPath(); c.ellipse(pbx, pby, pbs * 1.5, pbs, 0, 0, Math.PI * 2); c.fill();
       }
     } else if (habitat === 'outback') {
       paintSky(c, '#c84838', '#e87858', '#ffb888');
@@ -6624,33 +7034,119 @@
     c.restore();
   }
 
-  /* Themed bed painter — picks a color/prop based on the species. */
+  /* Side-view bed: headboard on the right, footboard on the left,
+     mattress, pillow, and a quilt that drapes over the front with a
+     turned-down sheet and a pattern. pal: { wood, quilt, quiltHi,
+     motif ('hearts' | 'dots' | 'stripes'), dot }. */
+  function paintSideBed(c, x, y, w, h, pal) {
+    var wood = pal.wood || '#7a4a24';
+    var woodHi = hexShadeUI(wood, 25);
+    var woodLo = hexShadeUI(wood, -35);
+    var floorY = y + h;
+    var mTop = y + h * 0.36, mBot = y + h * 0.7;
+    /* Floor shadow */
+    c.fillStyle = 'rgba(0,0,0,0.22)';
+    c.beginPath(); c.ellipse(x + w / 2, floorY, w * 0.56, 6, 0, 0, Math.PI * 2); c.fill();
+    /* Headboard (right) */
+    c.fillStyle = woodLo;
+    c.fillRect(x + w - 12, y - h * 0.3, 12, h * 1.3);
+    c.fillStyle = wood;
+    c.beginPath();
+    c.moveTo(x + w - 12, floorY);
+    c.lineTo(x + w - 12, y - h * 0.2);
+    c.quadraticCurveTo(x + w - 6, y - h * 0.42, x + w, y - h * 0.2);
+    c.lineTo(x + w, floorY);
+    c.closePath(); c.fill();
+    c.fillStyle = woodHi;
+    c.fillRect(x + w - 10, y - h * 0.18, 2, h * 1.1);
+    /* Frame rail + legs */
+    c.fillStyle = woodLo;
+    c.fillRect(x + 4, mBot, w - 14, h * 0.14);
+    c.fillRect(x + 6, mBot, 5, floorY - mBot);
+    c.fillRect(x + w - 18, mBot, 5, floorY - mBot);
+    /* Mattress */
+    c.fillStyle = '#fff6e6';
+    roundRect(c, x + 6, mTop, w - 18, mBot - mTop, 5);
+    c.fill();
+    /* Pillow against the headboard */
+    c.fillStyle = '#ffffff';
+    c.beginPath(); c.ellipse(x + w - 30, mTop - 2, 16, 7, -0.1, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.12)'; c.lineWidth = 1;
+    c.beginPath(); c.ellipse(x + w - 30, mTop - 2, 16, 7, -0.1, 0, Math.PI * 2); c.stroke();
+    /* Quilt: over the top, draping down the front with a wavy hem */
+    var qR = x + w - 46, qL = x + 2;
+    var qg = c.createLinearGradient(0, mTop - 4, 0, mBot + 10);
+    qg.addColorStop(0, pal.quiltHi || pal.quilt);
+    qg.addColorStop(1, pal.quilt);
+    c.fillStyle = qg;
+    c.beginPath();
+    c.moveTo(qR, mTop - 4);
+    c.quadraticCurveTo((qL + qR) / 2, mTop - 9, qL + 4, mTop - 2);
+    c.quadraticCurveTo(qL - 2, mTop + 6, qL, mBot + 8);
+    for (var hm = 0; hm <= 5; hm++) {
+      var hx = qL + (qR + 6 - qL) * hm / 5;
+      c.quadraticCurveTo(hx - (qR - qL) / 10, mBot + 12, hx, mBot + 8);
+    }
+    c.lineTo(qR + 6, mTop);
+    c.closePath();
+    c.fill();
+    /* Pattern, clipped to the quilt */
+    c.save();
+    c.clip();
+    c.fillStyle = pal.dot || '#ffffff';
+    c.strokeStyle = pal.dot || '#ffffff';
+    if (pal.motif === 'stripes') {
+      c.globalAlpha = 0.5;
+      c.lineWidth = 3;
+      for (var st = qL; st < qR + 10; st += 12) {
+        c.beginPath(); c.moveTo(st, mTop - 10); c.lineTo(st, mBot + 14); c.stroke();
+      }
+    } else {
+      c.globalAlpha = 0.75;
+      for (var row = 0; row < 3; row++) {
+        for (var col = 0; col < 8; col++) {
+          var px = qL + 8 + col * 12 + (row % 2) * 6, py = mTop + 2 + row * 9;
+          if (px > qR) continue;
+          if (pal.motif === 'hearts') {
+            c.beginPath();
+            c.arc(px - 1.6, py - 1, 1.8, 0, Math.PI * 2);
+            c.arc(px + 1.6, py - 1, 1.8, 0, Math.PI * 2);
+            c.moveTo(px - 3.2, py - 0.4); c.lineTo(px, py + 3); c.lineTo(px + 3.2, py - 0.4);
+            c.fill();
+          } else {
+            c.beginPath(); c.arc(px, py, 1.8, 0, Math.PI * 2); c.fill();
+          }
+        }
+      }
+    }
+    c.restore();
+    /* Turned-down sheet fold by the pillow */
+    c.fillStyle = '#ffffff';
+    c.beginPath();
+    c.moveTo(qR - 8, mTop - 5); c.lineTo(qR + 6, mTop - 3); c.lineTo(qR + 6, mBot + 6); c.lineTo(qR - 8, mBot + 8);
+    c.closePath(); c.fill();
+    c.fillStyle = 'rgba(0,0,0,0.1)';
+    c.fillRect(qR - 8, mTop - 4, 2, mBot - mTop + 12);
+    /* Footboard (left) */
+    c.fillStyle = wood;
+    c.beginPath();
+    c.moveTo(x - 4, floorY); c.lineTo(x - 4, mTop - 4);
+    c.quadraticCurveTo(x + 2, mTop - 14, x + 8, mTop - 4);
+    c.lineTo(x + 8, floorY); c.closePath(); c.fill();
+    c.fillStyle = woodHi;
+    c.fillRect(x - 2, mTop - 2, 2, floorY - mTop);
+  }
+
+  /* Guest bed in each suite, coloured from the species palette. */
   function paintHabitatBed(c, species, bx, by) {
-    /* Default frame */
     var p = (Game.entities && Game.entities.ANIMAL_PALETTES &&
              Game.entities.ANIMAL_PALETTES[species]) || { body: '#7a4818', shade: '#5a3018', accent: '#ffd24a' };
-    /* Bed scaled up: 100w x 50h */
-    c.fillStyle = '#3a2418';
-    c.fillRect(bx - 6, by, 100, 50);
-    c.fillStyle = p.shade;
-    c.fillRect(bx, by + 4, 88, 42);
-    /* Headboard */
-    c.fillStyle = '#5a3018';
-    c.fillRect(bx, by, 18, 50);
-    /* Mattress */
-    c.fillStyle = '#fff0d8';
-    c.fillRect(bx + 18, by + 8, 70, 22);
-    /* Pillow */
-    c.fillStyle = '#ffffff';
-    c.fillRect(bx + 22, by + 10, 22, 14);
-    /* Quilt — themed accent */
-    c.fillStyle = p.accent;
-    c.fillRect(bx + 46, by + 10, 42, 18);
-    /* Decorative species-tied prop on the quilt */
-    c.fillStyle = p.body;
-    c.beginPath();
-    c.arc(bx + 67, by + 19, 4, 0, Math.PI * 2);
-    c.fill();
+    var motifs = ['dots', 'stripes', 'hearts'];
+    var m = 0;
+    for (var i = 0; i < species.length; i++) m += species.charCodeAt(i);
+    paintSideBed(c, bx - 6, by, 106, 50, {
+      wood: '#7a4a24', quilt: p.shade, quiltHi: p.body, motif: motifs[m % 3], dot: p.accent,
+    });
   }
 
   function drawRoomBackground(c, species) {
@@ -6669,12 +7165,18 @@
 
     /* Themed bed in the corner of every room */
     if (roomState.bed) {
-      paintHabitatBed(c, species, roomState.bed.x, roomState.bed.y);
-      /* For the bedroom, layer the heart-quilted bed on top to keep the
-         original bedroom-bed look. */
       if (species === 'bedroom') {
+        /* Momoko's own bed: pink heart quilt and a bobbing ZZZ prompt */
         roomState.bed.update();
-        roomState.bed.draw(c, 0, 0);
+        var mbx = roomState.bed.x - 16, mby = roomState.bed.y + 4;
+        paintSideBed(c, mbx, mby, 120, 56, {
+          wood: '#e8b0c8', quilt: '#ff7ab0', quiltHi: '#ffa8cc', motif: 'hearts', dot: '#ffffff',
+        });
+        c.fillStyle = '#88ddff';
+        c.font = 'bold 13px ' + FONT;
+        c.fillText('ZZZ', mbx + 44, mby - 12 + Math.sin(roomState.bed.timer * 0.08) * 2);
+      } else {
+        paintHabitatBed(c, species, roomState.bed.x, roomState.bed.y);
       }
     }
 
@@ -6993,220 +7495,364 @@
   /* ============================================================
    *  SLEEP CUTSCENE
    * ============================================================ */
+  /* Moonlit bedroom: Momoko tucked in side-on, head on the pillow
+     against the headboard, under a patchwork quilt. The bed's legs end
+     above y = 440 so the "Tap anywhere" hint below stays clear. */
   function drawSleepCutscene(c, timer) {
     c.save();
+    var floorY = 300;
+    var t = timer || 0;
 
-    /* ---- Twilight room backdrop ---- */
-    var skyGrad = c.createLinearGradient(0, 0, 0, ROOM_FLOOR_TOP);
-    skyGrad.addColorStop(0, '#0a0428');
-    skyGrad.addColorStop(0.6, '#1a0c4a');
-    skyGrad.addColorStop(1, '#3a2068');
-    c.fillStyle = skyGrad;
-    c.fillRect(0, 0, W, ROOM_FLOOR_TOP);
-    /* Floor */
-    c.fillStyle = '#3a2050';
-    c.fillRect(0, ROOM_FLOOR_TOP, W, H - ROOM_FLOOR_TOP);
-    /* Faint heart wallpaper */
-    c.save();
-    c.globalAlpha = 0.18;
-    c.fillStyle = '#ff66aa';
-    for (var hr = 0; hr < 8; hr++) {
+    /* ---- Wall: night-blue wallpaper with faint hearts ---- */
+    var wallG = c.createLinearGradient(0, 0, 0, floorY);
+    wallG.addColorStop(0, '#1c1848');
+    wallG.addColorStop(1, '#342a6a');
+    c.fillStyle = wallG;
+    c.fillRect(0, 0, W, floorY);
+    c.fillStyle = 'rgba(255,140,200,0.14)';
+    for (var hr = 0; hr < 11; hr++) {
       for (var hc = 0; hc < 6; hc++) {
-        var hwx = 60 + hr * 100 + (hc % 2 === 0 ? 0 : 50);
-        var hwy = 30 + hc * 30;
-        if (hwy > ROOM_FLOOR_TOP - 20) continue;
+        var hwx = 30 + hr * 76 + (hc % 2) * 38, hwy = 26 + hc * 38;
         c.beginPath();
-        c.arc(hwx - 2, hwy - 1, 2, 0, Math.PI * 2);
-        c.arc(hwx + 2, hwy - 1, 2, 0, Math.PI * 2);
-        c.moveTo(hwx - 3.6, hwy);
-        c.lineTo(hwx, hwy + 3.5);
-        c.lineTo(hwx + 3.6, hwy);
-        c.closePath();
+        c.arc(hwx - 2.4, hwy - 1, 2.4, 0, Math.PI * 2);
+        c.arc(hwx + 2.4, hwy - 1, 2.4, 0, Math.PI * 2);
+        c.moveTo(hwx - 4.4, hwy - 0.2); c.lineTo(hwx, hwy + 4.4); c.lineTo(hwx + 4.4, hwy - 0.2);
         c.fill();
       }
     }
-    c.restore();
-    /* Window with moon + stars */
-    var winX = 100, winY = 50, winW = 160, winH = 130;
-    c.fillStyle = '#0a0428';
-    c.fillRect(winX, winY, winW, winH);
-    c.fillStyle = '#fff8c0';
-    c.beginPath(); c.arc(winX + 110, winY + 36, 18, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#3a2068';
-    c.beginPath(); c.arc(winX + 122, winY + 30, 14, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#ffffff';
-    for (var stt = 0; stt < 30; stt++) {
-      c.beginPath();
-      c.arc(winX + ((stt * 13) % winW), winY + ((stt * 7) % winH), 1, 0, Math.PI * 2);
-      c.fill();
+    /* Wainscot + floorboards */
+    c.fillStyle = '#2a2050';
+    c.fillRect(0, floorY - 64, W, 64);
+    c.fillStyle = '#4a3a7a';
+    c.fillRect(0, floorY - 66, W, 5);
+    c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = 1.5;
+    for (var wp = 0; wp < W; wp += 80) c.strokeRect(wp + 10, floorY - 52, 60, 40);
+    var flG = c.createLinearGradient(0, floorY, 0, H);
+    flG.addColorStop(0, '#3a2a4a');
+    flG.addColorStop(1, '#55405e');
+    c.fillStyle = flG;
+    c.fillRect(0, floorY, W, H - floorY);
+    c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = 1;
+    for (var fb = 0; fb < 6; fb++) {
+      var fby = floorY + 8 + fb * 14 + fb * fb * 3;
+      c.beginPath(); c.moveTo(0, fby); c.lineTo(W, fby); c.stroke();
     }
-    c.strokeStyle = '#caa040'; c.lineWidth = 3;
-    c.strokeRect(winX, winY, winW, winH);
+
+    /* ---- Window with moon and stars ---- */
+    var winX = 70, winY = 44, winW = 150, winH = 150;
+    c.save();
+    c.beginPath(); c.rect(winX, winY, winW, winH); c.clip();
+    var skyG = c.createLinearGradient(0, winY, 0, winY + winH);
+    skyG.addColorStop(0, '#0a0a30');
+    skyG.addColorStop(1, '#2a2a68');
+    c.fillStyle = skyG;
+    c.fillRect(winX, winY, winW, winH);
+    for (var st = 0; st < 22; st++) {
+      c.globalAlpha = 0.5 + 0.5 * Math.sin(t * 0.05 + st * 1.3);
+      c.fillStyle = '#fff8e0';
+      c.fillRect(winX + hash01(st + 3) * winW, winY + hash01(st + 70) * winH * 0.8, 1.5, 1.5);
+    }
+    c.globalAlpha = 1;
+    var mx = winX + 100, my = winY + 46;
+    var mg = c.createRadialGradient(mx, my, 8, mx, my, 60);
+    mg.addColorStop(0, 'rgba(255,248,210,0.55)');
+    mg.addColorStop(1, 'rgba(255,248,210,0)');
+    c.fillStyle = mg;
+    c.fillRect(mx - 60, my - 60, 120, 120);
+    c.fillStyle = '#fff4c4';
+    c.beginPath(); c.arc(mx, my, 20, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(210,200,150,0.55)';
+    c.beginPath(); c.arc(mx - 6, my - 4, 4, 0, Math.PI * 2); c.arc(mx + 7, my + 6, 3, 0, Math.PI * 2); c.fill();
+    /* Rooftops of the town below */
+    c.fillStyle = '#141236';
+    for (var rf = 0; rf < 7; rf++) {
+      var rfx = winX + rf * 24 - 4, rfh = 14 + hash01(rf + 40) * 22;
+      c.fillRect(rfx, winY + winH - rfh, 20, rfh);
+      c.beginPath(); c.moveTo(rfx - 2, winY + winH - rfh); c.lineTo(rfx + 10, winY + winH - rfh - 10); c.lineTo(rfx + 22, winY + winH - rfh); c.fill();
+      if (hash01(rf) > 0.4) { c.fillStyle = '#ffd88a'; c.fillRect(rfx + 7, winY + winH - rfh + 6, 4, 5); c.fillStyle = '#141236'; }
+    }
+    c.restore();
+    c.strokeStyle = '#d8c8f0'; c.lineWidth = 6;
+    c.strokeRect(winX - 3, winY - 3, winW + 6, winH + 6);
+    c.lineWidth = 3;
     c.beginPath();
     c.moveTo(winX + winW / 2, winY); c.lineTo(winX + winW / 2, winY + winH);
     c.moveTo(winX, winY + winH / 2); c.lineTo(winX + winW, winY + winH / 2);
     c.stroke();
-    /* Pendant lamp glow over the bed */
-    c.save();
-    c.globalAlpha = 0.5;
-    var lampX = W / 2 + 40;
-    var lampGrad = c.createRadialGradient(lampX, 200, 6, lampX, 200, 180);
-    lampGrad.addColorStop(0, 'rgba(255,224,160,0.55)');
-    lampGrad.addColorStop(1, 'rgba(255,224,160,0)');
-    c.fillStyle = lampGrad;
-    c.beginPath(); c.arc(lampX, 200, 180, 0, Math.PI * 2); c.fill();
-    c.restore();
-
-    /* ---- Bed (large, centered-right so the hero is clearly visible) ---- */
-    var bedW = 300, bedH = 90;
-    var bx = W / 2 - bedW / 2 + 40;
-    var by = ROOM_FLOOR_TOP + 70;
-    /* Bed shadow */
-    c.save();
-    c.globalAlpha = 0.4;
-    c.fillStyle = '#000000';
-    c.beginPath();
-    c.ellipse(bx + bedW / 2, by + bedH + 6, bedW / 2 + 10, 6, 0, 0, Math.PI * 2);
-    c.fill();
-    c.restore();
-    /* Frame */
-    c.fillStyle = '#5a3a18';
-    c.fillRect(bx, by + bedH - 30, bedW, 30);
-    c.fillStyle = '#7a4828';
-    c.fillRect(bx, by + bedH - 30, bedW, 4);
-    /* Headboard */
-    c.fillStyle = '#7a4828';
-    c.fillRect(bx, by, 28, bedH);
+    c.fillStyle = '#d8c8f0';
+    c.fillRect(winX - 12, winY + winH + 2, winW + 24, 8);
+    /* Sheer curtains */
+    for (var cs = -1; cs <= 1; cs += 2) {
+      var cex = cs < 0 ? winX - 18 : winX + winW + 18;
+      var cix = cs < 0 ? winX + 14 : winX + winW - 14;
+      c.fillStyle = 'rgba(255,170,215,0.75)';
+      c.beginPath();
+      c.moveTo(cex, winY - 12); c.lineTo(cix, winY - 12);
+      c.quadraticCurveTo(cix - cs * 6, winY + 70, cex + cs * 8, winY + 96);
+      c.quadraticCurveTo(cex + cs * 12, winY + 150, cex + cs * 14, floorY - 70);
+      c.lineTo(cex - cs * 2, floorY - 70);
+      c.closePath(); c.fill();
+      c.fillStyle = '#ff7ab0';
+      c.fillRect(cex + cs * 4 - 5, winY + 92, 12, 5);
+    }
     c.fillStyle = '#caa040';
-    c.fillRect(bx + 4, by + 4, 4, bedH - 8);
-    c.fillStyle = '#ffd24a';
+    c.fillRect(winX - 26, winY - 16, winW + 52, 4);
+
+    /* Moonbeam falling across the bed (additive) */
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    var beam = c.createLinearGradient(winX, winY, winX + 360, 420);
+    beam.addColorStop(0, 'rgba(170,190,255,0.22)');
+    beam.addColorStop(1, 'rgba(170,190,255,0)');
+    c.fillStyle = beam;
     c.beginPath();
-    c.moveTo(bx + 14, by - 8);
-    c.lineTo(bx + 8, by);
-    c.lineTo(bx + 20, by);
-    c.closePath();
+    c.moveTo(winX, winY + 10); c.lineTo(winX + winW, winY + 10);
+    c.lineTo(winX + winW + 330, 440); c.lineTo(winX + 160, 440);
+    c.closePath(); c.fill();
+    c.restore();
+
+    /* ---- Nightstand with a dim lamp, right of the bed ---- */
+    var nsx = 664, nsTop = 360;
+    c.fillStyle = '#6a4a7a';
+    c.fillRect(nsx, nsTop, 64, 72);
+    c.fillStyle = '#8a6a9a';
+    c.fillRect(nsx - 4, nsTop - 4, 72, 6);
+    c.fillStyle = '#ffd24a';
+    c.beginPath(); c.arc(nsx + 32, nsTop + 30, 2.4, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#4a3058';
+    c.fillRect(nsx + 28, nsTop - 30, 8, 26);
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    var lg = c.createRadialGradient(nsx + 32, nsTop - 44, 4, nsx + 32, nsTop - 44, 90);
+    lg.addColorStop(0, 'rgba(255,190,120,0.3)');
+    lg.addColorStop(1, 'rgba(255,190,120,0)');
+    c.fillStyle = lg;
+    c.fillRect(nsx - 60, nsTop - 136, 184, 184);
+    c.restore();
+    c.fillStyle = '#ffc8a0';
+    c.beginPath(); c.moveTo(nsx + 14, nsTop - 30); c.lineTo(nsx + 22, nsTop - 56); c.lineTo(nsx + 42, nsTop - 56); c.lineTo(nsx + 50, nsTop - 30); c.closePath(); c.fill();
+
+    /* ---- Bed ---- */
+    var hbX = 270, ftX = 636, mTop = 348, mBot = 376, bedFloor = 432;
+    c.fillStyle = 'rgba(0,0,0,0.3)';
+    c.beginPath(); c.ellipse((hbX + ftX) / 2 + 10, bedFloor, 210, 9, 0, 0, Math.PI * 2); c.fill();
+    /* Headboard: tall, rounded, with a heart cut-out */
+    c.fillStyle = '#d890b8';
+    c.beginPath();
+    c.moveTo(hbX, bedFloor); c.lineTo(hbX, 270);
+    c.quadraticCurveTo(hbX + 16, 236, hbX + 32, 270);
+    c.lineTo(hbX + 32, bedFloor); c.closePath(); c.fill();
+    c.fillStyle = '#f0b0d0';
+    c.fillRect(hbX + 4, 272, 4, bedFloor - 276);
+    c.fillStyle = '#ff6aa8';
+    var hhx = hbX + 16, hhy = 276;
+    c.beginPath();
+    c.arc(hhx - 4, hhy - 2, 4.5, 0, Math.PI * 2); c.arc(hhx + 4, hhy - 2, 4.5, 0, Math.PI * 2);
+    c.moveTo(hhx - 8.5, hhy - 1); c.lineTo(hhx, hhy + 9); c.lineTo(hhx + 8.5, hhy - 1);
     c.fill();
-    /* Bed legs */
-    c.fillStyle = '#3a2010';
-    c.fillRect(bx + 6, by + bedH, 6, 12);
-    c.fillRect(bx + bedW - 12, by + bedH, 6, 12);
+    /* Side rail + legs */
+    c.fillStyle = '#b06a98';
+    c.fillRect(hbX + 30, mBot, ftX - hbX - 26, 22);
+    c.fillStyle = '#c880ac';
+    c.fillRect(hbX + 30, mBot, ftX - hbX - 26, 3);
+    c.fillStyle = '#8a4a78';
+    c.fillRect(hbX + 36, mBot + 22, 8, bedFloor - mBot - 22);
+    c.fillRect(ftX - 14, mBot + 22, 8, bedFloor - mBot - 22);
     /* Mattress */
-    c.fillStyle = '#fff0d8';
-    c.fillRect(bx + 28, by + 18, bedW - 36, bedH - 48);
-    /* Pillow (where the head will rest) */
+    c.fillStyle = '#fff4ea';
+    roundRect(c, hbX + 30, mTop, ftX - hbX - 30, mBot - mTop, 6);
+    c.fill();
+    /* Big puffy pillow against the headboard */
+    var pX = hbX + 74, pY = mTop - 12;
     c.fillStyle = '#ffffff';
-    c.fillRect(bx + 40, by + 20, 70, 30);
-    c.fillStyle = '#ff99cc';
-    c.fillRect(bx + 44, by + 24, 60, 4);
-    /* Pink quilt with hearts (covers most of the body) */
-    c.fillStyle = '#ff99cc';
-    c.fillRect(bx + 110, by + 18, bedW - 120, bedH - 48);
-    c.fillStyle = '#ff5577';
-    for (var qi = 0; qi < 6; qi++) {
-      var qhx = bx + 130 + qi * 22;
-      var qhy = by + 32;
-      c.beginPath();
-      c.arc(qhx - 3, qhy - 1, 3, 0, Math.PI * 2);
-      c.arc(qhx + 3, qhy - 1, 3, 0, Math.PI * 2);
-      c.moveTo(qhx - 5, qhy);
-      c.lineTo(qhx, qhy + 6);
-      c.lineTo(qhx + 5, qhy);
-      c.closePath();
-      c.fill();
-    }
-    /* Quilt trim */
-    c.fillStyle = '#fff0f5';
-    c.fillRect(bx + 110, by + 18, bedW - 120, 3);
-    c.fillRect(bx + 110, by + bedH - 32, bedW - 120, 3);
+    c.beginPath(); c.ellipse(pX, pY, 44, 17, -0.06, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(200,180,230,0.5)';
+    c.beginPath(); c.ellipse(pX + 4, pY + 6, 38, 8, -0.06, 0, Math.PI); c.fill();
 
-    /* ---- Real Momoko sprite, lying down on the pillow ---- */
+    /* ---- Momoko's head on the pillow (sprite clipped at the neck,
+       tipped as if snuggled in, eyes painted closed) ---- */
+    var breathe = Math.sin(t * 0.045);
     if (Game.entities && Game.entities.drawMomokoSprite) {
+      var hs = 2.6;
       c.save();
-      /* Center on pillow */
-      var heroX = bx + 75;
-      var heroY = by + 35;
-      c.translate(heroX, heroY);
-      /* Rotate -90° so she's lying on her back (head on pillow, feet under quilt) */
-      c.rotate(-Math.PI / 2);
-      /* Scale up so she's clearly visible */
-      c.scale(2.0, 2.0);
-      /* Draw with sprite center anchored at translation point */
-      c.translate(-14, -20);
+      c.translate(pX - 14, pY - 16 + breathe * 0.6);
+      c.rotate(-0.26);
+      c.scale(hs, hs);
+      c.translate(-14, -16);
+      c.beginPath(); c.rect(-6, -6, 40, 26); c.clip();
       Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, 0);
-      c.restore();
-      /* Closed-eye overlay (sleeping face) — covers her eyes with two lash arcs */
-      c.save();
-      c.strokeStyle = '#1a1a1a';
-      c.lineWidth = 1.6;
-      c.beginPath();
-      c.moveTo(bx + 70, by + 36);
-      c.quadraticCurveTo(bx + 73, by + 38, bx + 76, by + 36);
-      c.moveTo(bx + 80, by + 36);
-      c.quadraticCurveTo(bx + 83, by + 38, bx + 86, by + 36);
-      c.stroke();
-      /* Eyelashes */
-      c.lineWidth = 0.8;
-      c.beginPath();
-      c.moveTo(bx + 70, by + 36); c.lineTo(bx + 68, by + 34);
-      c.moveTo(bx + 76, by + 36); c.lineTo(bx + 78, by + 34);
-      c.moveTo(bx + 80, by + 36); c.lineTo(bx + 78, by + 34);
-      c.moveTo(bx + 86, by + 36); c.lineTo(bx + 88, by + 34);
-      c.stroke();
-      /* Rosy cheek */
-      c.fillStyle = 'rgba(255,150,170,0.7)';
-      c.beginPath(); c.arc(bx + 64, by + 38, 2.4, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(bx + 92, by + 38, 2.4, 0, Math.PI * 2); c.fill();
+      var skin = (Game.customization && Game.customization.skin) || '#ffddbb';
+      for (var ey = 0; ey < 2; ey++) {
+        var ex = ey === 0 ? 10.3 : 17.7;
+        c.fillStyle = skin;
+        c.beginPath(); c.ellipse(ex, 13.6, 3.3, 3.1, 0, 0, Math.PI * 2); c.fill();
+        c.strokeStyle = '#1a0c14';
+        c.lineWidth = 0.8;
+        c.lineCap = 'round';
+        c.beginPath(); c.moveTo(ex - 2.5, 13.2); c.quadraticCurveTo(ex, 15.4, ex + 2.5, 13.2); c.stroke();
+        c.lineWidth = 0.5;
+        c.beginPath();
+        c.moveTo(ex - 1.4, 14.5); c.lineTo(ex - 1.9, 15.6);
+        c.moveTo(ex + 1.4, 14.5); c.lineTo(ex + 1.9, 15.6);
+        c.stroke();
+      }
       c.restore();
     }
 
-    /* ---- Plush bunny tucked beside her on the pillow ---- */
-    var pbX = bx + 36, pbY = by + 36;
+    /* Plush bunny tucked beside her on the pillow */
+    var pbX = pX + 26, pbY = pY - 12;
     c.fillStyle = '#fff0f5';
     c.beginPath(); c.arc(pbX, pbY, 8, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.ellipse(pbX - 4, pbY - 12, 1.6, 6, -0.2, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.ellipse(pbX + 4, pbY - 12, 1.6, 6, 0.2, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(pbX - 4, pbY - 12, 1.8, 6, -0.2, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(pbX + 4, pbY - 12, 1.8, 6, 0.2, 0, Math.PI * 2); c.fill();
     c.fillStyle = '#1a1a1a';
-    c.beginPath(); c.arc(pbX - 2, pbY - 1, 0.8, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.arc(pbX + 2, pbY - 1, 0.8, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(pbX - 2.4, pbY - 1, 0.9, 0, Math.PI * 2); c.arc(pbX + 2.4, pbY - 1, 0.9, 0, Math.PI * 2); c.fill();
     c.fillStyle = '#ff99bb';
-    c.beginPath(); c.arc(pbX, pbY + 1.6, 0.8, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(pbX, pbY + 1.8, 0.9, 0, Math.PI * 2); c.fill();
 
-    /* ---- Animated rising ZZZ over the hero's head ---- */
-    var zStartT = 20;
-    if (timer > zStartT) {
-      var zT = timer - zStartT;
+    /* ---- Patchwork quilt pulled up to her chin, rising and falling
+       with her breathing, draping over the side with a scalloped hem ---- */
+    var qL = pX - 2, qR = ftX + 6;
+    var rise = breathe * 1.5;
+    function quiltPath() {
+      c.beginPath();
+      c.moveTo(qL, mTop - 2);
+      c.quadraticCurveTo(qL + 30, mTop - 22 - rise, qL + 90, mTop - 20 - rise);   /* shoulder */
+      c.quadraticCurveTo(qL + 160, mTop - 14 - rise, qL + 200, mTop - 18);          /* hip */
+      c.quadraticCurveTo(qL + 250, mTop - 8, qR - 40, mTop - 14);                   /* knees / toes */
+      c.quadraticCurveTo(qR - 14, mTop - 14, qR, mTop + 2);
+      c.lineTo(qR + 2, mBot + 14);
+      var hemN = 10;
+      for (var hm = 1; hm <= hemN; hm++) {
+        var hx = qR + 2 - (qR + 2 - qL) * hm / hemN;
+        c.quadraticCurveTo(hx + (qR - qL) / hemN / 2, mBot + 22, hx, mBot + 14);
+      }
+      c.closePath();
+    }
+    quiltPath();
+    var qG = c.createLinearGradient(0, mTop - 24, 0, mBot + 22);
+    qG.addColorStop(0, '#ff9ac8');
+    qG.addColorStop(1, '#e05a9a');
+    c.fillStyle = qG;
+    c.fill();
+    c.save();
+    quiltPath();
+    c.clip();
+    /* Patches: alternating squares, each with a heart, star or dot */
+    var patchCols = ['rgba(255,255,255,0.18)', 'rgba(150,110,255,0.25)'];
+    for (var px = qL; px < qR + 30; px += 30) {
+      for (var py = mTop - 30; py < mBot + 30; py += 26) {
+        var k = Math.round((px - qL) / 30 + (py - mTop) / 26);
+        c.fillStyle = patchCols[((k % 2) + 2) % 2];
+        c.fillRect(px, py, 30, 26);
+        var cx = px + 15, cy = py + 13, kind = ((k % 3) + 3) % 3;
+        c.fillStyle = kind === 1 ? '#ffe680' : '#ffffff';
+        if (kind === 0) {
+          c.beginPath();
+          c.arc(cx - 2.6, cy - 1.4, 2.8, 0, Math.PI * 2); c.arc(cx + 2.6, cy - 1.4, 2.8, 0, Math.PI * 2);
+          c.moveTo(cx - 5.2, cy - 0.6); c.lineTo(cx, cy + 5); c.lineTo(cx + 5.2, cy - 0.6);
+          c.fill();
+        } else if (kind === 1) {
+          c.beginPath();
+          for (var sp = 0; sp < 10; sp++) {
+            var sa = -Math.PI / 2 + sp * Math.PI / 5, sr = sp % 2 === 0 ? 5 : 2.2;
+            if (sp === 0) c.moveTo(cx + Math.cos(sa) * sr, cy + Math.sin(sa) * sr);
+            else c.lineTo(cx + Math.cos(sa) * sr, cy + Math.sin(sa) * sr);
+          }
+          c.closePath(); c.fill();
+        } else {
+          c.beginPath(); c.arc(cx, cy, 2.4, 0, Math.PI * 2); c.fill();
+        }
+      }
+    }
+    /* Stitching */
+    c.strokeStyle = 'rgba(255,255,255,0.5)';
+    c.lineWidth = 1;
+    c.setLineDash([3, 3]);
+    for (var sx = qL + 30; sx < qR; sx += 30) { c.beginPath(); c.moveTo(sx, mTop - 30); c.lineTo(sx, mBot + 30); c.stroke(); }
+    c.setLineDash([]);
+    /* Shade where the quilt turns down over the mattress edge */
+    var edgeG = c.createLinearGradient(0, mTop + 2, 0, mBot + 22);
+    edgeG.addColorStop(0, 'rgba(60,0,40,0)');
+    edgeG.addColorStop(0.3, 'rgba(60,0,40,0.18)');
+    edgeG.addColorStop(1, 'rgba(60,0,40,0.05)');
+    c.fillStyle = edgeG;
+    c.fillRect(qL, mTop + 2, qR - qL + 4, mBot - mTop + 24);
+    c.restore();
+    /* Turned-down sheet fold along the top by her chin */
+    c.fillStyle = '#fff6fb';
+    c.beginPath();
+    c.moveTo(qL - 2, mTop - 1);
+    c.quadraticCurveTo(qL + 30, mTop - 23 - rise, qL + 90, mTop - 21 - rise);
+    c.lineTo(qL + 92, mTop - 12 - rise);
+    c.quadraticCurveTo(qL + 30, mTop - 13 - rise, qL + 4, mTop + 6);
+    c.closePath(); c.fill();
+    c.strokeStyle = '#ffb0d4'; c.lineWidth = 1.2;
+    c.beginPath(); c.moveTo(qL + 4, mTop + 6); c.quadraticCurveTo(qL + 30, mTop - 13 - rise, qL + 92, mTop - 12 - rise); c.stroke();
+    /* Footboard */
+    c.fillStyle = '#d890b8';
+    c.beginPath();
+    c.moveTo(ftX - 4, bedFloor); c.lineTo(ftX - 4, mTop - 20);
+    c.quadraticCurveTo(ftX + 6, mTop - 34, ftX + 16, mTop - 20);
+    c.lineTo(ftX + 16, bedFloor); c.closePath(); c.fill();
+    c.fillStyle = '#f0b0d0';
+    c.fillRect(ftX, mTop - 18, 3, bedFloor - mTop + 18);
+
+    /* ---- Floating Zs: drift up and away from her head, swaying ---- */
+    if (t > 20) {
+      var zT = t - 20;
       for (var i = 0; i < 4; i++) {
-        var zPhase = (zT - i * 40) % 200;
+        var zPhase = (zT - i * 50) % 200;
         if (zPhase < 0) continue;
-        var alpha = Math.max(0, 1 - zPhase / 200);
-        var dy = -zPhase * 0.7;
-        var size = 22 + i * 6 + zPhase * 0.08;
+        var alpha = Math.min(1, zPhase / 20) * Math.max(0, 1 - zPhase / 200);
+        var zx = pX + 30 + zPhase * 0.55 + Math.sin(zPhase * 0.05 + i) * 10;
+        var zy = pY - 48 - zPhase * 0.9;
+        var size = 16 + zPhase * 0.1;
         c.save();
         c.globalAlpha = alpha;
-        c.fillStyle = '#88ddff';
-        c.font = 'bold ' + Math.floor(size) + 'px "M PLUS Rounded 1c", sans-serif';
+        c.translate(zx, zy);
+        c.rotate(-0.2 + Math.sin(zPhase * 0.04) * 0.15);
+        c.font = 'bold ' + Math.floor(size) + 'px ' + FONT;
         c.textAlign = 'center';
-        c.fillText('Z', bx + 110 + i * 14, by + 4 + dy);
+        c.textBaseline = 'middle';
+        c.lineWidth = 3;
+        c.strokeStyle = '#3a2a7a';
+        c.strokeText('Z', 0, 0);
+        c.fillStyle = i % 2 ? '#ffd6f0' : '#b8e4ff';
+        c.fillText('Z', 0, 0);
         c.restore();
       }
     }
 
+    /* Soft vignette */
+    var vg = c.createRadialGradient(W / 2, H / 2, 160, W / 2, H / 2, W * 0.7);
+    vg.addColorStop(0, 'rgba(10,6,30,0)');
+    vg.addColorStop(1, 'rgba(10,6,30,0.45)');
+    c.fillStyle = vg;
+    c.fillRect(0, 0, W, H);
+
     /* ---- Title text ---- */
-    c.fillStyle = '#fff8e0';
-    c.font = 'bold 26px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
-    c.fillText(Game.i18n.t('sleepText'), W / 2, 36);
-
-    /* Cozy "good night" line beneath the title */
+    c.textBaseline = 'alphabetic';
+    c.fillStyle = '#fff8e0';
+    c.font = 'bold 26px ' + FONT;
+    c.fillText(Game.i18n.t('sleepText'), W / 2 + 70, 52);
     c.fillStyle = '#ffd6e8';
-    c.font = '13px "M PLUS Rounded 1c", sans-serif';
-    c.fillText('🌙 Good night, Momoko 🌙', W / 2, 60);
+    fitFont(c, Game.i18n.t('goodNight'), 300, 14);
+    c.fillText(Game.i18n.t('goodNight'), W / 2 + 70, 76);
 
-    /* Tap to wake hint after a beat */
-    if (timer > 80) {
-      c.fillStyle = '#bbbbcc';
-      c.font = '12px "M PLUS Rounded 1c", sans-serif';
-      c.fillText(Game.i18n.t('tapAnywhere'), W / 2, H - 18);
+    /* Tap-to-wake hint after a beat, on a pill below the bed */
+    if (t > 80) {
+      var tip = Game.i18n.t('tapAnywhere');
+      c.font = '13px ' + FONT;
+      var tw = c.measureText(tip).width + 28;
+      c.fillStyle = 'rgba(20,12,50,0.6)';
+      roundRect(c, W / 2 - tw / 2, H - 34, tw, 24, 12);
+      c.fill();
+      c.fillStyle = '#e8e0ff';
+      c.textBaseline = 'middle';
+      c.fillText(tip, W / 2, H - 21);
+      c.textBaseline = 'alphabetic';
     }
     c.textAlign = 'left';
     c.restore();
@@ -7499,6 +8145,77 @@
         c.fillText(Game.i18n.t('ledgerUnvisited'), ix + colW - 14, iy + (rowH - 4) / 2);
       }
       c.textBaseline = 'alphabetic';
+    }
+
+    /* Stamp album: a perforated stamp per guest along the bottom of the
+       page — the animal's portrait once greeted, a faint ghost until
+       then, with a red postmark over the stamped ones. */
+    var stW = 46, stH = 50, stGap = 4, perRow = 13;
+    var albumX = cardX + (cardW - (perRow * (stW + stGap) - stGap)) / 2;
+    var albumY = gridY + Math.ceil(LEDGER_SPECIES.length / cols) * rowH + 10;
+    var pal = (Game.entities && Game.entities.ANIMAL_PALETTES) || {};
+    for (var si = 0; si < LEDGER_SPECIES.length; si++) {
+      var ssp = LEDGER_SPECIES[si];
+      var sx = albumX + (si % perRow) * (stW + stGap);
+      var sy = albumY + Math.floor(si / perRow) * (stH + 6);
+      var got1 = !!stamps[ssp];
+      var tilt = (hash01(si + 3) - 0.5) * 0.08;
+      c.save();
+      c.translate(sx + stW / 2, sy + stH / 2);
+      c.rotate(tilt);
+      c.translate(-stW / 2, -stH / 2);
+      /* Perforated paper edge */
+      c.fillStyle = got1 ? '#ffffff' : 'rgba(255,255,255,0.55)';
+      c.shadowColor = 'rgba(90,60,20,0.25)';
+      c.shadowBlur = got1 ? 3 : 0;
+      c.shadowOffsetY = 1;
+      c.fillRect(0, 0, stW, stH);
+      c.shadowColor = 'rgba(0,0,0,0)';
+      c.fillStyle = '#fff4d8';
+      for (var pf = 3; pf < stW; pf += 5) {
+        c.beginPath(); c.arc(pf, 0, 1.6, 0, Math.PI * 2); c.arc(pf, stH, 1.6, 0, Math.PI * 2); c.fill();
+      }
+      for (var pv = 3; pv < stH; pv += 5) {
+        c.beginPath(); c.arc(0, pv, 1.6, 0, Math.PI * 2); c.arc(stW, pv, 1.6, 0, Math.PI * 2); c.fill();
+      }
+      /* Inner panel + portrait */
+      var pp = pal[ssp] || { accent: '#ffd24a' };
+      c.fillStyle = got1 ? hexShadeUI(pp.accent && pp.accent.length === 7 ? pp.accent : '#ffd24a', 55) : '#efe4cc';
+      c.fillRect(4, 4, stW - 8, stH - 8);
+      if (Game.entities && Game.entities.drawAnimalSprite) {
+        c.save();
+        c.beginPath(); c.rect(4, 4, stW - 8, stH - 8); c.clip();
+        c.globalAlpha = got1 ? 1 : 0.14;
+        c.translate(stW / 2, stH - 8);
+        c.scale(0.68, 0.68);
+        c.translate(-24, -44);
+        Game.entities.drawAnimalSprite(c, ssp, 0, 0);
+        c.restore();
+      }
+      if (got1) {
+        /* Postmark: ink ring + wavy cancel lines */
+        c.strokeStyle = 'rgba(170, 24, 36, 0.55)';
+        c.lineWidth = 1.2;
+        c.beginPath(); c.arc(stW - 10, 11, 8, 0, Math.PI * 2); c.stroke();
+        c.beginPath();
+        for (var wl = 0; wl < 3; wl++) {
+          c.moveTo(stW - 30, 6 + wl * 4);
+          c.quadraticCurveTo(stW - 25, 4 + wl * 4, stW - 20, 6 + wl * 4);
+        }
+        c.stroke();
+        c.fillStyle = 'rgba(170, 24, 36, 0.6)';
+        c.font = 'bold 7px ' + FONT;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText('★', stW - 10, 11);
+        c.textBaseline = 'alphabetic';
+      } else {
+        c.strokeStyle = 'rgba(122, 90, 24, 0.3)';
+        c.setLineDash([2, 2]);
+        c.strokeRect(4.5, 4.5, stW - 9, stH - 9);
+        c.setLineDash([]);
+      }
+      c.restore();
     }
 
     /* Hints + close button */

@@ -217,6 +217,7 @@
       animalRoomTitle: "%s's Room",
       ledgerCheckedIn: 'Checked in!',
       tapAnywhere: 'Tap anywhere to wake up',
+      goodNight: 'Good night, Momoko',
 
       /* ---- Bookshelf cutscene (public-domain fairy tale) ---- */
       bookshelfPrompt: 'Press UP to pick a book!',
@@ -656,6 +657,7 @@
       animalRoomTitle: '%s の おへや',
       ledgerCheckedIn: 'チェックインしたよ！',
       tapAnywhere: 'タップで おきよう',
+      goodNight: 'おやすみ、モモコ',
 
       /* ---- えほんの カットシーン ---- */
       bookshelfPrompt: 'うえキーで ほんを えらぼう！',
