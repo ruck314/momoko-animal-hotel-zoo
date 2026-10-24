@@ -361,73 +361,65 @@
     c.save();
     c.globalAlpha = 0.9;
 
-    /* D-pad center – computed from button positions so it matches layout.
-       Drawn first as a plum cross-plate the four buttons sit on. */
+    /* Flat discs with a 2px rim, drawn exactly like Momoko Treehouse so
+       the controls look and measure the same across all the Momoko
+       games; only the colours are this game's own. */
+    var btns = ['up', 'down', 'left', 'right'];
+    var arrows = ['\u25B2', '\u25BC', '\u25C0', '\u25B6'];
+    for (var i = 0; i < btns.length; i++) {
+      var b = touchButtons[btns[i]];
+      c.fillStyle = b.active ? '#9a5ccc' : '#55288a';
+      c.beginPath();
+      c.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = '#e8b860';
+      c.lineWidth = 2;
+      c.stroke();
+      c.fillStyle = '#fbe8ff';
+      c.font = 'bold ' + Math.round(b.r * 0.78) + 'px "M PLUS Rounded 1c", sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(arrows[i], b.x, b.y);
+    }
+
+    /* D-pad center – computed from button positions so it matches layout */
     var centerX = (touchButtons.left.x + touchButtons.right.x) / 2;
     var centerY = (touchButtons.up.y + touchButtons.down.y) / 2;
     c.fillStyle = '#2a1436';
     c.beginPath();
     c.arc(centerX, centerY, Math.max(8, touchButtons.up.r * 0.4), 0, Math.PI * 2);
     c.fill();
-    c.strokeStyle = 'rgba(232,184,96,0.5)';
+
+    /* Action button */
+    var ab = touchButtons.action;
+    c.fillStyle = ab.active ? '#ff9ad8' : '#e04c9e';
+    c.beginPath();
+    c.arc(ab.x, ab.y, ab.r, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = '#ffe6a0';
     c.lineWidth = 2;
     c.stroke();
-
-    /* D-pad buttons – the same plum-and-brass as the menu buttons */
-    var btns = ['up', 'down', 'left', 'right'];
-    var arrows = ['\u25B2', '\u25BC', '\u25C0', '\u25B6'];
-    for (var i = 0; i < btns.length; i++) {
-      var b = touchButtons[btns[i]];
-      paintRoundButton(c, b, b.active ? ['#a868d8', '#6a34a0'] : ['#6c3a9c', '#3e1a64'], '#e8b860');
-      c.fillStyle = b.active ? '#ffffff' : '#fbe8ff';
-      c.font = 'bold ' + Math.round(b.r * 0.78) + 'px "M PLUS Rounded 1c", sans-serif';
-      c.textAlign = 'center';
-      c.textBaseline = 'middle';
-      c.fillText(arrows[i], b.x, b.y + (b.active ? 2 : 0));
-    }
-
-    /* Action button – the pink call-to-action colour, gold rim */
-    var ab = touchButtons.action;
-    paintRoundButton(c, ab, ab.active ? ['#ffb8e4', '#f052b0'] : ['#ff8ad0', '#d0308c'], '#ffe6a0');
     c.fillStyle = '#ffffff';
     c.font = 'bold 26px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    c.shadowColor = 'rgba(110, 10, 70, 0.6)';
-    c.shadowOffsetY = 2;
     var bubbleLabel = (window.Game && Game.i18n) ? Game.i18n.t('bubbleBtn') : 'BUBBLE';
-    c.fillText(bubbleLabel, ab.x, ab.y + (ab.active ? 2 : 0));
-    c.shadowColor = 'transparent';
-    c.shadowOffsetY = 0;
+    c.fillText(bubbleLabel, ab.x, ab.y);
 
     /* Pause button */
     var pb = touchButtons.pause;
-    paintRoundButton(c, pb, pb.active ? ['#8a52c4', '#55268a'] : ['#4e2a6e', '#2e1444'], '#c89a48');
+    c.fillStyle = pb.active ? '#7a46aa' : '#3e1f5a';
+    c.beginPath();
+    c.arc(pb.x, pb.y, pb.r, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = '#c89a48';
+    c.lineWidth = 2;
+    c.stroke();
     c.fillStyle = '#fbe8ff';
-    c.fillRect(pb.x - 6, pb.y - 7, 4, 14);
-    c.fillRect(pb.x + 2, pb.y - 7, 4, 14);
+    c.font = 'bold 20px "M PLUS Rounded 1c", sans-serif';
+    c.fillText('II', pb.x, pb.y);
 
     c.restore();
-  }
-
-  /* Glossy round touch button: drop shadow, vertical gradient, top
-     highlight and a metallic rim. Sinks 2px while held. */
-  function paintRoundButton(c, b, cols, rim) {
-    var oy = b.active ? 2 : 0;
-    if (!b.active) {
-      c.fillStyle = 'rgba(0,0,0,0.4)';
-      c.beginPath(); c.arc(b.x, b.y + 3, b.r, 0, Math.PI * 2); c.fill();
-    }
-    var g = c.createLinearGradient(0, b.y - b.r + oy, 0, b.y + b.r + oy);
-    g.addColorStop(0, cols[0]);
-    g.addColorStop(1, cols[1]);
-    c.fillStyle = g;
-    c.beginPath(); c.arc(b.x, b.y + oy, b.r, 0, Math.PI * 2); c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.16)';
-    c.beginPath(); c.ellipse(b.x, b.y + oy - b.r * 0.45, b.r * 0.7, b.r * 0.35, 0, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = rim;
-    c.lineWidth = 2;
-    c.beginPath(); c.arc(b.x, b.y + oy, b.r, 0, Math.PI * 2); c.stroke();
   }
 
   /* Click handling for menus. Returns game-space coordinates (0..GAME_W,
