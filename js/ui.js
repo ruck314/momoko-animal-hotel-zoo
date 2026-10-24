@@ -2970,109 +2970,234 @@
   /*                    ROCKET LAUNCH ANIMATION                     */
   /* ============================================================ */
   function drawRocketAnim(c, timer, target) {
-    /* Elevator-shaft transition: cab travels through a dark shaft, lit by
-       passing floor lights. Reuses the rocket-anim wiring so we don't have
-       to fork the engine state machine. */
-    c.fillStyle = '#0d0810';
+    /* Elevator-shaft transition: a brass-trimmed cab rides up a brick
+       shaft past lit landings while the floor dial sweeps to the target.
+       Reuses the rocket-anim wiring so we don't have to fork the engine
+       state machine. */
+    var dest = target || 0;
+    var prog = Math.min(1, timer / 100);
+    var GOLD = '#caa040', GOLD_HI = '#ffe08a', WOOD = '#6a4020', WOOD_D = '#452814', PLAQUE = 'rgba(58, 36, 24, 0.92)';
+    var wallW = 150;
+    var bg = c.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#120a18'); bg.addColorStop(0.5, '#1e1222'); bg.addColorStop(1, '#0d0810');
+    c.fillStyle = bg;
     c.fillRect(0, 0, W, H);
 
-    /* Side rails */
-    c.fillStyle = '#1a1208';
-    c.fillRect(0,       0, 80, H);
-    c.fillRect(W - 80,  0, 80, H);
-    c.strokeStyle = '#caa040';
-    c.lineWidth = 2;
-    c.beginPath(); c.moveTo(82, 0); c.lineTo(82, H); c.stroke();
-    c.beginPath(); c.moveTo(W - 82, 0); c.lineTo(W - 82, H); c.stroke();
+    /* Brick shaft walls scrolling downward */
+    c.fillStyle = '#241418';
+    c.fillRect(0, 0, wallW, H);
+    c.fillRect(W - wallW, 0, wallW, H);
+    var scroll = (timer * 9) % 24;
+    c.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    c.lineWidth = 1.5;
+    var row = 0;
+    for (var by = scroll - 24; by < H + 24; by += 24, row++) {
+      c.beginPath();
+      c.moveTo(0, by); c.lineTo(wallW, by);
+      c.moveTo(W - wallW, by); c.lineTo(W, by);
+      c.stroke();
+      var off = (row % 2) ? 20 : 0;
+      for (var bxx = off; bxx < wallW; bxx += 40) {
+        c.beginPath();
+        c.moveTo(bxx, by); c.lineTo(bxx, by + 24);
+        c.moveTo(W - wallW + bxx, by); c.lineTo(W - wallW + bxx, by + 24);
+        c.stroke();
+      }
+    }
+    /* Guide rails */
+    c.fillStyle = '#3a2a1c';
+    c.fillRect(wallW, 0, 10, H);
+    c.fillRect(W - wallW - 10, 0, 10, H);
+    c.fillStyle = GOLD;
+    c.fillRect(wallW + 3, 0, 3, H);
+    c.fillRect(W - wallW - 6, 0, 3, H);
 
-    /* Streaking floor markers (give a sense of motion) */
-    var t = timer / 120; /* 0..1 */
-    for (var f = 0; f < 8; f++) {
-      var fy = ((timer * 12 + f * 80) % H);
-      c.fillStyle = (f % 4 === 0) ? '#ffd24a' : '#5a3a18';
-      c.fillRect(82, fy, 18, 4);
-      c.fillRect(W - 100, fy, 18, 4);
+    /* Passing landings: warm light spilling into the shaft, sconces on the walls */
+    var span = 260;
+    for (var f = 0; f < 4; f++) {
+      var fy = ((timer * 7 + f * span) % (H + span)) - span / 2;
+      var g = c.createLinearGradient(0, fy - 44, 0, fy + 44);
+      g.addColorStop(0, 'rgba(255, 214, 120, 0)');
+      g.addColorStop(0.5, 'rgba(255, 214, 120, 0.26)');
+      g.addColorStop(1, 'rgba(255, 214, 120, 0)');
+      c.fillStyle = g;
+      c.fillRect(wallW + 10, fy - 44, W - 2 * wallW - 20, 88);
+      c.fillStyle = '#5a3a20';
+      c.fillRect(wallW + 10, fy + 16, W - 2 * wallW - 20, 6);
+      var sc;
+      for (sc = 0; sc < 2; sc++) {
+        var sxp = sc ? W - wallW + 18 : wallW - 18;
+        var sg = c.createRadialGradient(sxp, fy, 2, sxp, fy, 44);
+        sg.addColorStop(0, 'rgba(255, 224, 140, 0.55)');
+        sg.addColorStop(1, 'rgba(255, 224, 140, 0)');
+        c.fillStyle = sg;
+        c.fillRect(sxp - 44, fy - 44, 88, 88);
+        c.fillStyle = GOLD;
+        c.fillRect(sxp - 5, fy - 2, 10, 10);
+        c.fillStyle = '#fff0b0';
+        c.beginPath(); c.arc(sxp, fy - 4, 5, 0, Math.PI * 2); c.fill();
+      }
     }
 
-    /* Cab — slowly bobs in the middle */
-    var cx = W / 2 - 120, cy = H / 2 - 110 + Math.sin(timer * 0.2) * 4;
-    var cabW = 240, cabH = 220;
+    /* Cab geometry — bobs gently */
+    var cabW = 320, cabH = 250;
+    var cx = W / 2 - cabW / 2;
+    var cy = H / 2 - cabH / 2 + 26 + Math.sin(timer * 0.2) * 3;
+
+    /* Hoist cables and roof bracket */
+    c.strokeStyle = '#7a7a84';
+    c.lineWidth = 3;
+    c.beginPath();
+    c.moveTo(cx + cabW * 0.3, 0); c.lineTo(cx + cabW * 0.3, cy - 14);
+    c.moveTo(cx + cabW * 0.7, 0); c.lineTo(cx + cabW * 0.7, cy - 14);
+    c.stroke();
+    c.strokeStyle = '#b8b8c4';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(cx + cabW * 0.3 - 1, 0); c.lineTo(cx + cabW * 0.3 - 1, cy - 14);
+    c.moveTo(cx + cabW * 0.7 - 1, 0); c.lineTo(cx + cabW * 0.7 - 1, cy - 14);
+    c.stroke();
+    c.fillStyle = '#2a1810';
+    c.fillRect(cx + cabW * 0.3 - 14, cy - 22, cabW * 0.4 + 28, 12);
+
+    /* Brass floor dial on the cab roof */
+    var dx = W / 2, dy = cy - 10, dr = 50;
+    c.fillStyle = GOLD;
+    c.beginPath(); c.arc(dx, dy, dr, Math.PI, Math.PI * 2); c.closePath(); c.fill();
+    c.fillStyle = '#3a2418';
+    c.beginPath(); c.arc(dx, dy, dr - 6, Math.PI, Math.PI * 2); c.closePath(); c.fill();
+    c.fillStyle = '#fff8e0';
+    c.font = 'bold 11px "M PLUS Rounded 1c", sans-serif';
+    c.textAlign = 'center';
+    var labels = ['L', '2', '3', '4'];
+    for (var li = 0; li < 4; li++) {
+      var la = Math.PI + (Math.PI * (0.14 + 0.72 * li / 3));
+      c.fillStyle = li === dest ? GOLD_HI : '#fff8e0';
+      c.fillText(labels[li], dx + Math.cos(la) * (dr - 17), dy + Math.sin(la) * (dr - 17) + 4);
+      c.fillStyle = GOLD;
+      c.fillRect(dx + Math.cos(la) * (dr - 8) - 1, dy + Math.sin(la) * (dr - 8) - 1, 2, 2);
+    }
+    var na = Math.PI + (Math.PI * (0.14 + 0.72 * (dest * prog) / 3));
+    c.strokeStyle = '#e04050';
+    c.lineWidth = 3;
+    c.lineCap = 'round';
+    c.beginPath(); c.moveTo(dx, dy); c.lineTo(dx + Math.cos(na) * (dr - 12), dy + Math.sin(na) * (dr - 12)); c.stroke();
+    c.lineCap = 'butt';
+    c.fillStyle = GOLD;
+    c.beginPath(); c.arc(dx, dy, 4, 0, Math.PI * 2); c.fill();
+
+    /* Cab shell with double brass trim */
     c.fillStyle = '#2a1810';
     c.fillRect(cx - 10, cy - 10, cabW + 20, cabH + 20);
-    /* Cab walls — wood paneling */
-    c.fillStyle = '#5a3a18';
+    c.strokeStyle = GOLD;
+    c.lineWidth = 3;
+    c.strokeRect(cx - 6, cy - 6, cabW + 12, cabH + 12);
+    c.strokeStyle = GOLD_HI;
+    c.lineWidth = 1;
+    c.strokeRect(cx - 2, cy - 2, cabW + 4, cabH + 4);
+    /* Walls: warm wood */
+    var wg = c.createLinearGradient(0, cy, 0, cy + cabH);
+    wg.addColorStop(0, WOOD); wg.addColorStop(1, WOOD_D);
+    c.fillStyle = wg;
     c.fillRect(cx, cy, cabW, cabH);
-    c.fillStyle = '#7a4a22';
-    c.fillRect(cx + 4, cy + 4, cabW - 8, cabH - 8);
-    /* Wood grain panels */
-    c.strokeStyle = '#3a2010';
-    c.lineWidth = 1.5;
-    for (var pn = 0; pn < 3; pn++) {
-      c.strokeRect(cx + 14 + pn * 70, cy + 50, 60, 140);
-    }
-    /* Cab ceiling light */
-    c.fillStyle = '#fff0b0';
-    c.fillRect(cx + 14, cy + 6, cabW - 28, 14);
-    var glow = c.createRadialGradient(cx + cabW / 2, cy + 14, 4, cx + cabW / 2, cy + 14, 60);
-    glow.addColorStop(0, 'rgba(255,240,176,0.5)');
-    glow.addColorStop(1, 'rgba(255,240,176,0)');
+    /* Ceiling with lamp */
+    c.fillStyle = '#f0dcb0';
+    c.fillRect(cx, cy, cabW, 22);
+    c.fillStyle = GOLD;
+    c.fillRect(cx, cy + 22, cabW, 3);
+    c.fillStyle = '#fff6c8';
+    c.fillRect(cx + cabW / 2 - 50, cy + 4, 100, 12);
+    var glow = c.createRadialGradient(cx + cabW / 2, cy + 14, 6, cx + cabW / 2, cy + 14, 120);
+    glow.addColorStop(0, 'rgba(255, 240, 176, 0.55)');
+    glow.addColorStop(1, 'rgba(255, 240, 176, 0)');
     c.fillStyle = glow;
-    c.fillRect(cx, cy, cabW, 80);
+    c.fillRect(cx, cy, cabW, 150);
+    /* Panelling with brass inlays */
+    for (var pn = 0; pn < 3; pn++) {
+      var px = cx + 22 + pn * 96;
+      c.fillStyle = WOOD_D;
+      c.fillRect(px, cy + 44, 80, 120);
+      c.strokeStyle = GOLD;
+      c.lineWidth = 1.5;
+      c.strokeRect(px + 6, cy + 50, 68, 108);
+      c.fillStyle = 'rgba(255, 224, 140, 0.08)';
+      c.fillRect(px + 8, cy + 52, 64, 50);
+    }
+    /* Brass handrail */
+    c.fillStyle = GOLD;
+    c.fillRect(cx + 10, cy + 150, cabW - 20, 6);
+    c.fillStyle = GOLD_HI;
+    c.fillRect(cx + 10, cy + 150, cabW - 20, 2);
+    c.fillStyle = '#3a2418';
+    c.fillRect(cx + 14, cy + 156, 6, 8);
+    c.fillRect(cx + cabW - 20, cy + 156, 6, 8);
+    /* Carpeted floor with a gold border */
+    c.fillStyle = '#8a2030';
+    c.fillRect(cx, cy + cabH - 34, cabW, 34);
+    c.fillStyle = GOLD;
+    c.fillRect(cx, cy + cabH - 34, cabW, 3);
+    c.fillStyle = '#a03040';
+    for (var fd = 0; fd < 8; fd++) {
+      c.beginPath();
+      c.moveTo(cx + 24 + fd * 40, cy + cabH - 17);
+      c.lineTo(cx + 30 + fd * 40, cy + cabH - 23);
+      c.lineTo(cx + 36 + fd * 40, cy + cabH - 17);
+      c.lineTo(cx + 30 + fd * 40, cy + cabH - 11);
+      c.closePath(); c.fill();
+    }
 
-    /* Real Momoko sprite (scaled up) */
+    /* Momoko riding the cab */
     if (Game.entities && Game.entities.drawMomokoSprite) {
       c.save();
-      var heroX = cx + cabW / 2 - 14;
-      var heroY = cy + cabH - 80;
-      c.translate(heroX, heroY);
-      /* Up to 1.6x for visibility */
-      c.scale(1.6, 1.6);
+      c.globalAlpha = 0.25;
+      c.fillStyle = '#000';
+      c.beginPath(); c.ellipse(cx + cabW / 2 - 24, cy + cabH - 16, 26, 5, 0, 0, Math.PI * 2); c.fill();
+      c.restore();
+      c.save();
+      c.translate(cx + cabW / 2 - 50, cy + cabH - 18 - 34 * 1.8);
+      c.scale(1.8, 1.8);
       Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, Math.floor(timer / 8) % 4);
       c.restore();
     }
 
-    /* Brass control panel + floor display */
-    c.fillStyle = '#caa040';
-    c.fillRect(cx + cabW - 56, cy + 60, 44, 100);
+    /* Brass control panel: floor display + button column */
+    var ppx = cx + cabW - 70, ppy = cy + 56;
+    c.fillStyle = GOLD;
+    c.fillRect(ppx, ppy, 50, 118);
+    c.strokeStyle = GOLD_HI;
+    c.lineWidth = 1;
+    c.strokeRect(ppx + 2, ppy + 2, 46, 114);
     c.fillStyle = '#3a2418';
-    c.fillRect(cx + cabW - 50, cy + 66, 32, 26);
-    c.fillStyle = '#ffd24a';
+    c.fillRect(ppx + 8, ppy + 8, 34, 28);
+    c.fillStyle = GOLD_HI;
     c.font = 'bold 18px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
-    c.fillText(String((target || 0) + 1) + 'F', cx + cabW - 34, cy + 84);
-    c.textAlign = 'left';
-    /* Button column */
+    c.fillText(String(dest + 1) + 'F', ppx + 25, ppy + 28);
     for (var bn = 0; bn < 4; bn++) {
-      var lit = bn === (target || 0);
-      c.fillStyle = lit ? '#ffd24a' : '#5a3a18';
-      c.beginPath();
-      c.arc(cx + cabW - 34, cy + 110 + bn * 12, 4, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = '#fff8e0';
-      c.font = '8px "M PLUS Rounded 1c", sans-serif';
-      c.textAlign = 'center';
-      c.fillText(String(bn + 1), cx + cabW - 34, cy + 113 + bn * 12);
+      var lit = bn === dest;
+      var bYY = ppy + 52 + bn * 16;
+      c.fillStyle = '#3a2418';
+      c.beginPath(); c.arc(ppx + 25, bYY, 6, 0, Math.PI * 2); c.fill();
+      c.fillStyle = lit ? GOLD_HI : '#6a4a2a';
+      c.beginPath(); c.arc(ppx + 25, bYY, 4.5, 0, Math.PI * 2); c.fill();
+      c.fillStyle = lit ? '#3a2418' : '#fff8e0';
+      c.font = 'bold 8px "M PLUS Rounded 1c", sans-serif';
+      c.fillText(String(bn + 1), ppx + 25, bYY + 3);
     }
     c.textAlign = 'left';
 
-    /* Up arrow indicator */
-    var arrowBlink = Math.sin(timer * 0.3) > 0;
-    c.fillStyle = arrowBlink ? '#ffd24a' : '#5a3a18';
-    c.beginPath();
-    c.moveTo(cx + cabW / 2, cy - 6);
-    c.lineTo(cx + cabW / 2 - 12, cy + 6);
-    c.lineTo(cx + cabW / 2 + 12, cy + 6);
-    c.closePath();
-    c.fill();
-
-    /* Status text */
-    c.fillStyle = '#ffd24a';
+    /* Status plaque, styled like the HUD ledger card */
+    var msg = timer < 90 ? Game.i18n.t('rocketLaunching') : Game.i18n.t('rocketArriving');
     c.font = 'bold 22px "M PLUS Rounded 1c", sans-serif';
+    var pw = Math.max(180, Math.ceil(c.measureText(msg).width) + 48), ph = 40;
+    c.fillStyle = PLAQUE;
+    c.fillRect(W / 2 - pw / 2, 22, pw, ph);
+    c.strokeStyle = GOLD;
+    c.lineWidth = 2;
+    c.strokeRect(W / 2 - pw / 2, 22, pw, ph);
+    c.fillStyle = '#ffd24a';
     c.textAlign = 'center';
-    c.fillText(
-      timer < 90 ? Game.i18n.t('rocketLaunching') : Game.i18n.t('rocketArriving'),
-      W / 2, 50
-    );
+    c.fillText(msg, W / 2, 50);
     c.textAlign = 'left';
   }
 
@@ -7745,9 +7870,14 @@
       c.restore();
     }
 
-    /* Room title bar across the top */
-    c.fillStyle = 'rgba(20, 12, 36, 0.6)';
-    c.fillRect(0, 0, W, 28);
+    /* Room title band across the top — same plaque styling as the
+       Guests ledger card so the two read as one HUD. */
+    c.fillStyle = 'rgba(58, 36, 24, 0.85)';
+    c.fillRect(0, 0, W, 30);
+    c.fillStyle = '#caa040';
+    c.fillRect(0, 30, W, 2);
+    c.fillStyle = 'rgba(255, 224, 138, 0.35)';
+    c.fillRect(0, 32, W, 1);
     c.fillStyle = '#fff8e0';
     c.font = 'bold 18px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
@@ -7762,7 +7892,7 @@
     } else {
       title = Game.i18n.t('animalName_' + species) + (species === 'monkey' ? '' : "'s Habitat");
     }
-    c.fillText(title, W / 2, 20);
+    c.fillText(title, W / 2, 21);
     c.textAlign = 'left';
 
     /* Bed prompt when standing near the bed (only the bedroom bed triggers sleep) */

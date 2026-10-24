@@ -2755,8 +2755,8 @@
     monkey:    { body: '#7a4a20', shade: '#4a2810', accent: '#fbd8a8' },
     /* Six new species */
     koala:     { body: '#a8a8b8', shade: '#6a6a78', accent: '#fafafa' },
-    hippo:     { body: '#7a6a8a', shade: '#4a3a58', accent: '#cfb8d8' },
-    rhino:     { body: '#9a9088', shade: '#65605a', accent: '#3a3434' },
+    hippo:     { body: '#8e8e9c', shade: '#585868', accent: '#e4a8b6' },
+    rhino:     { body: '#aca49c', shade: '#6e6660', accent: '#3a3434' },
     polarBear: { body: '#fafafa', shade: '#bcc8d6', accent: '#1a1a1a' },
     frog:      { body: '#5fc858', shade: '#2c8a30', accent: '#fff8c0' },
     gorilla:   { body: '#3a3a3a', shade: '#1a1a1a', accent: '#aa8866' },
@@ -3138,85 +3138,96 @@
 
   function drawWolfSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.wolf;
-    var PALE = p.accent;
-    var DARK = '#3e4050';
-    groundShadow(c, sx + 24, sy + 45, 20, 2.8);
-    /* Bushy tail hanging down and out */
-    blob(c, sx + 45, sy + 32, 4.2, 8.5, -0.25, p.shade);
-    blob(c, sx + 44.5, sy + 31, 2.8, 6, -0.25, p.body);
-    blob(c, sx + 47.5, sy + 39.5, 2.2, 2.6, -0.25, PALE);
-    /* Far legs — long and thin */
-    limb(c, sx + 18, sy + 29, sx + 20, sy + 42.5, 3.2, p.shade);
-    limb(c, sx + 38, sy + 29, sx + 40, sy + 42.5, 3.2, p.shade);
-    /* Body — deep chest, narrow waist, lean hips */
-    c.fillStyle = vGrad(c, sy + 14, sy + 36, p.body, p.shade);
+    var PALE = '#e4e5ea', DARK = '#383a48', LINE = 'rgba(56, 58, 72, 0.4)';
+    groundShadow(c, sx + 25, sy + 45, 21, 2.8);
+    /* Bushy tail hanging straight down and back from the rump */
+    blob(c, sx + 44, sy + 31, 3.9, 9.8, -0.32, p.shade);
+    blob(c, sx + 43.4, sy + 29, 2.6, 6.4, -0.32, p.body);
+    blob(c, sx + 47, sy + 39, 2.3, 2.8, -0.32, DARK);
+    /* Far legs: long and lean */
+    limb(c, sx + 21, sy + 28, sx + 23, sy + 42, 3.2, p.shade);
+    limb(c, sx + 39, sy + 27, sx + 41.5, sy + 42, 3.2, p.shade);
+    blob(c, sx + 23.4, sy + 43, 2.5, 1.2, 0, '#9a9ca8');
+    blob(c, sx + 41.8, sy + 43, 2.5, 1.2, 0, '#9a9ca8');
+    /* Body: deep chest, tucked waist, lean hips */
+    c.fillStyle = vGrad(c, sy + 12, sy + 33, p.body, p.shade);
     c.beginPath();
-    c.moveTo(sx + 12, sy + 16);
-    c.quadraticCurveTo(sx + 26, sy + 13, sx + 40, sy + 18);
-    c.quadraticCurveTo(sx + 46, sy + 22, sx + 42, sy + 31);
-    c.quadraticCurveTo(sx + 36, sy + 33, sx + 30, sy + 30);
-    c.quadraticCurveTo(sx + 24, sy + 30, sx + 20, sy + 34);
-    c.quadraticCurveTo(sx + 9, sy + 32, sx + 10, sy + 22);
+    c.moveTo(sx + 11, sy + 15);
+    c.quadraticCurveTo(sx + 24, sy + 10.5, sx + 38, sy + 14);
+    c.quadraticCurveTo(sx + 46.5, sy + 17, sx + 44, sy + 27);
+    c.quadraticCurveTo(sx + 40, sy + 32, sx + 33, sy + 28);
+    c.quadraticCurveTo(sx + 26, sy + 27, sx + 19, sy + 32);
+    c.quadraticCurveTo(sx + 9, sy + 31, sx + 10, sy + 20);
     c.closePath();
     c.fill();
-    /* Pale underside running from chest to belly */
-    c.save(); c.globalAlpha = 0.7;
+    /* Darker saddle along the back */
+    c.save(); c.globalAlpha = 0.45; blob(c, sx + 27, sy + 15, 13, 3.4, 0.04, DARK); c.restore();
+    /* Pale chest and underside */
+    c.save(); c.globalAlpha = 0.85;
     c.fillStyle = PALE;
     c.beginPath();
-    c.moveTo(sx + 11, sy + 27);
-    c.quadraticCurveTo(sx + 16, sy + 34.5, sx + 22, sy + 31.5);
-    c.quadraticCurveTo(sx + 28, sy + 29.5, sx + 36, sy + 31.5);
-    c.quadraticCurveTo(sx + 28, sy + 33.5, sx + 20, sy + 34);
-    c.quadraticCurveTo(sx + 12, sy + 33, sx + 11, sy + 27);
-    c.closePath();
-    c.fill();
+    c.moveTo(sx + 10.5, sy + 24);
+    c.quadraticCurveTo(sx + 13, sy + 32, sx + 20, sy + 31.5);
+    c.quadraticCurveTo(sx + 27, sy + 26.5, sx + 34, sy + 28);
+    c.quadraticCurveTo(sx + 27, sy + 30.5, sx + 19, sy + 33.5);
+    c.quadraticCurveTo(sx + 10, sy + 32, sx + 10.5, sy + 24);
+    c.closePath(); c.fill();
     c.restore();
-    /* Near legs */
-    limb(c, sx + 14, sy + 29, sx + 13, sy + 42.5, 3.6, p.body);
-    limb(c, sx + 34, sy + 29, sx + 35, sy + 42.5, 3.6, p.body);
-    blob(c, sx + 12.8, sy + 43, 2.6, 1.3, 0, PALE);
-    blob(c, sx + 35.2, sy + 43, 2.6, 1.3, 0, PALE);
-    blob(c, sx + 20, sy + 43, 2.2, 1.1, 0, '#b8bac4');
-    blob(c, sx + 40, sy + 43, 2.2, 1.1, 0, '#b8bac4');
-    /* Neck ruff joining head to chest */
-    blob(c, sx + 13, sy + 20, 7, 6, -0.5, p.body);
-    /* Pointed upright ears */
+    /* Near legs with pale paws */
+    limb(c, sx + 15, sy + 27, sx + 13, sy + 42, 3.8, p.body);
+    limb(c, sx + 35, sy + 27, sx + 36, sy + 42, 3.8, p.body);
+    blob(c, sx + 12.8, sy + 43, 2.9, 1.35, 0, PALE);
+    blob(c, sx + 36.2, sy + 43, 2.9, 1.35, 0, PALE);
+    /* Thick neck ruff with a pale throat */
+    blob(c, sx + 13, sy + 19, 7.6, 6.6, -0.5, p.body);
+    blob(c, sx + 9.5, sy + 22, 4.2, 3.2, -0.4, PALE);
+    furLine(c, sx + 15, sy + 25, sx + 16.5, sy + 27.5, PALE, 0.7);
+    furLine(c, sx + 18, sy + 24.5, sx + 19.6, sy + 27, PALE, 0.7);
+    /* Pricked, pointed ears */
     c.fillStyle = p.body;
-    c.beginPath(); c.moveTo(sx + 5.5, sy + 13); c.lineTo(sx + 7, sy + 3.5); c.lineTo(sx + 11, sy + 11.5); c.closePath(); c.fill();
-    c.beginPath(); c.moveTo(sx + 11.5, sy + 12); c.lineTo(sx + 14.5, sy + 3.5); c.lineTo(sx + 17, sy + 13); c.closePath(); c.fill();
-    c.fillStyle = '#c8a0a8';
-    c.beginPath(); c.moveTo(sx + 7, sy + 12); c.lineTo(sx + 7.6, sy + 6.5); c.lineTo(sx + 10, sy + 11.5); c.closePath(); c.fill();
-    c.beginPath(); c.moveTo(sx + 12.8, sy + 11.8); c.lineTo(sx + 14.3, sy + 6.5); c.lineTo(sx + 15.6, sy + 12); c.closePath(); c.fill();
-    /* Head — skull plus long pointed muzzle */
-    c.fillStyle = vGrad(c, sy + 9, sy + 24, p.body, p.shade);
-    c.beginPath(); c.arc(sx + 11, sy + 16, 7, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.moveTo(sx + 4.5, sy + 11); c.lineTo(sx + 6, sy + 2); c.lineTo(sx + 10, sy + 9.5); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(sx + 10.5, sy + 9.5); c.lineTo(sx + 13.5, sy + 1.5); c.lineTo(sx + 16, sy + 11); c.closePath(); c.fill();
+    c.fillStyle = '#c4a4aa';
+    c.beginPath(); c.moveTo(sx + 6.2, sy + 10); c.lineTo(sx + 6.7, sy + 5); c.lineTo(sx + 9, sy + 9.4); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(sx + 11.8, sy + 9.6); c.lineTo(sx + 13.3, sy + 4.5); c.lineTo(sx + 14.6, sy + 10); c.closePath(); c.fill();
+    /* Skull plus a long pointed muzzle */
+    c.fillStyle = vGrad(c, sy + 7, sy + 21, p.body, p.shade);
+    c.beginPath(); c.arc(sx + 10, sy + 14, 6.6, 0, Math.PI * 2); c.fill();
     c.fillStyle = p.body;
     c.beginPath();
-    c.moveTo(sx + 8, sy + 11.5);
-    c.quadraticCurveTo(sx + 1, sy + 14, sx - 4, sy + 19.5);
-    c.quadraticCurveTo(sx + 1, sy + 23, sx + 8, sy + 22);
-    c.closePath();
-    c.fill();
-    /* Pale cheek and lower jaw */
-    c.fillStyle = PALE;
-    c.beginPath();
-    c.moveTo(sx + 7, sy + 19);
-    c.quadraticCurveTo(sx + 1.5, sy + 19.5, sx - 3.2, sy + 20);
-    c.quadraticCurveTo(sx + 1, sy + 23, sx + 8, sy + 22.5);
-    c.closePath();
-    c.fill();
-    blob(c, sx + 12, sy + 21, 4.5, 3, 0, PALE);
-    /* Nose + mouth */
-    blob(c, sx - 3.6, sy + 18.8, 1.7, 1.3, 0, DARK);
-    c.strokeStyle = DARK; c.lineWidth = 0.6;
-    c.beginPath(); c.moveTo(sx - 2.5, sy + 20.2); c.quadraticCurveTo(sx + 0.5, sy + 21.4, sx + 3, sy + 20.6); c.stroke();
-    /* Dark brow / forehead marking */
+    c.moveTo(sx + 8, sy + 10);
+    c.quadraticCurveTo(sx + 1, sy + 12.5, sx - 4.2, sy + 17);
+    c.quadraticCurveTo(sx + 0.5, sy + 20.5, sx + 7, sy + 20);
+    c.closePath(); c.fill();
+    /* Dark bridge of the nose */
     c.save(); c.globalAlpha = 0.5;
-    blob(c, sx + 11, sy + 12.5, 4.5, 2.2, 0, DARK);
+    c.fillStyle = DARK;
+    c.beginPath(); c.moveTo(sx + 8, sy + 10.2); c.quadraticCurveTo(sx + 2, sy + 12, sx - 3.8, sy + 16.6);
+    c.quadraticCurveTo(sx + 1, sy + 14.4, sx + 8.5, sy + 13); c.closePath(); c.fill();
     c.restore();
-    /* Amber eye */
-    realEye(c, sx + 7.8, sy + 15.2, 1.4, '#d8a030');
-    realEye(c, sx + 13.4, sy + 14.8, 1.3, '#d8a030');
+    /* Pale lower jaw and cheek */
+    c.fillStyle = PALE;
+    c.beginPath();
+    c.moveTo(sx + 6, sy + 17.5);
+    c.quadraticCurveTo(sx + 1, sy + 17.8, sx - 3.2, sy + 18);
+    c.quadraticCurveTo(sx + 0.5, sy + 21, sx + 7, sy + 20.4);
+    c.closePath(); c.fill();
+    blob(c, sx + 11.5, sy + 19, 4.4, 2.9, 0, PALE);
+    /* Nose and mouth */
+    blob(c, sx - 3.8, sy + 16.6, 1.8, 1.4, 0, DARK);
+    blob(c, sx - 4.3, sy + 16.1, 0.55, 0.4, 0, '#8a8a98');
+    c.strokeStyle = DARK; c.lineWidth = 0.6;
+    c.beginPath(); c.moveTo(sx - 2.6, sy + 18.1); c.quadraticCurveTo(sx + 0.5, sy + 19.4, sx + 3, sy + 18.6); c.stroke();
+    /* Dark brow mask */
+    c.save(); c.globalAlpha = 0.5; blob(c, sx + 10, sy + 10.5, 4.6, 2.2, 0, DARK); c.restore();
+    /* Amber eyes, slightly slanted brows */
+    realEye(c, sx + 6.8, sy + 13.2, 1.35, '#e0a830');
+    realEye(c, sx + 12.5, sy + 12.8, 1.25, '#e0a830');
+    c.strokeStyle = DARK; c.lineWidth = 0.7;
+    c.beginPath();
+    c.moveTo(sx + 5, sy + 11.4); c.lineTo(sx + 8.4, sy + 11.8);
+    c.moveTo(sx + 11, sy + 11.4); c.lineTo(sx + 14, sy + 11.2);
+    c.stroke();
   }
 
   function drawFoxSprite(c, sx, sy) {
@@ -3283,128 +3294,161 @@
 
   function drawCatSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.cat;
-    var CREAM = p.accent;
-    var STRIPE = '#b87838';
-    groundShadow(c, sx + 22, sy + 45, 15, 2.4);
-    /* Tail curled up high behind */
-    curve(c, sx + 32, sy + 35, sx + 42, sy + 34, sx + 40, sy + 18, 3, p.body);
-    blob(c, sx + 40.2, sy + 17.5, 1.7, 1.7, 0, p.shade);
-    /* Tabby rings on the tail */
-    c.strokeStyle = STRIPE; c.lineWidth = 1;
+    var FUR = p.body, FURD = p.shade, CREAM = p.accent, STRIPE = '#b2702e', INK = '#5a3a28';
+    groundShadow(c, sx + 22, sy + 45, 15, 2.6);
+    /* Tail wrapped around the front of the paws */
+    curve(c, sx + 30, sy + 36, sx + 40, sy + 44, sx + 12, sy + 42.5, 3.4, FUR);
+    c.strokeStyle = STRIPE; c.lineWidth = 1.1;
     c.beginPath();
-    c.moveTo(sx + 39.6, sy + 23); c.lineTo(sx + 42.6, sy + 23.4);
-    c.moveTo(sx + 39.2, sy + 27); c.lineTo(sx + 42.4, sy + 28);
+    c.moveTo(sx + 32.5, sy + 40.6); c.lineTo(sx + 33.4, sy + 38.4);
+    c.moveTo(sx + 27.5, sy + 42.2); c.lineTo(sx + 28.2, sy + 40.2);
+    c.moveTo(sx + 21.5, sy + 43); c.lineTo(sx + 22, sy + 41.4);
     c.stroke();
-    /* Far legs */
-    limb(c, sx + 20, sy + 36, sx + 20, sy + 42.5, 2.6, p.shade);
-    limb(c, sx + 31, sy + 36, sx + 31, sy + 42.5, 2.6, p.shade);
-    /* Compact body */
-    c.fillStyle = vGrad(c, sy + 25, sy + 40, p.body, p.shade);
-    c.beginPath(); c.ellipse(sx + 23, sy + 33, 10.5, 6.8, 0, 0, Math.PI * 2); c.fill();
-    /* Cream belly */
-    blob(c, sx + 23, sy + 37, 7, 2.6, 0, CREAM);
-    /* Near legs */
-    limb(c, sx + 16, sy + 36, sx + 16, sy + 42.5, 3, p.body);
-    limb(c, sx + 27, sy + 36, sx + 27, sy + 42.5, 3, p.body);
-    blob(c, sx + 16, sy + 43, 2.2, 1.2, 0, CREAM);
-    blob(c, sx + 27, sy + 43, 2.2, 1.2, 0, CREAM);
-    /* Tabby stripes — short arcs over the back */
-    c.strokeStyle = STRIPE; c.lineWidth = 1.1; c.lineCap = 'round';
+    blob(c, sx + 11.5, sy + 42.6, 2, 1.7, 0, CREAM);
+    /* Sitting body: pear shape, haunches wide at the bottom */
+    c.fillStyle = vGrad(c, sy + 16, sy + 42, FUR, FURD);
     c.beginPath();
-    c.moveTo(sx + 21, sy + 27); c.quadraticCurveTo(sx + 20, sy + 29.5, sx + 21, sy + 32);
-    c.moveTo(sx + 26, sy + 26.6); c.quadraticCurveTo(sx + 25, sy + 29, sx + 26, sy + 31.5);
-    c.moveTo(sx + 31, sy + 27.6); c.quadraticCurveTo(sx + 30.2, sy + 29.6, sx + 31, sy + 32);
+    c.moveTo(sx + 16, sy + 20);
+    c.quadraticCurveTo(sx + 27, sy + 15, sx + 32, sy + 26);
+    c.quadraticCurveTo(sx + 37, sy + 36, sx + 31, sy + 41);
+    c.lineTo(sx + 14, sy + 41);
+    c.quadraticCurveTo(sx + 9, sy + 34, sx + 13, sy + 25);
+    c.closePath(); c.fill();
+    /* Tabby stripes down the back and on the haunch */
+    c.strokeStyle = STRIPE; c.lineWidth = 1.2; c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(sx + 24, sy + 18); c.quadraticCurveTo(sx + 27.5, sy + 20, sx + 29, sy + 23);
+    c.moveTo(sx + 26.5, sy + 22.5); c.quadraticCurveTo(sx + 30, sy + 24.5, sx + 32, sy + 28);
+    c.moveTo(sx + 28.5, sy + 28); c.quadraticCurveTo(sx + 32, sy + 30, sx + 34, sy + 33);
+    c.moveTo(sx + 25, sy + 33); c.quadraticCurveTo(sx + 29, sy + 34, sx + 32, sy + 37.5);
+    c.stroke();
+    /* Cream chest bib and straight front legs with white paws */
+    blob(c, sx + 17, sy + 29, 5, 7, 0.1, CREAM);
+    limb(c, sx + 15, sy + 31, sx + 14.5, sy + 41, 3.4, FUR);
+    limb(c, sx + 20.5, sy + 31, sx + 20.5, sy + 41, 3.4, FUR);
+    blob(c, sx + 14, sy + 42.2, 2.6, 1.6, 0, CREAM);
+    blob(c, sx + 20.5, sy + 42.2, 2.6, 1.6, 0, CREAM);
+    c.strokeStyle = STRIPE; c.lineWidth = 0.8;
+    c.beginPath();
+    c.moveTo(sx + 13.4, sy + 36); c.lineTo(sx + 16.6, sy + 36);
+    c.moveTo(sx + 18.9, sy + 36.5); c.lineTo(sx + 22.1, sy + 36.5);
     c.stroke();
     /* Round head */
-    c.fillStyle = vGrad(c, sy + 17, sy + 33, p.body, '#cf8e58');
-    c.beginPath(); c.arc(sx + 12, sy + 25, 7.8, 0, Math.PI * 2); c.fill();
-    /* Triangular ears with pink inner */
-    c.fillStyle = p.body;
-    c.beginPath(); c.moveTo(sx + 5.2, sy + 22); c.lineTo(sx + 6, sy + 13.5); c.lineTo(sx + 11.5, sy + 18); c.closePath(); c.fill();
-    c.beginPath(); c.moveTo(sx + 12.5, sy + 18); c.lineTo(sx + 18, sy + 13.5); c.lineTo(sx + 18.8, sy + 22); c.closePath(); c.fill();
+    c.fillStyle = vGrad(c, sy + 8, sy + 26, FUR, '#cf8e58');
+    c.beginPath(); c.arc(sx + 15, sy + 17, 8.2, 0, Math.PI * 2); c.fill();
+    /* Big triangular ears with pink insides */
+    c.fillStyle = FUR;
+    c.beginPath(); c.moveTo(sx + 7.6, sy + 14); c.lineTo(sx + 8.5, sy + 4.5); c.lineTo(sx + 14.5, sy + 10); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(sx + 15.5, sy + 10); c.lineTo(sx + 21.5, sy + 4.5); c.lineTo(sx + 22.4, sy + 14); c.closePath(); c.fill();
     c.fillStyle = '#f4a8b8';
-    c.beginPath(); c.moveTo(sx + 6.6, sy + 20.6); c.lineTo(sx + 7, sy + 15.8); c.lineTo(sx + 10.4, sy + 18.6); c.closePath(); c.fill();
-    c.beginPath(); c.moveTo(sx + 13.6, sy + 18.6); c.lineTo(sx + 17, sy + 15.8); c.lineTo(sx + 17.4, sy + 20.6); c.closePath(); c.fill();
-    /* Forehead "M" tabby marks */
-    c.strokeStyle = STRIPE; c.lineWidth = 0.9;
+    c.beginPath(); c.moveTo(sx + 9, sy + 12.6); c.lineTo(sx + 9.5, sy + 7); c.lineTo(sx + 13.4, sy + 10.6); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(sx + 16.6, sy + 10.6); c.lineTo(sx + 20.5, sy + 7); c.lineTo(sx + 21, sy + 12.6); c.closePath(); c.fill();
+    /* Forehead "M" tabby marking */
+    c.strokeStyle = STRIPE; c.lineWidth = 1;
     c.beginPath();
-    c.moveTo(sx + 10, sy + 18.5); c.lineTo(sx + 10.4, sy + 21);
-    c.moveTo(sx + 12, sy + 18); c.lineTo(sx + 12, sy + 20.8);
-    c.moveTo(sx + 14, sy + 18.5); c.lineTo(sx + 13.6, sy + 21);
+    c.moveTo(sx + 12, sy + 10.5); c.lineTo(sx + 12.6, sy + 13.5);
+    c.moveTo(sx + 15, sy + 9.8); c.lineTo(sx + 15, sy + 13.2);
+    c.moveTo(sx + 18, sy + 10.5); c.lineTo(sx + 17.4, sy + 13.5);
     c.stroke();
-    /* Cream muzzle */
-    blob(c, sx + 10.5, sy + 28, 4.8, 3, 0, CREAM);
-    /* Pink nose, mouth, whiskers */
+    /* Cheek stripes */
+    furLine(c, sx + 7.6, sy + 17.5, sx + 9.8, sy + 18, STRIPE, 0.9);
+    furLine(c, sx + 22.4, sy + 17.5, sx + 20.2, sy + 18, STRIPE, 0.9);
+    /* Cream muzzle, pink nose, mouth, whiskers */
+    blob(c, sx + 13, sy + 20.6, 3.2, 2.4, 0, CREAM);
+    blob(c, sx + 17, sy + 20.6, 3.2, 2.4, 0, CREAM);
     c.fillStyle = '#f08098';
-    c.beginPath(); c.moveTo(sx + 9.2, sy + 26.6); c.lineTo(sx + 11.8, sy + 26.6); c.lineTo(sx + 10.5, sy + 28.2); c.closePath(); c.fill();
-    c.strokeStyle = '#6a4030'; c.lineWidth = 0.6;
+    c.beginPath(); c.moveTo(sx + 13.6, sy + 18.8); c.lineTo(sx + 16.4, sy + 18.8); c.lineTo(sx + 15, sy + 20.4); c.closePath(); c.fill();
+    c.strokeStyle = INK; c.lineWidth = 0.6;
     c.beginPath();
-    c.moveTo(sx + 10.5, sy + 28.2); c.lineTo(sx + 10.5, sy + 29.2);
-    c.moveTo(sx + 8.6, sy + 29.8); c.quadraticCurveTo(sx + 10.5, sy + 31, sx + 12.4, sy + 29.8);
+    c.moveTo(sx + 15, sy + 20.4); c.lineTo(sx + 15, sy + 21.4);
+    c.moveTo(sx + 13, sy + 21.8); c.quadraticCurveTo(sx + 14, sy + 22.8, sx + 15, sy + 21.4);
+    c.moveTo(sx + 17, sy + 21.8); c.quadraticCurveTo(sx + 16, sy + 22.8, sx + 15, sy + 21.4);
     c.stroke();
     c.strokeStyle = '#3a2a20'; c.lineWidth = 0.45;
     c.beginPath();
-    c.moveTo(sx + 7.5, sy + 27.6); c.lineTo(sx + 1.5, sy + 26.6);
-    c.moveTo(sx + 7.5, sy + 28.8); c.lineTo(sx + 1.8, sy + 29.8);
-    c.moveTo(sx + 13.5, sy + 27.6); c.lineTo(sx + 19.5, sy + 26.6);
-    c.moveTo(sx + 13.5, sy + 28.8); c.lineTo(sx + 19.2, sy + 29.8);
+    c.moveTo(sx + 10.5, sy + 20); c.lineTo(sx + 3.5, sy + 18.6);
+    c.moveTo(sx + 10.5, sy + 21.2); c.lineTo(sx + 3.8, sy + 22.2);
+    c.moveTo(sx + 19.5, sy + 20); c.lineTo(sx + 26.5, sy + 18.6);
+    c.moveTo(sx + 19.5, sy + 21.2); c.lineTo(sx + 26.2, sy + 22.2);
     c.stroke();
-    /* Big green eyes */
-    realEye(c, sx + 9, sy + 23.6, 1.6, '#4caa58');
-    realEye(c, sx + 15, sy + 23.6, 1.6, '#4caa58');
-    /* Collar with bell */
-    c.strokeStyle = '#e04870'; c.lineWidth = 1.4;
-    c.beginPath(); c.arc(sx + 13, sy + 29.5, 6.2, Math.PI * 0.2, Math.PI * 0.8); c.stroke();
-    blob(c, sx + 13, sy + 36, 1.5, 1.5, 0, '#ffd24a');
-    blob(c, sx + 13.4, sy + 35.6, 0.5, 0.5, 0, '#fff8d0');
+    /* Big green eyes with slit pupils */
+    c.fillStyle = '#fff';
+    c.beginPath(); c.ellipse(sx + 11.6, sy + 16, 2.1, 1.9, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 18.4, sy + 16, 2.1, 1.9, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#5cb860';
+    c.beginPath(); c.arc(sx + 11.6, sy + 16, 1.55, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(sx + 18.4, sy + 16, 1.55, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#0a0a0a';
+    c.beginPath(); c.ellipse(sx + 11.6, sy + 16, 0.55, 1.35, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 18.4, sy + 16, 0.55, 1.35, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#fff';
+    c.beginPath(); c.arc(sx + 11, sy + 15.3, 0.45, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(sx + 17.8, sy + 15.3, 0.45, 0, Math.PI * 2); c.fill();
+    /* Collar with a bell */
+    c.strokeStyle = '#e04870'; c.lineWidth = 1.5;
+    c.beginPath(); c.arc(sx + 15.5, sy + 20.5, 6.4, Math.PI * 0.25, Math.PI * 0.75); c.stroke();
+    blob(c, sx + 15.5, sy + 27.4, 1.5, 1.5, 0, '#ffd24a');
+    blob(c, sx + 15.9, sy + 27, 0.5, 0.5, 0, '#fff8d0');
   }
 
   /* ---- Dog: friendly tan dog, floppy ears, tail up, collar ---- */
   function drawDogSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.dog;
-    var CREAM = '#f0d8b0';
-    groundShadow(c, sx + 22, sy + 45, 18);
-    /* Tail wagging up */
-    curve(c, sx + 38, sy + 24, sx + 44, sy + 18, sx + 45, sy + 9, 3.6, p.body);
-    blob(c, sx + 45, sy + 9, 2.2, 2.2, 0, CREAM);
+    var WHITE = '#f6f1e6', TAN = '#c48a4e', TAND = '#8a5a30', SADDLE = '#2e2622', INK = p.accent;
+    groundShadow(c, sx + 22, sy + 45, 19, 3);
+    /* Tail held up, white tip */
+    curve(c, sx + 38, sy + 23, sx + 44, sy + 17, sx + 45, sy + 8, 3.6, TAN);
+    blob(c, sx + 45, sy + 8, 2.3, 2.3, 0, WHITE);
     /* Far legs */
-    limb(c, sx + 15, sy + 32, sx + 14, sy + 42, 4.2, p.shade);
-    limb(c, sx + 34, sy + 32, sx + 35, sy + 42, 4.2, p.shade);
-    /* Body */
-    c.fillStyle = vGrad(c, sy + 18, sy + 38, p.body, p.shade);
+    limb(c, sx + 16, sy + 31, sx + 15, sy + 42, 4.2, '#d8d0c0');
+    limb(c, sx + 35, sy + 31, sx + 36, sy + 42, 4.2, '#d8d0c0');
+    /* Body: beagle build, white underneath */
+    c.fillStyle = vGrad(c, sy + 17, sy + 38, WHITE, '#d8d0c0');
     c.beginPath(); c.ellipse(sx + 24, sy + 28, 16, 10, 0, 0, Math.PI * 2); c.fill();
-    /* Belly highlight */
-    c.save(); c.globalAlpha = 0.55; blob(c, sx + 23, sy + 33, 10, 4.2, 0, CREAM); c.restore();
-    /* Near legs */
-    limb(c, sx + 10, sy + 32, sx + 9, sy + 42, 4.6, p.body);
-    limb(c, sx + 30, sy + 32, sx + 31, sy + 42, 4.6, p.body);
-    blob(c, sx + 9, sy + 43, 3.2, 1.6, 0, p.body);
-    blob(c, sx + 31, sy + 43, 3.2, 1.6, 0, p.body);
-    blob(c, sx + 14, sy + 43, 2.8, 1.4, 0, p.shade);
-    blob(c, sx + 35, sy + 43, 2.8, 1.4, 0, p.shade);
-    /* Neck + collar */
-    limb(c, sx + 12, sy + 20, sx + 18, sy + 26, 9, p.body);
-    limb(c, sx + 10, sy + 25, sx + 17, sy + 21, 2.6, '#e04050');
-    blob(c, sx + 13, sy + 26.5, 1.7, 1.7, 0, '#ffd24a');
-    /* Head (round) */
-    c.fillStyle = vGrad(c, sy + 7, sy + 25, p.body, p.shade);
-    c.beginPath(); c.arc(sx + 10, sy + 15, 9, 0, Math.PI * 2); c.fill();
-    /* Muzzle */
-    blob(c, sx + 3.5, sy + 19, 5.2, 4.2, 0, CREAM);
-    /* Open mouth + tongue */
-    c.fillStyle = p.shade;
-    c.beginPath(); c.ellipse(sx + 2.5, sy + 22, 2.6, 1.6, 0, 0, Math.PI); c.fill();
-    blob(c, sx + 3, sy + 23.4, 1.4, 2.0, 0, '#ff7fa0');
-    /* Nose */
-    blob(c, sx - 0.5, sy + 17.8, 2.2, 1.7, 0, p.accent);
-    blob(c, sx - 1.2, sy + 17.2, 0.6, 0.5, 0, '#ffffff');
-    /* Floppy ears (far then near) */
-    blob(c, sx + 17, sy + 17, 3.2, 6.8, -0.15, p.shade);
-    blob(c, sx + 13, sy + 15, 3.4, 7.2, 0.18, p.shade);
-    blob(c, sx + 13.2, sy + 15.5, 1.8, 5.0, 0.18, '#a06a38');
-    /* Eye + brow */
-    realEye(c, sx + 5.5, sy + 14, 1.7, '#4a2c10');
-    furLine(c, sx + 3.5, sy + 11.2, sx + 7.5, sy + 10.6, p.shade, 0.8);
+    /* Tan flank and black saddle over the back */
+    c.save();
+    c.beginPath(); c.ellipse(sx + 24, sy + 28, 16, 10, 0, 0, Math.PI * 2); c.clip();
+    c.fillStyle = vGrad(c, sy + 18, sy + 34, TAN, TAND);
+    c.beginPath(); c.ellipse(sx + 27, sy + 24, 15, 8, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = SADDLE;
+    c.beginPath(); c.ellipse(sx + 28, sy + 20, 11, 5.4, 0.05, 0, Math.PI * 2); c.fill();
+    c.restore();
+    /* Near legs with white socks */
+    limb(c, sx + 11, sy + 31, sx + 10, sy + 42, 4.6, TAN);
+    limb(c, sx + 31, sy + 31, sx + 32, sy + 42, 4.6, TAN);
+    limb(c, sx + 10.3, sy + 38, sx + 10, sy + 42, 4.6, WHITE);
+    limb(c, sx + 31.7, sy + 38, sx + 32, sy + 42, 4.6, WHITE);
+    blob(c, sx + 10, sy + 43, 3.3, 1.6, 0, WHITE);
+    blob(c, sx + 32, sy + 43, 3.3, 1.6, 0, WHITE);
+    blob(c, sx + 15, sy + 43, 2.9, 1.4, 0, '#d8d0c0');
+    blob(c, sx + 36, sy + 43, 2.9, 1.4, 0, '#d8d0c0');
+    c.fillStyle = '#6a6058';
+    c.fillRect(sx + 7.6, sy + 43, 0.9, 1.3); c.fillRect(sx + 9.6, sy + 43.3, 0.9, 1.3); c.fillRect(sx + 11.6, sy + 43, 0.9, 1.3);
+    /* Neck and red collar with a tag */
+    limb(c, sx + 12, sy + 21, sx + 19, sy + 26, 9, WHITE);
+    limb(c, sx + 9.5, sy + 25.5, sx + 17, sy + 21.5, 2.6, '#e04050');
+    blob(c, sx + 12.5, sy + 27, 1.7, 1.7, 0, '#ffd24a');
+    /* Head: tan with a white blaze down the muzzle */
+    c.fillStyle = vGrad(c, sy + 7, sy + 25, TAN, TAND);
+    c.beginPath(); c.arc(sx + 10, sy + 15.5, 9, 0, Math.PI * 2); c.fill();
+    /* Long muzzle, white */
+    c.fillStyle = WHITE;
+    c.beginPath(); c.ellipse(sx + 3, sy + 19.5, 6.2, 4.6, 0.1, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.moveTo(sx + 7, sy + 7.5); c.quadraticCurveTo(sx + 10, sy + 9, sx + 10.5, sy + 11); c.lineTo(sx + 6.5, sy + 17.5); c.lineTo(sx + 2.5, sy + 17); c.quadraticCurveTo(sx + 5, sy + 10, sx + 7, sy + 7.5); c.closePath(); c.fill();
+    /* Open mouth with a tongue */
+    c.fillStyle = TAND;
+    c.beginPath(); c.ellipse(sx + 1.6, sy + 22.4, 2.8, 1.5, 0, 0, Math.PI); c.fill();
+    blob(c, sx + 2.2, sy + 23.6, 1.4, 1.9, 0, '#ff7fa0');
+    /* Black nose */
+    blob(c, sx - 1.6, sy + 18, 2.3, 1.8, 0, INK);
+    blob(c, sx - 2.3, sy + 17.4, 0.6, 0.5, 0, '#ffffff');
+    /* Long floppy ears (far then near) */
+    blob(c, sx + 18, sy + 18.5, 3.3, 7.4, -0.12, TAND);
+    blob(c, sx + 13.5, sy + 17, 3.6, 8, 0.16, TAND);
+    blob(c, sx + 13.6, sy + 17.5, 2, 5.8, 0.16, TAN);
+    /* Eye and brow */
+    realEye(c, sx + 5.8, sy + 14.4, 1.7, '#4a2c10');
+    furLine(c, sx + 3.6, sy + 11.6, sx + 7.8, sy + 11, TAND, 0.8);
   }
 
   /* ---- Bunny: sitting upright, tall ears, cotton tail, carrot ---- */
@@ -3458,306 +3502,424 @@
   /* ---- Koala: sitting, hugging a eucalyptus branch ---- */
   function drawKoalaSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.koala;
-    var BARK = '#7a5230', BARK2 = '#5a3a1c', LEAF = '#5c9e63';
-    groundShadow(c, sx + 24, sy + 45, 17);
-    /* Branch (behind the koala) */
-    c.fillStyle = vGrad(c, sy - 6, sy + 44, BARK, BARK2);
-    c.fillRect(sx + 35, sy - 6, 5.5, 50);
-    furLine(c, sx + 36.5, sy + 4, sx + 36.5, sy + 40, BARK2, 0.7);
-    blob(c, sx + 33, sy - 4, 4.5, 1.9, -0.7, LEAF);
-    blob(c, sx + 42, sy - 3, 4.5, 1.9, 0.6, LEAF);
-    blob(c, sx + 38, sy - 7, 4.2, 1.8, -0.1, '#6fae73');
-    /* Far ear */
-    blob(c, sx + 27, sy + 10, 6, 6, 0, p.shade);
-    blob(c, sx + 27, sy + 10, 3.6, 3.6, 0, p.accent);
-    /* Body */
-    c.fillStyle = vGrad(c, sy + 20, sy + 44, p.body, p.shade);
-    c.beginPath(); c.ellipse(sx + 23, sy + 31, 11.5, 12, 0, 0, Math.PI * 2); c.fill();
+    var FUR = p.body, FURD = p.shade, WHITE = p.accent, FUZZ = '#c6c6d2';
+    var BARK = '#8a6a48', BARK2 = '#5e4328', LEAF = '#5c9e63', LEAF2 = '#7ab47e';
+    groundShadow(c, sx + 22, sy + 45, 17, 2.8);
+    /* Eucalyptus trunk behind the koala, a couple of leaf sprigs at the top */
+    c.fillStyle = vGrad(c, sy - 2, sy + 44, BARK, BARK2);
+    c.beginPath();
+    c.moveTo(sx + 34, sy + 44); c.lineTo(sx + 35.5, sy - 2); c.lineTo(sx + 42.5, sy - 2); c.lineTo(sx + 42.5, sy + 44);
+    c.closePath(); c.fill();
+    furLine(c, sx + 37, sy + 4, sx + 36.6, sy + 40, BARK2, 0.7);
+    furLine(c, sx + 40.4, sy + 12, sx + 40.6, sy + 36, 'rgba(0,0,0,0.18)', 0.9);
+    blob(c, sx + 31.5, sy + 1, 4.4, 1.7, -0.55, LEAF);
+    blob(c, sx + 45.5, sy + 2.5, 3.6, 1.6, 0.5, LEAF2);
+    blob(c, sx + 33, sy + 6, 3.4, 1.4, 0.4, LEAF2);
+    /* Far ear: round and fluffy with a white fringe */
+    blob(c, sx + 28, sy + 10, 6.6, 6.6, 0, FURD);
+    var fa;
+    for (fa = 0; fa < 7; fa++) {
+      var fang = -1.1 + fa * 0.42;
+      blob(c, sx + 28 + Math.cos(fang) * 5.6, sy + 10 + Math.sin(fang) * 5.6, 1.4, 1.4, 0, fa % 2 ? WHITE : FURD);
+    }
+    blob(c, sx + 28.4, sy + 10.4, 3.8, 3.8, 0, WHITE);
+    /* Stocky body */
+    c.fillStyle = vGrad(c, sy + 20, sy + 44, FUR, FURD);
+    c.beginPath(); c.ellipse(sx + 23, sy + 31, 11.5, 11.5, 0, 0, Math.PI * 2); c.fill();
+    furLine(c, sx + 12.5, sy + 27, sx + 11.2, sy + 28.4, FUZZ, 0.7);
+    furLine(c, sx + 12, sy + 32, sx + 10.6, sy + 32.6, FUZZ, 0.7);
+    furLine(c, sx + 13, sy + 37, sx + 11.8, sy + 38.3, FUZZ, 0.7);
     /* White chest */
-    c.save(); c.globalAlpha = 0.85; blob(c, sx + 20, sy + 32, 6, 8, 0, p.accent); c.restore();
-    /* Legs: thigh + foot gripping floor and branch */
-    blob(c, sx + 20, sy + 39, 6.5, 4.2, 0, p.body);
-    limb(c, sx + 17, sy + 42, sx + 11, sy + 42.5, 3.6, p.shade);
-    limb(c, sx + 27, sy + 40, sx + 36, sy + 41.5, 3.8, p.body);
-    /* Arms hugging the branch (far arm then near arm) */
-    limb(c, sx + 24, sy + 24, sx + 37, sy + 22, 4.2, p.shade);
-    limb(c, sx + 20, sy + 26, sx + 37, sy + 27, 4.6, p.body);
-    blob(c, sx + 38, sy + 27, 2.2, 2.6, 0, p.shade);
-    /* Head: big and round */
-    c.fillStyle = vGrad(c, sy + 5, sy + 25, p.body, p.shade);
-    c.beginPath(); c.arc(sx + 17, sy + 15, 10.5, 0, Math.PI * 2); c.fill();
-    /* Near ear: fluffy */
-    blob(c, sx + 7, sy + 10, 6.5, 6.5, 0, p.shade);
-    blob(c, sx + 4.5, sy + 6.5, 2.2, 2.2, 0, p.shade);
-    blob(c, sx + 2, sy + 11, 2.2, 2.2, 0, p.shade);
-    blob(c, sx + 5, sy + 15, 2.2, 2.2, 0, p.shade);
-    blob(c, sx + 7, sy + 10, 4, 4, 0, p.accent);
-    blob(c, sx + 5, sy + 8, 1.6, 1.6, 0, p.accent);
-    /* Big black nose */
-    blob(c, sx + 12, sy + 18, 3.2, 4.6, 0, '#1a1a1a');
-    blob(c, sx + 11, sy + 16.5, 0.9, 1.3, 0, '#5a5a5a');
-    /* Sleepy eyes: iris then lid */
-    realEye(c, sx + 10, sy + 12.5, 1.5, '#3a2a20');
-    realEye(c, sx + 19, sy + 13, 1.5, '#3a2a20');
-    c.fillStyle = p.body;
-    c.beginPath(); c.ellipse(sx + 10, sy + 11.8, 2.2, 1.6, 0, Math.PI, 0); c.fill();
-    c.beginPath(); c.ellipse(sx + 19, sy + 12.3, 2.2, 1.6, 0, Math.PI, 0); c.fill();
-    /* Little smile */
-    curve(c, sx + 10, sy + 23, sx + 12, sy + 24.5, sx + 14, sy + 23, 0.7, p.shade);
+    c.save(); c.globalAlpha = 0.9; blob(c, sx + 19.5, sy + 32, 6.5, 8.2, 0, WHITE); c.restore();
+    /* Legs: thigh, near foot on the floor, far foot braced on the trunk */
+    blob(c, sx + 20, sy + 38.5, 6.5, 4.5, 0, FUR);
+    limb(c, sx + 16.5, sy + 42, sx + 10, sy + 42.5, 4, FURD);
+    c.fillStyle = '#2a2a2a';
+    c.fillRect(sx + 7.4, sy + 42, 1, 1.6); c.fillRect(sx + 8.8, sy + 42.6, 1, 1.6);
+    limb(c, sx + 28, sy + 40.5, sx + 35, sy + 41.5, 4, FUR);
+    /* Arms hugging the trunk */
+    limb(c, sx + 25, sy + 23, sx + 37, sy + 21.5, 4.2, FURD);
+    limb(c, sx + 20, sy + 26, sx + 37, sy + 26.5, 4.8, FUR);
+    blob(c, sx + 38.5, sy + 26.5, 2.4, 2.9, 0, FURD);
+    c.fillStyle = '#2a2a2a';
+    c.fillRect(sx + 39.6, sy + 24.2, 0.8, 1.5); c.fillRect(sx + 40.2, sy + 26.4, 0.8, 1.5);
+    /* Big round head */
+    c.fillStyle = vGrad(c, sy + 5, sy + 26, FUR, FURD);
+    c.beginPath(); c.arc(sx + 16, sy + 15.5, 10.5, 0, Math.PI * 2); c.fill();
+    furLine(c, sx + 7, sy + 19, sx + 5.6, sy + 20.4, FUZZ, 0.7);
+    furLine(c, sx + 8.6, sy + 22.6, sx + 7.4, sy + 24, FUZZ, 0.7);
+    furLine(c, sx + 24, sy + 21, sx + 25.4, sy + 22.4, FUZZ, 0.7);
+    /* Near ear: huge, round, fluffy white fringe */
+    blob(c, sx + 5.5, sy + 10.5, 7.2, 7.2, 0, FURD);
+    var na;
+    for (na = 0; na < 10; na++) {
+      var nang = na * 0.628;
+      blob(c, sx + 5.5 + Math.cos(nang) * 6.4, sy + 10.5 + Math.sin(nang) * 6.4, 1.6, 1.6, 0, na % 2 ? WHITE : FURD);
+    }
+    blob(c, sx + 5.9, sy + 10.9, 4.6, 4.6, 0, WHITE);
+    blob(c, sx + 6.4, sy + 11.4, 2.4, 2.6, 0, '#e2dce4');
+    /* Big black spoon nose */
+    blob(c, sx + 11.4, sy + 18.4, 3.5, 5.3, 0.05, '#1a1a1a');
+    blob(c, sx + 10.5, sy + 16.2, 1, 1.5, 0, '#5a5a5a');
+    /* Small dark eyes with sleepy lids */
+    realEye(c, sx + 8.6, sy + 12.6, 1.4, '#2a1a10');
+    realEye(c, sx + 18.6, sy + 13.2, 1.4, '#2a1a10');
+    c.fillStyle = FUR;
+    c.beginPath(); c.ellipse(sx + 8.6, sy + 12, 2.1, 1.5, 0, Math.PI, 0); c.fill();
+    c.beginPath(); c.ellipse(sx + 18.6, sy + 12.6, 2.1, 1.5, 0, Math.PI, 0); c.fill();
+    /* Little smile under the nose */
+    curve(c, sx + 9.5, sy + 24, sx + 11.5, sy + 25.4, sx + 13.8, sy + 24.2, 0.7, FURD);
   }
 
   /* ---- Polar bear: long body, long low neck, small head ---- */
   function drawPolarBearSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.polarBear;
-    var ICE = '#e4ecf4';
-    groundShadow(c, sx + 24, sy + 45, 21);
-    /* Far legs */
-    limb(c, sx + 17, sy + 33, sx + 16, sy + 42, 5, p.shade);
-    limb(c, sx + 38, sy + 33, sx + 39, sy + 42, 5, p.shade);
-    /* Body: long, with a shoulder hump */
-    c.fillStyle = vGrad(c, sy + 16, sy + 42, p.body, p.shade);
-    c.beginPath(); c.ellipse(sx + 27, sy + 29, 18, 11, 0, 0, Math.PI * 2); c.fill();
-    blob(c, sx + 30, sy + 21, 10, 6, 0, p.body);
-    /* Tail stub */
-    blob(c, sx + 45, sy + 27, 2.6, 2.2, 0, ICE);
-    /* Neck: long, forward and down */
-    c.fillStyle = vGrad(c, sy + 18, sy + 32, p.body, ICE);
+    var CREAM = '#f6f3ea', ICE = '#cfdae6', DEEP = '#a9bbcd', LINE = 'rgba(90, 112, 140, 0.5)';
+    groundShadow(c, sx + 24, sy + 45, 22, 3.2);
+    /* Far legs: thick columns on big paws */
+    limb(c, sx + 19, sy + 30, sx + 18, sy + 41, 6, ICE);
+    limb(c, sx + 39, sy + 30, sx + 41, sy + 41, 6, ICE);
+    blob(c, sx + 17.5, sy + 42.6, 4.4, 1.9, 0, DEEP);
+    blob(c, sx + 41.5, sy + 42.6, 4.4, 1.9, 0, DEEP);
+    /* Body: shoulders lower than the high, rounded rump; deep belly */
+    function bodyPath() {
+      c.beginPath();
+      c.moveTo(sx + 14, sy + 20);
+      c.quadraticCurveTo(sx + 20, sy + 14.5, sx + 30, sy + 14);
+      c.quadraticCurveTo(sx + 43, sy + 12.5, sx + 47, sy + 22);
+      c.quadraticCurveTo(sx + 49, sy + 31, sx + 42, sy + 35.5);
+      c.quadraticCurveTo(sx + 30, sy + 38.5, sx + 16, sy + 36);
+      c.quadraticCurveTo(sx + 10, sy + 32, sx + 14, sy + 20);
+      c.closePath();
+    }
+    c.fillStyle = vGrad(c, sy + 14, sy + 38, p.body, ICE);
+    bodyPath(); c.fill();
+    c.strokeStyle = LINE; c.lineWidth = 0.8; bodyPath(); c.stroke();
+    /* Rump highlight and shaggy belly fur */
+    c.save(); c.globalAlpha = 0.7; blob(c, sx + 35, sy + 19, 8, 3, 0.12, '#ffffff'); c.restore();
+    furLine(c, sx + 20, sy + 36.5, sx + 22.5, sy + 38.6, DEEP, 0.7);
+    furLine(c, sx + 27, sy + 37.3, sx + 29.5, sy + 39.3, DEEP, 0.7);
+    furLine(c, sx + 34, sy + 36.8, sx + 36.5, sy + 38.6, DEEP, 0.7);
+    /* Stub tail */
+    blob(c, sx + 47, sy + 28, 2.3, 2, 0, CREAM);
+    c.strokeStyle = LINE; c.lineWidth = 0.6;
+    c.beginPath(); c.arc(sx + 47, sy + 28, 2.3, -1.2, 1.6); c.stroke();
+    /* Near legs: slightly forward-set, round paws, dark claws */
+    limb(c, sx + 12, sy + 30, sx + 11, sy + 41, 6.8, p.body);
+    limb(c, sx + 33, sy + 30, sx + 34, sy + 41, 6.8, p.body);
+    c.strokeStyle = LINE; c.lineWidth = 0.7;
     c.beginPath();
-    c.moveTo(sx + 16, sy + 19); c.quadraticCurveTo(sx + 8, sy + 20, sx + 4, sy + 24);
-    c.lineTo(sx + 6, sy + 32); c.quadraticCurveTo(sx + 14, sy + 34, sx + 22, sy + 34);
-    c.lineTo(sx + 22, sy + 20); c.closePath(); c.fill();
-    /* Head: small, carried low */
-    c.fillStyle = vGrad(c, sy + 21, sy + 33, p.body, ICE);
-    c.beginPath(); c.ellipse(sx + 5, sy + 27, 7.2, 5.6, 0.1, 0, Math.PI * 2); c.fill();
-    blob(c, sx - 0.5, sy + 28.5, 3.6, 3, 0, '#f4f2ee');
-    blob(c, sx - 3.2, sy + 28, 1.9, 1.5, 0, p.accent);
-    furLine(c, sx - 2.5, sy + 30, sx + 0.5, sy + 31, p.shade, 0.7);
+    c.moveTo(sx + 8.6, sy + 31); c.lineTo(sx + 7.8, sy + 41);
+    c.moveTo(sx + 36.4, sy + 31); c.lineTo(sx + 37.2, sy + 41);
+    c.stroke();
+    blob(c, sx + 10.5, sy + 42.5, 5.2, 2.3, 0, CREAM);
+    blob(c, sx + 34.5, sy + 42.5, 5.2, 2.3, 0, CREAM);
+    c.strokeStyle = LINE; c.lineWidth = 0.7;
+    c.beginPath(); c.ellipse(sx + 10.5, sy + 42.5, 5.2, 2.3, 0, 0, Math.PI * 2); c.stroke();
+    c.beginPath(); c.ellipse(sx + 34.5, sy + 42.5, 5.2, 2.3, 0, 0, Math.PI * 2); c.stroke();
+    c.fillStyle = '#5a6672';
+    var cl;
+    for (cl = 0; cl < 3; cl++) {
+      c.fillRect(sx + 6.6 + cl * 2.2, sy + 43.2, 1, 1.5);
+      c.fillRect(sx + 30.6 + cl * 2.2, sy + 43.2, 1, 1.5);
+    }
+    /* Long neck: carried low and forward */
+    c.fillStyle = vGrad(c, sy + 17, sy + 34, p.body, ICE);
+    c.beginPath();
+    c.moveTo(sx + 17, sy + 17.5);
+    c.quadraticCurveTo(sx + 10, sy + 19, sx + 4.5, sy + 24.5);
+    c.lineTo(sx + 7.5, sy + 33);
+    c.quadraticCurveTo(sx + 14, sy + 35, sx + 21, sy + 33.5);
+    c.lineTo(sx + 23, sy + 19);
+    c.closePath(); c.fill();
+    c.strokeStyle = LINE; c.lineWidth = 0.8;
+    c.beginPath();
+    c.moveTo(sx + 17, sy + 17.5); c.quadraticCurveTo(sx + 10, sy + 19, sx + 4.5, sy + 24.5);
+    c.moveTo(sx + 7.5, sy + 33); c.quadraticCurveTo(sx + 14, sy + 35, sx + 21, sy + 33.5);
+    c.stroke();
+    /* Small head on the end of the neck: long, slightly Roman-nosed */
+    c.fillStyle = vGrad(c, sy + 21, sy + 33, '#ffffff', ICE);
+    c.beginPath(); c.ellipse(sx + 4.5, sy + 27, 7.2, 5.4, 0.18, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = LINE; c.lineWidth = 0.8;
+    c.beginPath(); c.ellipse(sx + 4.5, sy + 27, 7.2, 5.4, 0.18, Math.PI * 0.75, Math.PI * 1.95); c.stroke();
+    /* Muzzle, black nose, mouth */
+    blob(c, sx - 1.2, sy + 29.2, 3.8, 2.9, 0.18, CREAM);
+    blob(c, sx - 4.6, sy + 28.4, 2, 1.55, 0, '#1a1a1a');
+    blob(c, sx - 5.2, sy + 27.9, 0.6, 0.45, 0, '#777');
+    c.strokeStyle = '#6a7684'; c.lineWidth = 0.6;
+    c.beginPath(); c.moveTo(sx - 3.6, sy + 29.8); c.quadraticCurveTo(sx - 1.5, sy + 31.4, sx + 1, sy + 30.6); c.stroke();
     /* Small round ear */
-    blob(c, sx + 9.5, sy + 22, 2.3, 2.3, 0, p.body);
-    blob(c, sx + 9.5, sy + 22, 1.2, 1.2, 0, p.shade);
-    /* Eye */
-    eye(c, sx + 4, sy + 25.2, 1.25);
-    /* Near legs: big paws */
-    limb(c, sx + 11, sy + 33, sx + 10, sy + 42, 5.6, p.body);
-    limb(c, sx + 33, sy + 33, sx + 34, sy + 42, 5.6, p.body);
-    blob(c, sx + 9.5, sy + 43, 4.2, 1.9, 0, ICE);
-    blob(c, sx + 34.5, sy + 43, 4.2, 1.9, 0, ICE);
-    blob(c, sx + 15.5, sy + 43, 3.4, 1.6, 0, p.shade);
-    blob(c, sx + 39.5, sy + 43, 3.4, 1.6, 0, p.shade);
-    /* Claws */
-    c.fillStyle = '#6a7684';
-    c.fillRect(sx + 6.2, sy + 43.2, 0.9, 1.3); c.fillRect(sx + 8.4, sy + 43.5, 0.9, 1.3); c.fillRect(sx + 10.6, sy + 43.5, 0.9, 1.3);
-    c.fillRect(sx + 31.2, sy + 43.2, 0.9, 1.3); c.fillRect(sx + 33.4, sy + 43.5, 0.9, 1.3); c.fillRect(sx + 35.6, sy + 43.5, 0.9, 1.3);
+    blob(c, sx + 9.8, sy + 22.4, 2.5, 2.5, 0, p.body);
+    blob(c, sx + 9.9, sy + 22.6, 1.3, 1.3, 0, DEEP);
+    c.strokeStyle = LINE; c.lineWidth = 0.7;
+    c.beginPath(); c.arc(sx + 9.8, sy + 22.4, 2.5, Math.PI * 0.9, Math.PI * 2.1); c.stroke();
+    /* Small dark eye */
+    eye(c, sx + 3.3, sy + 25.2, 1.25);
   }
 
   /* ---- Rhino: armour-plated barrel, nose horn ---- */
   function drawRhinoSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.rhino;
-    var HORN = '#d8d0c0', HORN2 = '#a89c8c';
-    groundShadow(c, sx + 24, sy + 45, 21);
-    /* Tail */
-    curve(c, sx + 44, sy + 24, sx + 47, sy + 30, sx + 46, sy + 36, 1.6, p.shade);
-    blob(c, sx + 46, sy + 36.5, 1.6, 2, 0, p.accent);
+    var HORN = '#ece4d4', HORN2 = '#bcb0a0', FOLD = 'rgba(58, 52, 48, 0.42)', HI = 'rgba(255, 255, 255, 0.22)';
+    groundShadow(c, sx + 24, sy + 45, 22, 3.2);
+    /* Tail with a tuft */
+    curve(c, sx + 45, sy + 23, sx + 48.5, sy + 30, sx + 46.5, sy + 37, 1.6, p.shade);
+    blob(c, sx + 46.5, sy + 38, 1.8, 2.4, 0, p.accent);
     /* Far legs */
-    limb(c, sx + 16, sy + 34, sx + 15, sy + 42, 5.2, p.shade);
-    limb(c, sx + 37, sy + 34, sx + 38, sy + 42, 5.2, p.shade);
-    /* Body */
-    c.fillStyle = vGrad(c, sy + 12, sy + 42, p.body, p.shade);
-    c.beginPath(); c.ellipse(sx + 27, sy + 27, 19, 13, 0, 0, Math.PI * 2); c.fill();
-    blob(c, sx + 24, sy + 16, 11, 6, 0, p.body);
-    /* Armour folds */
-    curve(c, sx + 18, sy + 16, sx + 15, sy + 27, sx + 18, sy + 38, 1.1, p.shade);
-    curve(c, sx + 36, sy + 15, sx + 39, sy + 26, sx + 37, sy + 38, 1.1, p.shade);
-    curve(c, sx + 20, sy + 33, sx + 27, sy + 36, sx + 35, sy + 33, 0.9, p.shade);
+    limb(c, sx + 17, sy + 33, sx + 16, sy + 41, 5.8, p.shade);
+    limb(c, sx + 37.5, sy + 33, sx + 39, sy + 41, 5.8, p.shade);
+    blob(c, sx + 16, sy + 42.4, 4, 1.8, 0, p.shade);
+    blob(c, sx + 39, sy + 42.4, 4, 1.8, 0, p.shade);
+    /* Barrel body with a shoulder hump */
+    c.fillStyle = vGrad(c, sy + 11, sy + 42, p.body, p.shade);
+    c.beginPath(); c.ellipse(sx + 27, sy + 27, 19, 12.8, 0, 0, Math.PI * 2); c.fill();
+    blob(c, sx + 22, sy + 16.5, 10.5, 6.2, 0, p.body);
+    /* Armour plates: shoulder fold, hip fold, belly fold, each with a light edge */
+    curve(c, sx + 17.5, sy + 15.5, sx + 14.5, sy + 27, sx + 17.5, sy + 38.5, 1.4, FOLD);
+    curve(c, sx + 19, sy + 16, sx + 16, sy + 27, sx + 19, sy + 38, 0.9, HI);
+    curve(c, sx + 36, sy + 15, sx + 39.5, sy + 26, sx + 37, sy + 38.5, 1.4, FOLD);
+    curve(c, sx + 34.6, sy + 15.6, sx + 38, sy + 26, sx + 35.6, sy + 38, 0.9, HI);
+    curve(c, sx + 20, sy + 34, sx + 27, sy + 37.5, sx + 35, sy + 34, 1, FOLD);
+    c.save(); c.globalAlpha = 0.25; blob(c, sx + 27, sy + 17, 8, 2.4, 0, '#ffffff'); c.restore();
     /* Near legs with three toes */
-    limb(c, sx + 11, sy + 34, sx + 10, sy + 42, 6, p.body);
-    limb(c, sx + 32, sy + 34, sx + 33, sy + 42, 6, p.body);
+    limb(c, sx + 11.5, sy + 33, sx + 10.5, sy + 41, 6.4, p.body);
+    limb(c, sx + 32, sy + 33, sx + 33, sy + 41, 6.4, p.body);
+    blob(c, sx + 10.5, sy + 42.6, 4.6, 2, 0, '#7c746e');
+    blob(c, sx + 33, sy + 42.6, 4.6, 2, 0, '#7c746e');
     c.fillStyle = p.accent;
     var tx;
     for (tx = 0; tx < 3; tx++) {
-      c.fillRect(sx + 7.4 + tx * 2, sy + 43, 1.3, 1.5);
-      c.fillRect(sx + 30.4 + tx * 2, sy + 43, 1.3, 1.5);
+      c.fillRect(sx + 7.6 + tx * 2.2, sy + 43, 1.4, 1.5);
+      c.fillRect(sx + 30.1 + tx * 2.2, sy + 43, 1.4, 1.5);
     }
-    /* Head: large, carried low */
-    c.fillStyle = vGrad(c, sy + 17, sy + 37, p.body, p.shade);
+    /* Head: long, carried low, with a square lip */
+    c.fillStyle = vGrad(c, sy + 17, sy + 38, p.body, p.shade);
     c.beginPath();
-    c.moveTo(sx + 14, sy + 18); c.quadraticCurveTo(sx + 4, sy + 17, sx - 1, sy + 24);
-    c.quadraticCurveTo(sx - 5, sy + 30, sx - 1, sy + 35); c.quadraticCurveTo(sx + 6, sy + 38, sx + 14, sy + 33);
+    c.moveTo(sx + 15, sy + 18); c.quadraticCurveTo(sx + 5, sy + 16.5, sx - 1, sy + 23.5);
+    c.quadraticCurveTo(sx - 5.5, sy + 30, sx - 1.5, sy + 35.5); c.quadraticCurveTo(sx + 6, sy + 38.5, sx + 15, sy + 33.5);
     c.closePath(); c.fill();
-    /* Mouth */
-    curve(c, sx - 3.5, sy + 32, sx + 1, sy + 34.5, sx + 6, sy + 33.5, 0.8, p.shade);
-    /* Nose horn: big, pointing up and forward */
+    c.save(); c.globalAlpha = 0.2; blob(c, sx + 6, sy + 22, 5, 2, -0.3, '#ffffff'); c.restore();
+    /* Mouth and nostril */
+    curve(c, sx - 4.2, sy + 32.4, sx + 0.5, sy + 35, sx + 6, sy + 33.8, 0.9, p.shade);
+    blob(c, sx - 3.4, sy + 29, 1, 0.8, 0.4, p.shade);
+    /* Big front horn: curves up and back from the nose */
     c.fillStyle = HORN;
-    c.beginPath(); c.moveTo(sx - 4.5, sy + 25); c.lineTo(sx + 3, sy + 23); c.lineTo(sx - 5.5, sy + 9); c.closePath(); c.fill();
+    c.beginPath();
+    c.moveTo(sx - 5.2, sy + 26); c.quadraticCurveTo(sx - 2, sy + 24.5, sx + 2.6, sy + 23.5);
+    c.quadraticCurveTo(sx + 0, sy + 16, sx - 4.8, sy + 9.5);
+    c.quadraticCurveTo(sx - 6.5, sy + 17, sx - 5.2, sy + 26);
+    c.closePath(); c.fill();
     c.fillStyle = HORN2;
-    c.beginPath(); c.moveTo(sx - 4.5, sy + 25); c.lineTo(sx - 1, sy + 24); c.lineTo(sx - 5.5, sy + 9); c.closePath(); c.fill();
-    /* Second small horn */
+    c.beginPath();
+    c.moveTo(sx - 5.2, sy + 26); c.quadraticCurveTo(sx - 3.5, sy + 25, sx - 1.5, sy + 24.4);
+    c.quadraticCurveTo(sx - 3, sy + 17, sx - 4.8, sy + 9.5);
+    c.quadraticCurveTo(sx - 6.5, sy + 17, sx - 5.2, sy + 26);
+    c.closePath(); c.fill();
+    /* Second, smaller horn */
     c.fillStyle = HORN;
-    c.beginPath(); c.moveTo(sx + 4, sy + 22.5); c.lineTo(sx + 9, sy + 21); c.lineTo(sx + 5.5, sy + 15); c.closePath(); c.fill();
-    /* Tiny ear */
-    blob(c, sx + 13, sy + 18, 2.2, 3.2, 0.3, p.body);
-    blob(c, sx + 13, sy + 18.4, 1.1, 2, 0.3, p.shade);
+    c.beginPath(); c.moveTo(sx + 4, sy + 22.8); c.quadraticCurveTo(sx + 6.5, sy + 21.5, sx + 9, sy + 21); c.quadraticCurveTo(sx + 7.5, sy + 16.5, sx + 5.5, sy + 14.5); c.quadraticCurveTo(sx + 4, sy + 18.5, sx + 4, sy + 22.8); c.closePath(); c.fill();
+    /* Tubular ears */
+    blob(c, sx + 10.5, sy + 15.5, 2, 3.2, -0.15, p.shade);
+    blob(c, sx + 14.5, sy + 17, 2.5, 3.6, 0.3, p.body);
+    blob(c, sx + 14.6, sy + 17.4, 1.2, 2.2, 0.3, p.shade);
     /* Small eye */
-    eye(c, sx + 7.5, sy + 24.5, 1.25);
-    /* Skin wrinkles on the neck */
-    furLine(c, sx + 12, sy + 22, sx + 12.5, sy + 30, p.shade, 0.6);
+    eye(c, sx + 7.8, sy + 25, 1.3);
+    /* Neck wrinkles */
+    furLine(c, sx + 12.5, sy + 22, sx + 13, sy + 30.5, FOLD, 0.8);
+    furLine(c, sx + 10, sy + 29, sx + 11.5, sy + 32.5, FOLD, 0.6);
   }
 
   /* ---- Hippo: enormous muzzle, eyes and ears high on the head ---- */
   function drawHippoSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.hippo;
-    groundShadow(c, sx + 24, sy + 45, 21);
-    /* Tail */
-    limb(c, sx + 45, sy + 26, sx + 46.5, sy + 32, 1.8, p.shade);
-    /* Far legs */
-    limb(c, sx + 18, sy + 36, sx + 17, sy + 42, 5.4, p.shade);
-    limb(c, sx + 38, sy + 36, sx + 39, sy + 42, 5.4, p.shade);
-    /* Body */
-    c.fillStyle = vGrad(c, sy + 16, sy + 42, p.body, p.shade);
-    c.beginPath(); c.ellipse(sx + 28, sy + 29, 18, 12.5, 0, 0, Math.PI * 2); c.fill();
-    /* Pink underside */
-    c.save(); c.globalAlpha = 0.5; blob(c, sx + 28, sy + 37, 12, 4.5, 0, p.accent); c.restore();
-    /* Near legs */
-    limb(c, sx + 13, sy + 36, sx + 12, sy + 42, 6.2, p.body);
-    limb(c, sx + 33, sy + 36, sx + 34, sy + 42, 6.2, p.body);
-    c.fillStyle = '#e8d8e8';
-    c.fillRect(sx + 9.4, sy + 43, 1.4, 1.4); c.fillRect(sx + 11.6, sy + 43.3, 1.4, 1.4); c.fillRect(sx + 13.8, sy + 43, 1.4, 1.4);
-    c.fillRect(sx + 31.4, sy + 43, 1.4, 1.4); c.fillRect(sx + 33.6, sy + 43.3, 1.4, 1.4); c.fillRect(sx + 35.8, sy + 43, 1.4, 1.4);
-    /* Skull */
-    c.fillStyle = vGrad(c, sy + 12, sy + 30, p.body, p.shade);
-    c.beginPath(); c.ellipse(sx + 11, sy + 21, 9, 7.5, 0, 0, Math.PI * 2); c.fill();
-    /* Huge muzzle */
-    c.fillStyle = vGrad(c, sy + 20, sy + 37, p.body, p.shade);
-    c.beginPath(); c.ellipse(sx + 3, sy + 29, 10, 7.5, 0.05, 0, Math.PI * 2); c.fill();
-    /* Lower jaw / lip in pink */
-    c.save(); c.globalAlpha = 0.75; blob(c, sx + 2.5, sy + 33.5, 8, 3.2, 0, p.accent); c.restore();
-    /* Mouth line */
-    curve(c, sx - 6, sy + 31, sx + 1, sy + 33.5, sx + 9, sy + 32, 0.9, p.shade);
-    /* Tusks poking up from the lower jaw */
+    var PINK = p.accent, SKIN = p.body, SKIND = p.shade, LINE = 'rgba(60, 60, 80, 0.4)';
+    groundShadow(c, sx + 24, sy + 45, 22, 3.2);
+    /* Short tail with a flat tuft */
+    limb(c, sx + 45.5, sy + 25, sx + 47, sy + 31.5, 1.8, SKIND);
+    blob(c, sx + 47, sy + 32.5, 1.5, 2.2, 0, '#3a3a48');
+    /* Far legs: short, stumpy */
+    limb(c, sx + 18, sy + 35, sx + 17, sy + 41.5, 5.8, SKIND);
+    limb(c, sx + 38, sy + 35, sx + 39.5, sy + 41.5, 5.8, SKIND);
+    /* Barrel body */
+    c.fillStyle = vGrad(c, sy + 15, sy + 42, SKIN, SKIND);
+    c.beginPath(); c.ellipse(sx + 27.5, sy + 28.5, 19, 12.8, 0, 0, Math.PI * 2); c.fill();
+    /* Pink belly and a soft sheen on the back */
+    c.save(); c.globalAlpha = 0.55; blob(c, sx + 27, sy + 37.5, 13.5, 4.2, 0, PINK); c.restore();
+    c.save(); c.globalAlpha = 0.28; blob(c, sx + 29, sy + 19, 11, 3, 0.05, '#ffffff'); c.restore();
+    /* Skin creases */
+    curve(c, sx + 36, sy + 18, sx + 39, sy + 26, sx + 37, sy + 34, 0.9, LINE);
+    curve(c, sx + 19, sy + 20, sx + 17, sy + 26, sx + 19, sy + 33, 0.9, LINE);
+    /* Near legs with pale toenails */
+    limb(c, sx + 12.5, sy + 35, sx + 11.5, sy + 41.5, 6.6, SKIN);
+    limb(c, sx + 33, sy + 35, sx + 34, sy + 41.5, 6.6, SKIN);
+    blob(c, sx + 11.5, sy + 42.6, 4.6, 1.9, 0, SKIND);
+    blob(c, sx + 34, sy + 42.6, 4.6, 1.9, 0, SKIND);
+    c.fillStyle = '#e8e0e8';
+    c.fillRect(sx + 8.6, sy + 42.6, 1.5, 1.6); c.fillRect(sx + 10.8, sy + 42.9, 1.5, 1.6); c.fillRect(sx + 13, sy + 42.6, 1.5, 1.6);
+    c.fillRect(sx + 31.1, sy + 42.6, 1.5, 1.6); c.fillRect(sx + 33.3, sy + 42.9, 1.5, 1.6); c.fillRect(sx + 35.5, sy + 42.6, 1.5, 1.6);
+    /* Skull with eyes and ears set high */
+    c.fillStyle = vGrad(c, sy + 12, sy + 30, SKIN, SKIND);
+    c.beginPath(); c.ellipse(sx + 12, sy + 21.5, 9.2, 7.6, 0, 0, Math.PI * 2); c.fill();
+    /* Huge broad muzzle, nostrils on top */
+    c.fillStyle = vGrad(c, sy + 20, sy + 37, SKIN, SKIND);
+    c.beginPath(); c.ellipse(sx + 3.5, sy + 29.5, 10.5, 7.6, 0.05, 0, Math.PI * 2); c.fill();
+    c.save(); c.globalAlpha = 0.3; blob(c, sx + 3, sy + 24.2, 7, 2, 0.05, '#ffffff'); c.restore();
+    /* Pink lips and chin */
+    c.save(); c.globalAlpha = 0.85; blob(c, sx + 3, sy + 34, 8.6, 3.3, 0, PINK); c.restore();
+    curve(c, sx - 6.2, sy + 31.4, sx + 1, sy + 34, sx + 9.5, sy + 32.4, 1, SKIND);
+    /* Little tusks poking up from the lower jaw */
     c.fillStyle = '#fff8e8';
-    c.fillRect(sx - 3.6, sy + 29.5, 1.5, 3.2);
-    c.fillRect(sx + 2.4, sy + 30.2, 1.5, 3.2);
-    /* Nostrils */
-    blob(c, sx - 4.5, sy + 25, 1.3, 0.9, 0.3, p.shade);
-    blob(c, sx - 1, sy + 23.8, 1.3, 0.9, 0.3, p.shade);
-    /* Eyes high on bumps */
-    blob(c, sx + 6, sy + 16, 2.6, 2.4, 0, p.body);
-    blob(c, sx + 15, sy + 15.5, 2.6, 2.4, 0, p.body);
-    eye(c, sx + 6, sy + 16.2, 1.3);
-    eye(c, sx + 14.5, sy + 15.6, 1.1);
-    /* Tiny round ears */
-    blob(c, sx + 9, sy + 13.5, 2.2, 2.2, 0, p.body);
-    blob(c, sx + 9, sy + 13.7, 1.1, 1.1, 0, p.accent);
-    blob(c, sx + 17.5, sy + 13.5, 2.2, 2.2, 0, p.body);
-    blob(c, sx + 17.5, sy + 13.7, 1.1, 1.1, 0, p.accent);
+    c.beginPath(); c.moveTo(sx - 4.4, sy + 33.2); c.lineTo(sx - 2.4, sy + 33.2); c.lineTo(sx - 3.2, sy + 29.6); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(sx + 2, sy + 33.6); c.lineTo(sx + 4, sy + 33.6); c.lineTo(sx + 3.2, sy + 30.2); c.closePath(); c.fill();
+    /* Nostrils on top of the snout */
+    blob(c, sx - 4.6, sy + 25.2, 1.5, 1, 0.3, '#3a3a48');
+    blob(c, sx - 0.8, sy + 24, 1.5, 1, 0.3, '#3a3a48');
+    /* Eyes on bumps, pink-rimmed */
+    blob(c, sx + 6.5, sy + 16.2, 2.9, 2.6, 0, SKIN);
+    blob(c, sx + 15.5, sy + 15.6, 2.9, 2.6, 0, SKIN);
+    c.save(); c.globalAlpha = 0.5; blob(c, sx + 6.5, sy + 16.6, 2, 1.7, 0, PINK); blob(c, sx + 15, sy + 16, 1.8, 1.5, 0, PINK); c.restore();
+    eye(c, sx + 6.5, sy + 16.4, 1.3);
+    eye(c, sx + 15, sy + 15.8, 1.15);
+    /* Tiny round ears, pink inside */
+    blob(c, sx + 9.5, sy + 13.2, 2.3, 2.3, 0, SKIN);
+    blob(c, sx + 9.5, sy + 13.4, 1.2, 1.2, 0, PINK);
+    blob(c, sx + 18.5, sy + 13.2, 2.3, 2.3, 0, SKIN);
+    blob(c, sx + 18.5, sy + 13.4, 1.2, 1.2, 0, PINK);
   }
 
   /* ---- Gorilla: knuckle-walking, huge arms, silver back ---- */
   function drawGorillaSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.gorilla;
-    var SILVER = '#8c8c94', SKIN2 = '#7a5a44';
-    groundShadow(c, sx + 22, sy + 45, 20);
-    /* Far arm + far leg */
-    limb(c, sx + 17, sy + 22, sx + 11, sy + 42, 6.5, p.shade);
-    blob(c, sx + 11, sy + 42.5, 4, 2, 0, p.shade);
-    limb(c, sx + 37, sy + 33, sx + 41, sy + 42, 5, p.shade);
-    blob(c, sx + 41.5, sy + 43, 3.6, 1.6, 0, p.shade);
-    /* Body: slopes down from the shoulders to the rump */
-    c.fillStyle = vGrad(c, sy + 12, sy + 40, p.body, p.shade);
-    c.beginPath(); c.ellipse(sx + 27, sy + 28, 17, 11.5, 0.22, 0, Math.PI * 2); c.fill();
-    /* Shoulder mass */
-    blob(c, sx + 17, sy + 21, 11.5, 9.5, 0, p.body);
-    /* Silver saddle on the back */
-    c.save(); c.globalAlpha = 0.75; blob(c, sx + 31, sy + 24, 10, 5.5, 0.25, SILVER); c.restore();
-    /* Near leg */
-    limb(c, sx + 32, sy + 34, sx + 36, sy + 42, 5.6, p.body);
-    blob(c, sx + 36.5, sy + 43, 4, 1.7, 0, p.shade);
-    /* Near arm: long, down to the knuckles */
-    limb(c, sx + 13, sy + 23, sx + 5, sy + 42, 7.4, p.body);
-    blob(c, sx + 5, sy + 42.6, 4.6, 2.1, 0, p.shade);
-    furLine(c, sx + 3, sy + 41.5, sx + 3, sy + 43.5, '#000', 0.6);
-    furLine(c, sx + 5.5, sy + 41.3, sx + 5.5, sy + 43.5, '#000', 0.6);
-    /* Head with a crest */
-    c.fillStyle = vGrad(c, sy + 3, sy + 22, p.body, p.shade);
-    c.beginPath(); c.arc(sx + 10, sy + 13, 8.4, 0, Math.PI * 2); c.fill();
-    blob(c, sx + 11, sy + 6, 5.5, 3.5, -0.2, p.body);
+    var FUR = '#3c3c42', FURD = '#1c1c22', FURL = '#55555c', SILVER = '#9a9aa4', SKIN = '#5c443a', SKIN2 = '#3a2a24', INK = '#15100e';
+    groundShadow(c, sx + 24, sy + 45, 22, 3.2);
+    /* Far arm straight down onto its knuckles, far leg */
+    limb(c, sx + 19, sy + 22, sx + 11, sy + 40, 6.5, FURD);
+    blob(c, sx + 10.5, sy + 42.2, 4.2, 2.2, 0, SKIN2);
+    limb(c, sx + 37, sy + 32, sx + 41, sy + 40.5, 5.5, FURD);
+    blob(c, sx + 41.5, sy + 42.8, 4, 1.8, 0, SKIN2);
+    /* Body: massive shoulders and chest sloping down to small hips */
+    c.fillStyle = vGrad(c, sy + 9, sy + 40, FUR, FURD);
+    c.beginPath();
+    c.moveTo(sx + 10, sy + 21);
+    c.quadraticCurveTo(sx + 13, sy + 8, sx + 27, sy + 9.5);
+    c.quadraticCurveTo(sx + 41, sy + 12, sx + 45.5, sy + 26);
+    c.quadraticCurveTo(sx + 47, sy + 36, sx + 38, sy + 38);
+    c.quadraticCurveTo(sx + 28, sy + 40, sx + 22, sy + 36);
+    c.quadraticCurveTo(sx + 11, sy + 34, sx + 10, sy + 21);
+    c.closePath(); c.fill();
+    /* Silver saddle across the back */
+    c.save(); c.globalAlpha = 0.85; blob(c, sx + 34, sy + 23.5, 10.5, 6.2, 0.4, SILVER); c.restore();
+    c.save(); c.globalAlpha = 0.35; blob(c, sx + 31, sy + 19, 6, 2.2, 0.35, '#ffffff'); c.restore();
+    /* Broad chest plate, a little lighter */
+    c.save(); c.globalAlpha = 0.55; blob(c, sx + 17.5, sy + 26.5, 6, 7.5, -0.15, FURL); c.restore();
+    /* Near leg: short, bent */
+    limb(c, sx + 31, sy + 33, sx + 34.5, sy + 40.5, 6, FUR);
+    blob(c, sx + 35.5, sy + 42.8, 4.6, 1.9, 0, SKIN2);
+    c.fillStyle = INK;
+    c.fillRect(sx + 31.6, sy + 42.2, 1, 1.6); c.fillRect(sx + 33.4, sy + 42.6, 1, 1.6);
+    /* Near arm: huge, from the shoulder down to knuckles on the ground */
+    limb(c, sx + 15, sy + 21, sx + 5.5, sy + 40, 8.2, FUR);
+    c.save(); c.globalAlpha = 0.4; limb(c, sx + 13.5, sy + 24, sx + 6.5, sy + 36, 3, FURL); c.restore();
+    blob(c, sx + 4.8, sy + 42.2, 5.2, 2.5, 0, SKIN2);
+    c.strokeStyle = INK; c.lineWidth = 0.6;
+    c.beginPath();
+    c.moveTo(sx + 2.6, sy + 41.4); c.lineTo(sx + 2.6, sy + 43.4);
+    c.moveTo(sx + 4.8, sy + 41.2); c.lineTo(sx + 4.8, sy + 43.6);
+    c.moveTo(sx + 7, sy + 41.4); c.lineTo(sx + 7, sy + 43.4);
+    c.stroke();
+    /* Head: tall domed crest, bare dark face */
+    c.fillStyle = vGrad(c, sy + 1, sy + 22, FUR, FURD);
+    c.beginPath(); c.arc(sx + 12, sy + 12.5, 8.4, 0, Math.PI * 2); c.fill();
+    blob(c, sx + 13, sy + 5, 5.6, 4.2, -0.12, FUR);
+    c.save(); c.globalAlpha = 0.35; blob(c, sx + 13, sy + 4.4, 3.4, 1.6, -0.12, FURL); c.restore();
     /* Ear */
-    blob(c, sx + 17, sy + 14, 2, 2.3, 0, SKIN2);
-    /* Bare face */
-    c.fillStyle = vGrad(c, sy + 9, sy + 21, p.accent, SKIN2);
-    c.beginPath(); c.ellipse(sx + 6.5, sy + 15.5, 5.6, 6.2, 0, 0, Math.PI * 2); c.fill();
+    blob(c, sx + 19.6, sy + 13.6, 2, 2.4, 0, SKIN);
+    blob(c, sx + 19.8, sy + 13.8, 1, 1.3, 0, SKIN2);
+    /* Face */
+    c.fillStyle = vGrad(c, sy + 8, sy + 22, SKIN, SKIN2);
+    c.beginPath(); c.ellipse(sx + 8, sy + 15.2, 6.2, 6.6, 0, 0, Math.PI * 2); c.fill();
     /* Heavy brow ridge */
-    blob(c, sx + 6.5, sy + 11.6, 6, 2.2, 0, p.shade);
-    /* Eyes under the brow */
-    eye(c, sx + 4, sy + 13.6, 1.15);
-    eye(c, sx + 8.5, sy + 13.6, 1.15);
-    /* Broad flat nose */
-    blob(c, sx + 5.8, sy + 17.2, 3.2, 1.8, 0, SKIN2);
-    blob(c, sx + 4.4, sy + 17.5, 1.1, 0.8, 0, p.shade);
-    blob(c, sx + 7.2, sy + 17.5, 1.1, 0.8, 0, p.shade);
+    blob(c, sx + 8, sy + 11, 6.6, 2.5, 0, FURD);
+    /* Deep-set brown eyes */
+    realEye(c, sx + 5.4, sy + 13.4, 1.2, '#5a3a20');
+    realEye(c, sx + 10.4, sy + 13.4, 1.2, '#5a3a20');
+    /* Wide flat nose with flaring nostrils */
+    blob(c, sx + 7.6, sy + 17.6, 3.6, 2.1, 0, SKIN2);
+    blob(c, sx + 6, sy + 17.9, 1.2, 0.85, 0, INK);
+    blob(c, sx + 9.2, sy + 17.9, 1.2, 0.85, 0, INK);
     /* Mouth */
-    curve(c, sx + 3.5, sy + 20, sx + 6, sy + 21.3, sx + 8.8, sy + 20, 0.8, p.shade);
+    curve(c, sx + 4.8, sy + 20.6, sx + 7.6, sy + 22, sx + 10.8, sy + 20.6, 0.8, INK);
   }
 
   /* ---- Giraffe: long neck, ossicones, sloping barrel body, leggy ---- */
   function drawGiraffeSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.giraffe;
     var BODY = p.body, SHADE = p.shade, DARK = p.accent;
-    var FAR = '#cfae66';
-    groundShadow(c, sx + 28, sy + 45, 17);
+    var PATCH = '#a8682a', FAR = '#cfae66', PALE = '#f6e6b8';
+    groundShadow(c, sx + 28, sy + 45, 18, 3);
 
-    /* Tail with tuft (behind body) */
-    curve(c, sx + 42, sy + 22, sx + 48, sy + 28, sx + 46, sy + 37, 1.4, SHADE);
-    blob(c, sx + 46, sy + 38, 2, 2.4, 0, DARK);
+    /* Tail with a dark tuft (behind the body) */
+    curve(c, sx + 42, sy + 21, sx + 48, sy + 27, sx + 46, sy + 36, 1.4, SHADE);
+    blob(c, sx + 46, sy + 37.5, 2, 2.6, 0, DARK);
 
-    /* Legs: far pair darker, near pair body colour; knee bands + hooves */
-    var legs = [[18, FAR], [38, FAR], [14, BODY], [33, BODY]];
-    for (var li = 0; li < legs.length; li++) {
+    /* Long legs: far pair darker, near pair body colour; knee bumps and dark hooves */
+    var legs = [[20, FAR], [39, FAR], [16, BODY], [35, BODY]];
+    var li;
+    for (li = 0; li < legs.length; li++) {
       var lx = sx + legs[li][0];
       limb(c, lx, sy + 26, lx, sy + 42, 3.2, legs[li][1]);
-      c.fillStyle = SHADE; c.fillRect(lx - 1.6, sy + 33, 3.2, 1.4);
+      blob(c, lx, sy + 34, 2, 1.6, 0, legs[li][1]);
+      c.fillStyle = SHADE; c.fillRect(lx - 1.6, sy + 35, 3.2, 1.2);
       c.fillStyle = DARK;
       c.beginPath(); c.ellipse(lx, sy + 43, 2.2, 1.6, 0, 0, Math.PI * 2); c.fill();
     }
 
-    /* Body: barrel that slopes down from the shoulders to the hips */
-    c.fillStyle = vGrad(c, sy + 14, sy + 31, BODY, SHADE);
-    c.beginPath(); c.ellipse(sx + 28, sy + 23, 15.5, 8.5, 0.16, 0, Math.PI * 2); c.fill();
+    /* Body: barrel that slopes down from the high shoulders to the hips */
+    function bodyPath() { c.beginPath(); c.ellipse(sx + 28, sy + 22.5, 15.5, 8.6, 0.16, 0, Math.PI * 2); }
+    c.fillStyle = vGrad(c, sy + 13, sy + 31, BODY, SHADE);
+    bodyPath(); c.fill();
+    c.save(); c.globalAlpha = 0.5; blob(c, sx + 28, sy + 29.5, 11, 2.4, 0.16, PALE); c.restore();
 
-    /* Neck: tapers upward, leans slightly forward */
-    c.fillStyle = vGrad(c, sy - 18, sy + 24, BODY, '#d9b764');
-    c.beginPath();
-    c.moveTo(sx + 13, sy + 24);
-    c.lineTo(sx + 7,  sy - 16);
-    c.lineTo(sx + 14, sy - 18);
-    c.lineTo(sx + 22, sy + 18);
-    c.closePath(); c.fill();
+    /* Long neck reaching up and forward, so the whole animal fits the frame */
+    function neckPath() {
+      c.beginPath();
+      c.moveTo(sx + 13, sy + 25);
+      c.lineTo(sx + 3.5, sy + 4);
+      c.lineTo(sx + 10.5, sy + 0.5);
+      c.lineTo(sx + 23, sy + 17);
+      c.closePath();
+    }
+    c.fillStyle = vGrad(c, sy, sy + 25, BODY, '#d9b764');
+    neckPath(); c.fill();
 
-    /* Mane: dark bristles along the back of the neck */
-    for (var gm = 0; gm < 10; gm++) {
-      var mx = sx + 14.6 + gm * 0.82, my = sy - 17 + gm * 3.9;
-      limb(c, mx, my, mx + 2.4, my - 1.2, 1.5, DARK);
+    /* Short dark mane bristling along the back of the neck */
+    var gm;
+    for (gm = 0; gm < 9; gm++) {
+      var mx = sx + 11.5 + gm * 1.42, my = sy + 1.8 + gm * 1.86;
+      limb(c, mx, my, mx + 1.9, my - 1.9, 1.5, DARK);
     }
 
-    /* Head + long muzzle */
-    blob(c, sx + 8, sy - 20, 7, 4.6, -0.15, BODY);
-    blob(c, sx + 1.5, sy - 18.5, 3.8, 2.8, -0.15, SHADE);
-    /* Ossicones */
-    limb(c, sx + 7, sy - 23, sx + 6.5, sy - 29, 1.5, SHADE);
-    limb(c, sx + 12, sy - 23, sx + 12.5, sy - 29, 1.5, SHADE);
-    blob(c, sx + 6.4, sy - 29.5, 1.8, 1.8, 0, DARK);
-    blob(c, sx + 12.6, sy - 29.5, 1.8, 1.8, 0, DARK);
-    /* Leaf ears */
-    blob(c, sx + 1, sy - 22, 3.4, 1.7, -0.6, BODY);
-    blob(c, sx + 15.5, sy - 22, 3.4, 1.7, 0.6, BODY);
-    blob(c, sx + 1, sy - 22, 1.9, 0.8, -0.6, '#cc9988');
-    blob(c, sx + 15.5, sy - 22, 1.9, 0.8, 0.6, '#cc9988');
+    /* Head: angled down and forward, long muzzle, pale chin */
+    blob(c, sx + 4, sy + 3.5, 6.6, 4.5, -0.5, BODY);
+    blob(c, sx - 2.4, sy + 7.8, 4, 2.9, -0.5, '#d8b068');
+    blob(c, sx - 2.2, sy + 9, 2.6, 1.3, -0.5, PALE);
+    /* Ossicones with dark knobs */
+    limb(c, sx + 6, sy - 0.5, sx + 5, sy - 6, 1.5, SHADE);
+    limb(c, sx + 11, sy - 1, sx + 11.5, sy - 6.5, 1.5, SHADE);
+    blob(c, sx + 4.8, sy - 6.8, 1.9, 1.9, 0, DARK);
+    blob(c, sx + 11.7, sy - 7.2, 1.9, 1.9, 0, DARK);
+    /* Leaf-shaped ears */
+    blob(c, sx - 0.5, sy - 0.5, 3.4, 1.7, -0.9, BODY);
+    blob(c, sx + 15, sy + 1.5, 3.4, 1.7, 0.35, BODY);
+    blob(c, sx - 0.5, sy - 0.5, 1.9, 0.8, -0.9, '#cc9988');
+    blob(c, sx + 15, sy + 1.5, 1.9, 0.8, 0.35, '#cc9988');
 
-    /* Patches: irregular polygons clipped to body and neck */
-    c.fillStyle = SHADE;
+    /* Patches: irregular polygons clipped to the body and the neck */
+    c.fillStyle = PATCH;
     function patch(cx, cy, r, sides) {
       c.beginPath();
-      for (var i = 0; i < sides; i++) {
+      var i;
+      for (i = 0; i < sides; i++) {
         var a = (i / sides) * Math.PI * 2 + (cx * 0.3);
         var rr = r * (0.78 + 0.22 * Math.sin(cx + cy + i));
         var px = cx + Math.cos(a) * rr, py = cy + Math.sin(a) * rr;
@@ -3765,202 +3927,211 @@
       }
       c.closePath(); c.fill();
     }
-    c.save();
-    c.beginPath(); c.ellipse(sx + 28, sy + 23, 15.5, 8.5, 0.16, 0, Math.PI * 2); c.clip();
-    patch(sx + 17, sy + 19, 3.4, 6); patch(sx + 24, sy + 16, 3.1, 5);
-    patch(sx + 31, sy + 20, 3.5, 6); patch(sx + 38, sy + 21, 3.0, 5);
-    patch(sx + 21, sy + 26, 2.9, 6); patch(sx + 29, sy + 28, 3.1, 5);
-    patch(sx + 38, sy + 28, 2.4, 5); patch(sx + 42, sy + 24, 2.2, 5);
+    c.save(); bodyPath(); c.clip();
+    patch(sx + 17, sy + 19, 3.4, 6); patch(sx + 24, sy + 15.5, 3.1, 5);
+    patch(sx + 31, sy + 19.5, 3.5, 6); patch(sx + 38, sy + 21, 3.0, 5);
+    patch(sx + 21, sy + 25, 2.9, 6); patch(sx + 29, sy + 26.5, 3.1, 5);
+    patch(sx + 38, sy + 27.5, 2.4, 5); patch(sx + 42.5, sy + 23.5, 2.2, 5);
     c.restore();
-    c.save();
-    c.beginPath();
-    c.moveTo(sx + 13, sy + 24); c.lineTo(sx + 7, sy - 16);
-    c.lineTo(sx + 14, sy - 18); c.lineTo(sx + 22, sy + 18);
-    c.closePath(); c.clip();
-    patch(sx + 14, sy + 14, 2.6, 5); patch(sx + 11, sy + 4, 2.3, 5);
-    patch(sx + 13, sy - 5, 2.1, 5); patch(sx + 10, sy - 12, 1.9, 5);
-    patch(sx + 17, sy + 8, 1.6, 5);
+    c.save(); neckPath(); c.clip();
+    patch(sx + 15, sy + 19, 2.6, 5); patch(sx + 11.5, sy + 13, 2.3, 5);
+    patch(sx + 14.5, sy + 9, 1.9, 5); patch(sx + 8, sy + 7.5, 2.1, 5);
+    patch(sx + 10, sy + 3, 1.6, 5); patch(sx + 18.5, sy + 14.5, 1.6, 5);
     c.restore();
     /* Upper-leg patches */
-    for (var lp = 0; lp < legs.length; lp++) {
-      c.fillStyle = SHADE; c.fillRect(sx + legs[lp][0] - 1.5, sy + 28, 3, 2);
+    var lp;
+    for (lp = 0; lp < legs.length; lp++) {
+      c.fillStyle = PATCH; c.fillRect(sx + legs[lp][0] - 1.5, sy + 27.5, 3, 2.2);
     }
 
-    /* Face */
-    realEye(c, sx + 9, sy - 19.5, 1.5, '#3a2010');
+    /* Face: big dark eye with lashes, nostril, gentle mouth */
+    realEye(c, sx + 4.6, sy + 3.2, 1.5, '#3a2010');
     c.strokeStyle = '#1a1a1a'; c.lineWidth = 0.6;
     c.beginPath();
-    c.moveTo(sx + 8.2, sy - 21.3); c.lineTo(sx + 7.5, sy - 22.4);
-    c.moveTo(sx + 9.4, sy - 21.6); c.lineTo(sx + 9.3, sy - 22.8);
+    c.moveTo(sx + 3.6, sy + 1.4); c.lineTo(sx + 2.8, sy + 0.4);
+    c.moveTo(sx + 5, sy + 1.2); c.lineTo(sx + 4.9, sy + 0);
     c.stroke();
     c.fillStyle = '#3a2010';
-    c.beginPath(); c.arc(sx + 0.4, sy - 18.4, 0.6, 0, Math.PI * 2); c.fill();
-    curve(c, sx - 0.2, sy - 16.4, sx + 1.4, sy - 15.4, sx + 3, sy - 16.2, 0.6, '#7a3838');
+    c.beginPath(); c.arc(sx - 4.2, sy + 7.2, 0.6, 0, Math.PI * 2); c.fill();
+    curve(c, sx - 4.6, sy + 9.4, sx - 2.8, sy + 10.4, sx - 1, sy + 9.6, 0.6, '#7a3838');
   }
 
   /* ---- Zebra: horse body, upright striped mane, contour-following stripes ---- */
   function drawZebraSprite(c, sx, sy) {
-    var WHITE = '#fafafa', GRAY = '#d4d4d4', FAR = '#c4c4c4';
+    var WHITE = '#fafafa', GRAY = '#dcdcdc', FAR = '#c8c8c8';
     var BLACK = ANIMAL_PALETTES.zebra.shade;
-    groundShadow(c, sx + 26, sy + 45, 18);
+    groundShadow(c, sx + 26, sy + 45, 19, 3);
 
-    /* Tail: white cord with a black tuft */
-    curve(c, sx + 42, sy + 22, sx + 48, sy + 30, sx + 45, sy + 38, 2, WHITE);
-    blob(c, sx + 45, sy + 40, 2.3, 3.2, 0, BLACK);
+    /* Tail: short cord ending in a black tuft */
+    curve(c, sx + 42, sy + 21, sx + 48, sy + 28, sx + 45.5, sy + 37, 1.8, WHITE);
+    blob(c, sx + 45.5, sy + 39.5, 2.3, 3.4, 0, BLACK);
 
-    /* Legs: far pair grey, near pair white; black rings + hooves */
-    var legs = [[20, FAR], [38, FAR], [16, WHITE], [34, WHITE]];
-    for (var li = 0; li < legs.length; li++) {
+    /* Legs: far pair grey, near pair white; horizontal stripes ring the legs */
+    var legs = [[21, FAR], [38, FAR], [16, WHITE], [34, WHITE]];
+    var li;
+    for (li = 0; li < legs.length; li++) {
       var lx = sx + legs[li][0];
-      limb(c, lx, sy + 28, lx, sy + 42, 3.4, legs[li][1]);
+      limb(c, lx, sy + 28, lx, sy + 42, 3.5, legs[li][1]);
       c.fillStyle = BLACK;
-      c.fillRect(lx - 1.7, sy + 31.5, 3.4, 1.3);
-      c.fillRect(lx - 1.7, sy + 35, 3.4, 1.3);
-      c.fillRect(lx - 1.7, sy + 38.5, 3.4, 1.3);
+      c.fillRect(lx - 1.75, sy + 30.5, 3.5, 1.4);
+      c.fillRect(lx - 1.75, sy + 34, 3.5, 1.3);
+      c.fillRect(lx - 1.75, sy + 37.5, 3.5, 1.2);
       c.beginPath(); c.ellipse(lx, sy + 43, 2.3, 1.6, 0, 0, Math.PI * 2); c.fill();
     }
 
     /* Body */
+    function bodyPath() { c.beginPath(); c.ellipse(sx + 28, sy + 24, 15.5, 9.2, 0, 0, Math.PI * 2); }
     c.fillStyle = vGrad(c, sy + 15, sy + 33, WHITE, GRAY);
-    c.beginPath(); c.ellipse(sx + 28, sy + 24, 15, 9, 0, 0, Math.PI * 2); c.fill();
+    bodyPath(); c.fill();
+    /* Stripes: body stripes run down from the back and bend toward the rump; the belly stays white */
+    c.save(); bodyPath(); c.clip();
+    var bx = [21, 26, 31, 36];
+    var bi;
+    for (bi = 0; bi < bx.length; bi++) {
+      var t = bi / (bx.length - 1);
+      curve(c, sx + bx[bi] - 1.5, sy + 14, sx + bx[bi] - 1 + t * 2, sy + 22, sx + bx[bi] + 1.5 + t * 2.5, sy + 29.5, 2.6, BLACK);
+    }
+    /* rump stripes wrap around the hip */
+    curve(c, sx + 40.5, sy + 15.5, sx + 43.5, sy + 20, sx + 41.5, sy + 28, 2.2, BLACK);
+    curve(c, sx + 43.5, sy + 19, sx + 46, sy + 23, sx + 44.5, sy + 28.5, 1.8, BLACK);
+    c.restore();
 
-    /* Neck: wide and strong, rising to a big head */
+    /* Neck rising to the head */
     function neckPath() {
       c.beginPath();
-      c.moveTo(sx + 13, sy + 29); c.lineTo(sx + 8, sy + 10);
-      c.lineTo(sx + 20, sy + 6); c.lineTo(sx + 25, sy + 22);
+      c.moveTo(sx + 14, sy + 30); c.lineTo(sx + 8.5, sy + 10);
+      c.lineTo(sx + 19.5, sy + 6.5); c.lineTo(sx + 26, sy + 22);
       c.closePath();
     }
     c.fillStyle = WHITE; neckPath(); c.fill();
 
     /* Upright brush mane along the back of the neck: black with white bars */
-    for (var mi = 0; mi < 7; mi++) {
-      blob(c, sx + 18.5 + mi * 1.2, sy + 5 + mi * 2.5, 2.3, 3.6, -0.85, BLACK);
-    }
-    for (var wb = 0; wb < 3; wb++) {
-      limb(c, sx + 19.5 + wb * 2.5, sy + 8 + wb * 5.2, sx + 22.5 + wb * 2.5, sy + 6.6 + wb * 5.2, 0.9, WHITE);
-    }
-
-    /* Head: big dome + cheek + long muzzle angled down */
-    function headPath() { c.beginPath(); c.ellipse(sx + 11, sy + 11, 7.5, 6.5, 0, 0, Math.PI * 2); }
-    function muzzlePath() { c.beginPath(); c.ellipse(sx + 3.5, sy + 15.5, 7, 4.6, 0.3, 0, Math.PI * 2); }
-    c.fillStyle = WHITE; headPath(); c.fill(); muzzlePath(); c.fill();
-    /* Dark grey muzzle tip with nostril */
-    blob(c, sx - 1.5, sy + 17.6, 3.2, 2.6, 0.3, '#4a4648');
-    c.fillStyle = '#111';
-    c.beginPath(); c.arc(sx - 2.4, sy + 16.6, 0.65, 0, Math.PI * 2); c.fill();
-    curve(c, sx - 0.5, sy + 19.6, sx + 1.5, sy + 20.8, sx + 3.6, sy + 20.2, 0.6, '#2a2a2a');
-
-    /* Ears: tall, rounded tips, black rims */
-    function ear(x, y, lean) {
+    var mi;
+    for (mi = 0; mi < 7; mi++) {
+      var mx = sx + 18.6 + mi * 1.15, my = sy + 5.6 + mi * 2.5;
       c.fillStyle = BLACK;
-      c.beginPath(); c.moveTo(x - 2.6, y + 4.5); c.quadraticCurveTo(x + lean, y - 6.5, x + 3, y + 4.5); c.closePath(); c.fill();
-      c.fillStyle = WHITE;
-      c.beginPath(); c.moveTo(x - 1.7, y + 4); c.quadraticCurveTo(x + lean * 0.8, y - 4.6, x + 2.1, y + 4); c.closePath(); c.fill();
-      c.fillStyle = '#c99';
-      c.beginPath(); c.moveTo(x - 0.8, y + 3.6); c.quadraticCurveTo(x + lean * 0.5, y - 1.8, x + 1.2, y + 3.6); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(mx - 1.6, my + 2.6); c.lineTo(mx + 2.4, my - 2.2); c.lineTo(mx + 3.4, my + 1.6); c.closePath(); c.fill();
     }
-    ear(sx + 8.5, sy + 5, -0.6); ear(sx + 15, sy + 4, 0.9);
+    for (mi = 0; mi < 3; mi++) {
+      limb(c, sx + 20.4 + mi * 2.4, sy + 7.6 + mi * 5.1, sx + 22.6 + mi * 2.4, sy + 6.2 + mi * 5.1, 0.8, WHITE);
+    }
 
-    /* Stripes: body (curving over the rump), neck (diagonal), head, muzzle */
-    c.save();
-    c.beginPath(); c.ellipse(sx + 28, sy + 24, 15, 9, 0, 0, Math.PI * 2); c.clip();
-    var bx = [17, 22, 27, 32, 37, 41];
-    for (var bi = 0; bi < bx.length; bi++) {
-      var t = bi / (bx.length - 1);
-      curve(c, sx + bx[bi] - 1, sy + 13, sx + bx[bi] - 3 + t * 6, sy + 24, sx + bx[bi] + 1 + t * 3, sy + 35, 2.6, BLACK);
-    }
-    c.restore();
+    /* Head: skull plus a long muzzle angled down */
+    function headPath() { c.beginPath(); c.ellipse(sx + 11, sy + 11.5, 7.4, 6.4, 0, 0, Math.PI * 2); }
+    function muzzlePath() { c.beginPath(); c.ellipse(sx + 4, sy + 16, 6.6, 4.4, 0.35, 0, Math.PI * 2); }
+    c.fillStyle = WHITE; headPath(); c.fill(); muzzlePath(); c.fill();
+
+    /* Neck stripes slant from the mane down toward the throat */
     c.save(); neckPath(); c.clip();
-    for (var ni = 0; ni < 5; ni++) {
-      var ny = sy + 9 + ni * 4;
-      limb(c, sx + 6, ny + 1.6, sx + 26, ny - 2.4, 1.8, BLACK);
+    var ni;
+    for (ni = 0; ni < 4; ni++) {
+      var ny = sy + 9 + ni * 5.2;
+      limb(c, sx + 26, ny - 2.5, sx + 7, ny + 4.5, 2.2, BLACK);
     }
     c.restore();
+    /* Head stripes: forehead and cheek */
     c.save(); headPath(); c.clip();
-    curve(c, sx + 13, sy + 4, sx + 17, sy + 8, sx + 17.5, sy + 14, 1.8, BLACK);
-    curve(c, sx + 10, sy + 4.5, sx + 14, sy + 9, sx + 14.5, sy + 16, 1.5, BLACK);
-    curve(c, sx + 5, sy + 7, sx + 7, sy + 10, sx + 7.5, sy + 15, 1.2, BLACK);
+    curve(c, sx + 13.5, sy + 4.5, sx + 17, sy + 9, sx + 17.5, sy + 15, 1.9, BLACK);
+    curve(c, sx + 5.5, sy + 7.5, sx + 7.5, sy + 10.5, sx + 7.5, sy + 15, 1.2, BLACK);
     c.restore();
     c.save(); muzzlePath(); c.clip();
-    limb(c, sx + 7.5, sy + 11, sx + 6.5, sy + 20, 1.3, BLACK);
-    limb(c, sx + 4.5, sy + 11.5, sx + 3.6, sy + 20, 1.2, BLACK);
-    limb(c, sx + 1.6, sy + 12.5, sx + 1, sy + 20, 1.0, BLACK);
+    limb(c, sx + 6.5, sy + 12.5, sx + 5.5, sy + 20, 1.2, BLACK);
     c.restore();
+    /* Black muzzle tip with a nostril and a soft mouth line */
+    blob(c, sx - 1.2, sy + 18, 3.4, 2.7, 0.35, '#3a3638');
+    c.fillStyle = '#111';
+    c.beginPath(); c.arc(sx - 2.2, sy + 17, 0.7, 0, Math.PI * 2); c.fill();
+    curve(c, sx - 0.5, sy + 20.2, sx + 1.5, sy + 21.3, sx + 3.8, sy + 20.6, 0.6, '#2a2a2a');
 
-    /* Eye + lashes */
-    realEye(c, sx + 9.5, sy + 12, 1.8, '#2a1a10');
+    /* Ears: tall, rounded tips, black rims and pink insides */
+    function ear(x, y, lean) {
+      c.fillStyle = BLACK;
+      c.beginPath(); c.moveTo(x - 2.6, y + 4.5); c.quadraticCurveTo(x + lean, y - 6.2, x + 3, y + 4.5); c.closePath(); c.fill();
+      c.fillStyle = WHITE;
+      c.beginPath(); c.moveTo(x - 1.7, y + 4); c.quadraticCurveTo(x + lean * 0.8, y - 4.4, x + 2.1, y + 4); c.closePath(); c.fill();
+      c.fillStyle = '#d0a0a0';
+      c.beginPath(); c.moveTo(x - 0.8, y + 3.6); c.quadraticCurveTo(x + lean * 0.5, y - 1.6, x + 1.2, y + 3.6); c.closePath(); c.fill();
+    }
+    ear(sx + 8.5, sy + 5.5, -0.6); ear(sx + 14.5, sy + 4.5, 0.9);
+
+    /* Eye with lashes */
+    realEye(c, sx + 9.5, sy + 12.5, 1.8, '#2a1a10');
     c.strokeStyle = '#111'; c.lineWidth = 0.6;
     c.beginPath();
-    c.moveTo(sx + 8.4, sy + 9.9); c.lineTo(sx + 7.6, sy + 8.8);
-    c.moveTo(sx + 9.8, sy + 9.6); c.lineTo(sx + 9.8, sy + 8.4);
+    c.moveTo(sx + 8.4, sy + 10.4); c.lineTo(sx + 7.6, sy + 9.3);
+    c.moveTo(sx + 9.8, sy + 10.1); c.lineTo(sx + 9.8, sy + 8.9);
     c.stroke();
   }
 
   /* ---- Kangaroo: upright tripod on big feet and heavy tail, joey in pouch ---- */
   function drawKangarooSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.kangaroo;
-    var BODY = p.body, SHADE = p.shade, CREAM = p.accent;
-    groundShadow(c, sx + 26, sy + 45, 20);
-
-    /* Heavy tail resting on the ground behind */
-    curve(c, sx + 29, sy + 31, sx + 40, sy + 34, sx + 48, sy + 42, 7, SHADE);
-    curve(c, sx + 29, sy + 30, sx + 40, sy + 32, sx + 48, sy + 41, 5, BODY);
-
-    /* Far leg + foot */
-    blob(c, sx + 27, sy + 33, 6, 5.5, 0, SHADE);
-    blob(c, sx + 21, sy + 42, 10, 2.2, 0, SHADE);
-
-    /* Body: upright oval leaning back a little */
+    var BODY = p.body, SHADE = p.shade, CREAM = p.accent, JOEY = '#d9a673', DARK = '#4a2c14';
+    var LINE = 'rgba(74, 44, 20, 0.35)';
+    groundShadow(c, sx + 26, sy + 45, 22, 3);
+    /* Heavy tail: thick at the hips, resting on the ground behind */
+    c.fillStyle = vGrad(c, sy + 27, sy + 44, BODY, SHADE);
+    c.beginPath();
+    c.moveTo(sx + 24, sy + 28);
+    c.quadraticCurveTo(sx + 38, sy + 27, sx + 46, sy + 37);
+    c.quadraticCurveTo(sx + 49.5, sy + 41.5, sx + 46.5, sy + 44);
+    c.quadraticCurveTo(sx + 40, sy + 44.5, sx + 34, sy + 41);
+    c.quadraticCurveTo(sx + 28.5, sy + 38, sx + 23, sy + 38);
+    c.closePath(); c.fill();
+    curve(c, sx + 27, sy + 31.5, sx + 38, sy + 32, sx + 45.5, sy + 40.5, 0.9, LINE);
+    /* Far thigh + far foot flat on the ground */
+    blob(c, sx + 27, sy + 33, 6.5, 5.5, 0, SHADE);
+    blob(c, sx + 21, sy + 42.7, 9.5, 2, 0, SHADE);
+    /* Torso: pear-shaped, leaning a little forward; heavy hips */
     c.fillStyle = vGrad(c, sy + 10, sy + 40, BODY, SHADE);
-    c.beginPath(); c.ellipse(sx + 22, sy + 25, 9.5, 13, 0.22, 0, Math.PI * 2); c.fill();
-    /* Cream chest & belly */
-    blob(c, sx + 18.5, sy + 26, 5.5, 9.5, 0.22, CREAM);
-
-    /* Near thigh + lower leg + big long foot */
-    blob(c, sx + 23, sy + 34, 7, 5.6, 0, BODY);
-    limb(c, sx + 20, sy + 37, sx + 14, sy + 42, 3.6, BODY);
-    blob(c, sx + 17, sy + 42.6, 10.5, 2.3, 0, BODY);
-    c.fillStyle = SHADE;
-    c.beginPath(); c.arc(sx + 7, sy + 42.6, 1.1, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.arc(sx + 9.6, sy + 43.6, 1.0, 0, Math.PI * 2); c.fill();
-
-    /* Pouch with joey */
-    c.fillStyle = BODY;
-    c.beginPath(); c.ellipse(sx + 18.5, sy + 33, 6, 3.6, 0.1, 0, Math.PI); c.fill();
-    blob(c, sx + 18, sy + 30.5, 3, 2.8, 0, '#d9a673');
-    blob(c, sx + 16.4, sy + 27.6, 1, 1.9, -0.2, '#d9a673');
-    blob(c, sx + 19.8, sy + 27.6, 1, 1.9, 0.2, '#d9a673');
-    c.fillStyle = BODY;
-    c.beginPath(); c.ellipse(sx + 18.5, sy + 33.4, 6.2, 3.4, 0.1, 0, Math.PI); c.fill();
+    c.beginPath(); c.ellipse(sx + 20, sy + 25, 8, 12, -0.12, 0, Math.PI * 2); c.fill();
+    blob(c, sx + 23, sy + 33, 9, 7, 0, BODY);
+    /* Cream chest and belly */
+    blob(c, sx + 17, sy + 26, 5, 9.5, -0.12, CREAM);
+    /* Near thigh (big and muscular), shin and long foot */
+    blob(c, sx + 22.5, sy + 34, 7.5, 6, 0.1, BODY);
+    curve(c, sx + 17, sy + 31, sx + 26, sy + 30, sx + 29, sy + 36, 0.8, LINE);
+    limb(c, sx + 19.5, sy + 38.5, sx + 12.5, sy + 42, 3.8, BODY);
+    blob(c, sx + 13, sy + 42.8, 10, 2.3, 0, BODY);
+    c.fillStyle = DARK;
+    c.beginPath(); c.arc(sx + 3.6, sy + 43, 1.1, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(sx + 6.2, sy + 43.9, 0.9, 0, Math.PI * 2); c.fill();
+    /* Pouch with a peeking joey */
+    blob(c, sx + 17.4, sy + 29.6, 3.1, 2.9, 0, JOEY);
+    blob(c, sx + 15.6, sy + 26.8, 1, 1.9, -0.2, JOEY);
+    blob(c, sx + 19.2, sy + 26.8, 1, 1.9, 0.2, JOEY);
+    blob(c, sx + 15.6, sy + 26.9, 0.5, 1.1, -0.2, '#e8b8a8');
+    blob(c, sx + 19.2, sy + 26.9, 0.5, 1.1, 0.2, '#e8b8a8');
     c.fillStyle = '#1a1a1a';
-    c.beginPath(); c.arc(sx + 16.8, sy + 30.4, 0.6, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.arc(sx + 19.2, sy + 30.4, 0.6, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.arc(sx + 18, sy + 31.8, 0.5, 0, Math.PI * 2); c.fill();
-    curve(c, sx + 13, sy + 32.4, sx + 18.5, sy + 34.2, sx + 24, sy + 32.4, 0.9, SHADE);
-
-    /* Small arms held in front */
-    limb(c, sx + 17, sy + 20, sx + 11.5, sy + 24, 2.8, BODY);
-    limb(c, sx + 11.5, sy + 24, sx + 10, sy + 27, 2.8, BODY);
-    limb(c, sx + 19, sy + 22, sx + 13.5, sy + 26, 2.6, SHADE);
-    limb(c, sx + 13.5, sy + 26, sx + 12.5, sy + 29, 2.6, SHADE);
-
-    /* Neck + head with long muzzle */
-    limb(c, sx + 19, sy + 14, sx + 13, sy + 7.5, 6, BODY);
-    blob(c, sx + 11, sy + 7, 6.2, 5.2, 0.1, BODY);
-    blob(c, sx + 4, sy + 9.5, 5.2, 3.3, 0.3, BODY);
-    blob(c, sx + 4.5, sy + 10.8, 3.4, 1.6, 0.3, CREAM);
-    blob(c, sx - 0.4, sy + 10.4, 1.9, 1.5, 0.3, '#2a1a10');
-    /* Tall ears */
-    blob(c, sx + 10.5, sy - 0.5, 2.2, 6, -0.15, BODY);
-    blob(c, sx + 15.5, sy + 0.5, 2.2, 6, 0.3, BODY);
-    blob(c, sx + 10.5, sy - 0.2, 1.1, 4, -0.15, '#e8b8a8');
-    blob(c, sx + 15.5, sy + 0.8, 1.1, 4, 0.3, '#e8b8a8');
-    /* Eye */
-    realEye(c, sx + 9, sy + 6.5, 1.5, '#3a2010');
+    c.beginPath(); c.arc(sx + 16.2, sy + 29.4, 0.6, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(sx + 18.6, sy + 29.4, 0.6, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(sx + 17.4, sy + 30.8, 0.5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = BODY;
+    c.beginPath(); c.ellipse(sx + 17.5, sy + 32.4, 6.2, 3.6, 0.1, 0, Math.PI); c.fill();
+    curve(c, sx + 11.5, sy + 32.4, sx + 17.5, sy + 34.4, sx + 23.5, sy + 32.4, 0.9, SHADE);
+    /* Small arms held at the chest */
+    limb(c, sx + 18.5, sy + 21, sx + 13.5, sy + 24.5, 2.6, SHADE);
+    limb(c, sx + 13.5, sy + 24.5, sx + 12.8, sy + 28, 2.6, SHADE);
+    limb(c, sx + 16.5, sy + 19.5, sx + 11, sy + 23.5, 2.8, BODY);
+    limb(c, sx + 11, sy + 23.5, sx + 10.3, sy + 27, 2.8, BODY);
+    blob(c, sx + 10.2, sy + 28, 1.6, 1.3, 0, DARK);
+    blob(c, sx + 12.7, sy + 29, 1.4, 1.1, 0, DARK);
+    /* Long neck and deer-like head with a long muzzle */
+    limb(c, sx + 18, sy + 14.5, sx + 12, sy + 9.5, 5.6, BODY);
+    blob(c, sx + 10, sy + 9, 6.2, 4.9, 0.15, BODY);
+    blob(c, sx + 3.6, sy + 11.2, 4.8, 3.1, 0.3, BODY);
+    blob(c, sx + 4.2, sy + 12.6, 3.4, 1.5, 0.3, CREAM);
+    blob(c, sx - 0.6, sy + 11.2, 1.9, 1.5, 0.3, DARK);
+    curve(c, sx + 0.6, sy + 13.2, sx + 2.6, sy + 14.3, sx + 4.8, sy + 13.4, 0.6, SHADE);
+    /* Tall ears with pink insides */
+    blob(c, sx + 10.5, sy + 2.5, 2.1, 4.8, -0.15, BODY);
+    blob(c, sx + 15.5, sy + 3.3, 2.1, 4.8, 0.3, BODY);
+    blob(c, sx + 10.6, sy + 2.9, 1.05, 3.2, -0.15, '#e8b8a8');
+    blob(c, sx + 15.5, sy + 3.7, 1.05, 3.2, 0.3, '#e8b8a8');
+    /* Eye with a lash */
+    realEye(c, sx + 8.4, sy + 8.4, 1.4, '#3a2010');
     c.strokeStyle = '#1a1a1a'; c.lineWidth = 0.6;
-    c.beginPath(); c.moveTo(sx + 8.2, sy + 4.7); c.lineTo(sx + 7.5, sy + 3.7); c.stroke();
-    curve(c, sx + 1, sy + 12.4, sx + 3, sy + 13.6, sx + 5, sy + 12.6, 0.6, SHADE);
+    c.beginPath(); c.moveTo(sx + 7.6, sy + 6.7); c.lineTo(sx + 6.9, sy + 5.7); c.stroke();
   }
 
   /* ---- Unicorn: white horse, spiral horn, rainbow mane and tail ---- */
@@ -4050,66 +4221,74 @@
   /* ---- Sea otter: floating on its back, clam on its chest ---- */
   function drawSeaOtterSprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.seaOtter;
-    var BODY = p.body, SHADE = p.shade, TAN = p.accent;
-    /* Water: pale pool + ripples instead of a hard ground shadow */
-    c.save(); c.globalAlpha = 0.55;
-    blob(c, sx + 24, sy + 41, 26, 4.5, 0, '#8ecbe6');
+    var BODY = p.body, SHADE = p.shade, BELLY = '#8c6038', FACE = '#e6d6b4', FACE2 = '#cdb892';
+    var URCHIN = '#5a3a78', URCHIN2 = '#7a56a0';
+    /* Water: pale pool with ripples instead of a hard ground shadow */
+    c.save(); c.globalAlpha = 0.6;
+    blob(c, sx + 24, sy + 41, 27, 4.8, 0, '#7fc0e0');
     c.restore();
-    c.save(); c.globalAlpha = 0.8;
-    curve(c, sx - 2, sy + 44, sx + 10, sy + 42.4, sx + 20, sy + 44, 1, '#d8f0fa');
-    curve(c, sx + 26, sy + 44.4, sx + 36, sy + 42.8, sx + 50, sy + 44.4, 1, '#d8f0fa');
+    c.save(); c.globalAlpha = 0.85;
+    curve(c, sx - 3, sy + 44.2, sx + 9, sy + 42.2, sx + 19, sy + 44.2, 1, '#e4f4fc');
+    curve(c, sx + 27, sy + 44.6, sx + 37, sy + 42.6, sx + 51, sy + 44.6, 1, '#e4f4fc');
     c.restore();
-
-    /* Tail: flat paddle at the far right, half under the surface */
-    blob(c, sx + 45, sy + 36, 4.5, 2.2, 0.2, SHADE);
-
-    /* Body: long horizontal, belly up */
-    c.fillStyle = vGrad(c, sy + 24, sy + 42, BODY, SHADE);
-    c.beginPath(); c.ellipse(sx + 25, sy + 33, 19, 8.5, -0.06, 0, Math.PI * 2); c.fill();
-    blob(c, sx + 25, sy + 30.5, 13.5, 5, -0.06, TAN);
-
-    /* Hind feet sticking up at the right end (webbed flippers) */
-    blob(c, sx + 38.5, sy + 26, 3, 6.5, 0.45, SHADE);
-    blob(c, sx + 43, sy + 28.5, 2.8, 6, 0.7, BODY);
+    /* Flat tail at the far end, half under the surface */
+    blob(c, sx + 44.5, sy + 37, 5, 2.3, 0.15, SHADE);
+    /* Body: long, floating belly-up; dark wet fur with a lighter belly band */
+    c.fillStyle = vGrad(c, sy + 26, sy + 42, BELLY, SHADE);
+    c.beginPath(); c.ellipse(sx + 26, sy + 34, 18.5, 8.2, -0.05, 0, Math.PI * 2); c.fill();
+    c.save(); c.globalAlpha = 0.3; blob(c, sx + 25, sy + 29.2, 11, 1.8, -0.05, '#d8ac78'); c.restore();
+    furLine(c, sx + 30, sy + 36, sx + 33, sy + 37, SHADE, 0.7);
+    furLine(c, sx + 24, sy + 37.5, sx + 27, sy + 38.6, SHADE, 0.7);
+    /* Webbed hind flippers held up out of the water */
+    blob(c, sx + 38.5, sy + 25.5, 3, 6.8, 0.5, SHADE);
+    blob(c, sx + 43, sy + 28, 2.8, 6.2, 0.78, BODY);
     c.strokeStyle = SHADE; c.lineWidth = 0.6;
     c.beginPath();
-    c.moveTo(sx + 41.6, sy + 24.6); c.lineTo(sx + 44.6, sy + 23.4);
-    c.moveTo(sx + 42.6, sy + 25.6); c.lineTo(sx + 45.6, sy + 24.8);
+    c.moveTo(sx + 41.4, sy + 24.2); c.lineTo(sx + 44.8, sy + 23);
+    c.moveTo(sx + 42.6, sy + 25.3); c.lineTo(sx + 46, sy + 24.6);
+    c.moveTo(sx + 36.4, sy + 19.6); c.lineTo(sx + 37.2, sy + 22.6);
     c.stroke();
-
-    /* Head at the left end, raised */
-    blob(c, sx + 7, sy + 24, 8, 7.5, 0, BODY);
-    blob(c, sx + 5.5, sy + 26.5, 6, 4.4, 0, TAN);
+    blob(c, sx + 36.8, sy + 20.4, 1.6, 2.6, 0.5, SHADE);
+    /* Head raised at the near end: dark cap, pale face */
+    blob(c, sx + 8, sy + 24, 8.2, 7.4, 0, BODY);
+    c.fillStyle = vGrad(c, sy + 19, sy + 31, FACE, FACE2);
+    c.beginPath(); c.ellipse(sx + 6.5, sy + 25.5, 6.8, 5.4, 0, 0, Math.PI * 2); c.fill();
+    c.save(); c.globalAlpha = 0.8; blob(c, sx + 8, sy + 21.5, 5.2, 3, 0, FACE2); c.restore();
     /* Small round ears */
-    blob(c, sx + 1, sy + 19, 2.1, 2.1, 0, SHADE);
-    blob(c, sx + 13.5, sy + 18.5, 2.1, 2.1, 0, SHADE);
-    blob(c, sx + 1, sy + 19, 0.9, 0.9, 0, '#d9a0a0');
-    blob(c, sx + 13.5, sy + 18.5, 0.9, 0.9, 0, '#d9a0a0');
-    /* Nose, mouth, whiskers */
-    blob(c, sx + 0.8, sy + 25, 2.2, 1.6, 0, '#1a1a1a');
-    c.fillStyle = '#fff'; c.beginPath(); c.arc(sx + 0.3, sy + 24.5, 0.5, 0, Math.PI * 2); c.fill();
-    curve(c, sx + 1.5, sy + 26.8, sx + 4, sy + 29.2, sx + 7, sy + 27.2, 0.8, SHADE);
-    c.strokeStyle = '#f0e8d8'; c.lineWidth = 0.6;
+    blob(c, sx + 1.2, sy + 19.2, 2.1, 2.1, 0, SHADE);
+    blob(c, sx + 14.6, sy + 18.8, 2.1, 2.1, 0, SHADE);
+    blob(c, sx + 1.2, sy + 19.3, 0.9, 0.9, 0, '#c99090');
+    blob(c, sx + 14.6, sy + 18.9, 0.9, 0.9, 0, '#c99090');
+    /* Big black nose, mouth, white whiskers */
+    blob(c, sx + 0.6, sy + 25.6, 2.4, 1.8, 0, '#1a1a1a');
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(sx + 0, sy + 25.1, 0.55, 0, Math.PI * 2); c.fill();
+    curve(c, sx + 1.4, sy + 27.5, sx + 3.6, sy + 29.6, sx + 6.5, sy + 27.8, 0.8, SHADE);
+    c.strokeStyle = '#f4ecdc'; c.lineWidth = 0.65;
     c.beginPath();
-    c.moveTo(sx + 2, sy + 25.5); c.lineTo(sx - 6, sy + 24);
-    c.moveTo(sx + 2, sy + 26.5); c.lineTo(sx - 6, sy + 27.5);
-    c.moveTo(sx + 11, sy + 26); c.lineTo(sx + 18, sy + 24.5);
+    c.moveTo(sx + 2.4, sy + 26.2); c.lineTo(sx - 6, sy + 24.4);
+    c.moveTo(sx + 2.4, sy + 27.2); c.lineTo(sx - 6, sy + 28.2);
+    c.moveTo(sx + 11, sy + 26.6); c.lineTo(sx + 18.5, sy + 24.8);
+    c.moveTo(sx + 11, sy + 27.6); c.lineTo(sx + 18.5, sy + 28.4);
     c.stroke();
-    realEye(c, sx + 4.8, sy + 22.6, 1.5, '#3a2010');
-    realEye(c, sx + 10.4, sy + 22.4, 1.4, '#3a2010');
-
-    /* Front paws holding a clam on the chest */
-    blob(c, sx + 14.5, sy + 27.5, 3, 3.2, -0.4, BODY);
-    blob(c, sx + 22, sy + 27.5, 3, 3.2, 0.4, BODY);
-    blob(c, sx + 18.3, sy + 25.8, 4.6, 3.1, 0, '#e4dccc');
-    c.strokeStyle = '#a89a86'; c.lineWidth = 0.6;
+    realEye(c, sx + 4.4, sy + 23, 1.5, '#2a1a10');
+    realEye(c, sx + 10.6, sy + 22.8, 1.4, '#2a1a10');
+    /* Purple sea urchin held on the chest between the forepaws */
+    blob(c, sx + 18.6, sy + 25.6, 3.3, 3, 0, URCHIN);
+    c.strokeStyle = URCHIN2; c.lineWidth = 0.6;
+    var sp;
     c.beginPath();
-    c.moveTo(sx + 18.3, sy + 23); c.lineTo(sx + 18.3, sy + 28.6);
-    c.moveTo(sx + 16.2, sy + 23.6); c.lineTo(sx + 17, sy + 28.4);
-    c.moveTo(sx + 20.4, sy + 23.6); c.lineTo(sx + 19.6, sy + 28.4);
+    for (sp = 0; sp < 9; sp++) {
+      var sa = -2.9 + sp * 0.36;
+      c.moveTo(sx + 18.6 + Math.cos(sa) * 2.6, sy + 25.6 + Math.sin(sa) * 2.4);
+      c.lineTo(sx + 18.6 + Math.cos(sa) * 4.4, sy + 25.6 + Math.sin(sa) * 4.1);
+    }
     c.stroke();
-    blob(c, sx + 14.5, sy + 27.5, 1.6, 1.8, -0.4, SHADE);
-    blob(c, sx + 22, sy + 27.5, 1.6, 1.8, 0.4, SHADE);
+    blob(c, sx + 17.6, sy + 24.6, 0.9, 0.7, 0, '#9a7ac0');
+    /* Forepaws cupped around the urchin, dark pads */
+    blob(c, sx + 14.6, sy + 27.6, 3, 3.2, -0.4, BODY);
+    blob(c, sx + 22.6, sy + 27.6, 3, 3.2, 0.4, BODY);
+    blob(c, sx + 14.8, sy + 27.8, 1.5, 1.7, -0.4, SHADE);
+    blob(c, sx + 22.4, sy + 27.8, 1.5, 1.7, 0.4, SHADE);
   }
 
   /* ---- Frog: squat on a lily pad, bulging eyes on top, folded hind legs ---- */
@@ -4455,59 +4634,78 @@
      old sprite (ChandelierMonkey and ui.js rely on it). */
   function drawMonkeySprite(c, sx, sy) {
     var p = ANIMAL_PALETTES.monkey;
-    var TAN = p.accent, TAN_SH = '#dcb888';
-    groundShadow(c, sx + 22, sy + 45, 18);
-    /* Tail */
-    c.save(); c.strokeStyle = p.body; c.lineWidth = 3.4; c.lineCap = 'round';
+    var FUR = p.body, FURD = p.shade, TAN = p.accent, TAN_SH = '#dcb888', INK = '#4a2c14';
+    groundShadow(c, sx + 22, sy + 45, 18, 3);
+    /* Long tail curling up and over behind */
+    c.save(); c.strokeStyle = FUR; c.lineWidth = 3.2; c.lineCap = 'round';
     c.beginPath();
-    c.moveTo(sx + 33, sy + 34);
-    c.bezierCurveTo(sx + 50, sy + 34, sx + 54, sy + 18, sx + 44, sy + 14);
-    c.bezierCurveTo(sx + 39, sy + 12, sx + 38, sy + 18, sx + 42, sy + 19);
+    c.moveTo(sx + 32, sy + 35);
+    c.bezierCurveTo(sx + 48, sy + 36, sx + 54, sy + 18, sx + 44, sy + 12);
+    c.bezierCurveTo(sx + 38, sy + 9, sx + 36, sy + 17, sx + 41, sy + 18);
     c.stroke();
+    c.strokeStyle = FURD; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(sx + 44, sy + 34); c.bezierCurveTo(sx + 50, sy + 30, sx + 50, sy + 20, sx + 45, sy + 15); c.stroke();
     c.restore();
-    /* Far arm + hand */
-    limb(c, sx + 31, sy + 27, sx + 38, sy + 38, 4.4, p.shade);
-    blob(c, sx + 39, sy + 39.5, 2.8, 2.2, 0, TAN_SH);
-    /* Body */
-    c.fillStyle = vGrad(c, sy + 18, sy + 44, p.body, p.shade);
-    c.beginPath(); c.ellipse(sx + 23, sy + 31, 12, 12, 0, 0, Math.PI * 2); c.fill();
-    /* Belly */
+    /* Far arm reaching down to the ground */
+    limb(c, sx + 30, sy + 26, sx + 38, sy + 39, 4.2, FURD);
+    blob(c, sx + 39, sy + 41, 3, 2.2, 0, TAN_SH);
+    /* Body: sitting, hunched */
+    c.fillStyle = vGrad(c, sy + 17, sy + 44, FUR, FURD);
+    c.beginPath(); c.ellipse(sx + 23, sy + 30.5, 12, 12.5, 0, 0, Math.PI * 2); c.fill();
+    /* Pale chest and belly */
     c.fillStyle = vGrad(c, sy + 24, sy + 42, TAN, TAN_SH);
-    c.beginPath(); c.ellipse(sx + 22, sy + 33, 7.5, 8, 0, 0, Math.PI * 2); c.fill();
-    /* Legs folded in front, feet on the baseline */
-    c.fillStyle = p.body;
-    c.beginPath(); c.ellipse(sx + 15, sy + 38.5, 6, 4.5, 0.2, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 21, sy + 33, 7, 8.5, 0, 0, Math.PI * 2); c.fill();
+    /* Legs folded up in front, feet with long toes on the baseline */
+    c.fillStyle = FUR;
+    c.beginPath(); c.ellipse(sx + 15, sy + 38, 6.2, 4.8, 0.25, 0, Math.PI * 2); c.fill();
     c.beginPath(); c.ellipse(sx + 30, sy + 38.5, 6, 4.5, -0.2, 0, Math.PI * 2); c.fill();
-    blob(c, sx + 12, sy + 43, 4.2, 2, 0, TAN);
-    blob(c, sx + 32, sy + 43, 4.2, 2, 0, TAN);
-    /* Near arm + hand */
-    limb(c, sx + 15, sy + 27, sx + 8, sy + 39, 4.4, p.body);
-    blob(c, sx + 7, sy + 41, 2.9, 2.3, 0, TAN);
-    /* Ears */
-    blob(c, sx + 2.5, sy + 14, 3.4, 3.4, 0, p.body);
-    blob(c, sx + 22, sy + 14, 3.4, 3.4, 0, p.body);
-    blob(c, sx + 2.5, sy + 14, 1.8, 1.8, 0, TAN);
-    blob(c, sx + 22, sy + 14, 1.8, 1.8, 0, TAN);
-    /* Head */
-    c.fillStyle = vGrad(c, sy + 4, sy + 26, p.body, p.shade);
-    c.beginPath(); c.arc(sx + 12, sy + 15, 10.2, 0, Math.PI * 2); c.fill();
-    /* Hair tuft */
-    c.fillStyle = p.shade;
-    c.beginPath(); c.moveTo(sx + 10, sy + 6); c.quadraticCurveTo(sx + 12, sy + 1, sx + 14, sy + 5.5); c.closePath(); c.fill();
-    /* Face mask: two cheek lobes + muzzle */
-    c.fillStyle = TAN;
-    c.beginPath(); c.arc(sx + 8.5, sy + 14.5, 4.6, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.arc(sx + 15.5, sy + 14.5, 4.6, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.ellipse(sx + 12, sy + 19.5, 5.8, 4.2, 0, 0, Math.PI * 2); c.fill();
+    blob(c, sx + 11.5, sy + 43, 4.6, 1.9, 0, TAN);
+    blob(c, sx + 32.5, sy + 43, 4.4, 1.9, 0, TAN);
+    c.strokeStyle = INK; c.lineWidth = 0.5;
+    c.beginPath();
+    c.moveTo(sx + 8.6, sy + 42.6); c.lineTo(sx + 8.6, sy + 44.2);
+    c.moveTo(sx + 10.6, sy + 42.3); c.lineTo(sx + 10.6, sy + 44.4);
+    c.moveTo(sx + 12.6, sy + 42.3); c.lineTo(sx + 12.6, sy + 44.4);
+    c.stroke();
+    /* Near arm resting on the knee, hand holding a banana */
+    limb(c, sx + 15, sy + 26, sx + 8.5, sy + 36, 4.2, FUR);
+    blob(c, sx + 7.5, sy + 37.5, 3, 2.4, 0, TAN);
+    c.save(); c.strokeStyle = '#f2d04a'; c.lineWidth = 2.4; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(sx + 4, sy + 40.5); c.quadraticCurveTo(sx + 7, sy + 33.5, sx + 12, sy + 33.5); c.stroke();
+    c.strokeStyle = '#c8a030'; c.lineWidth = 0.7;
+    c.beginPath(); c.moveTo(sx + 4.6, sy + 39.4); c.quadraticCurveTo(sx + 7.2, sy + 34.6, sx + 11.6, sy + 34.4); c.stroke();
+    c.restore();
+    blob(c, sx + 4, sy + 40.8, 0.8, 0.8, 0, '#6a4a18');
+    blob(c, sx + 7.6, sy + 37.2, 2.2, 1.6, -0.5, TAN);
+    /* Round ears, pale inside */
+    blob(c, sx + 3, sy + 15, 3.4, 3.4, 0, FUR);
+    blob(c, sx + 21.5, sy + 15, 3.4, 3.4, 0, FUR);
+    blob(c, sx + 3.2, sy + 15.2, 1.9, 1.9, 0, TAN);
+    blob(c, sx + 21.3, sy + 15.2, 1.9, 1.9, 0, TAN);
+    /* Head with a dark cap */
+    c.fillStyle = vGrad(c, sy + 5, sy + 27, FUR, FURD);
+    c.beginPath(); c.arc(sx + 12, sy + 16, 10, 0, Math.PI * 2); c.fill();
+    c.fillStyle = FURD;
+    c.beginPath(); c.moveTo(sx + 9, sy + 7); c.quadraticCurveTo(sx + 12, sy + 1.5, sx + 15.5, sy + 7); c.closePath(); c.fill();
+    /* Heart-shaped bare face: brow + cheeks + muzzle */
+    c.fillStyle = vGrad(c, sy + 10, sy + 25, TAN, TAN_SH);
+    c.beginPath();
+    c.moveTo(sx + 12, sy + 11);
+    c.quadraticCurveTo(sx + 5, sy + 8.5, sx + 4.2, sy + 15);
+    c.quadraticCurveTo(sx + 4.5, sy + 22.5, sx + 12, sy + 24.5);
+    c.quadraticCurveTo(sx + 19.5, sy + 22.5, sx + 19.8, sy + 15);
+    c.quadraticCurveTo(sx + 19, sy + 8.5, sx + 12, sy + 11);
+    c.closePath(); c.fill();
+    /* Brow ridge */
+    curve(c, sx + 6.5, sy + 13, sx + 12, sy + 10.5, sx + 17.5, sy + 13, 0.9, FURD);
     /* Eyes */
-    realEye(c, sx + 9, sy + 14.5, 1.8, '#3a2010');
-    realEye(c, sx + 15, sy + 14.5, 1.8, '#3a2010');
-    /* Nostrils + smile */
-    c.fillStyle = '#5a3818';
-    c.beginPath(); c.arc(sx + 10.8, sy + 19.2, 0.7, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.arc(sx + 13.2, sy + 19.2, 0.7, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = '#5a3818'; c.lineWidth = 0.9; c.lineCap = 'round';
-    c.beginPath(); c.moveTo(sx + 9, sy + 21.4); c.quadraticCurveTo(sx + 12, sy + 23.6, sx + 15, sy + 21.4); c.stroke();
+    realEye(c, sx + 9, sy + 15.2, 1.7, '#3a2010');
+    realEye(c, sx + 15, sy + 15.2, 1.7, '#3a2010');
+    /* Nostrils and a smile */
+    c.fillStyle = INK;
+    c.beginPath(); c.arc(sx + 10.9, sy + 19.6, 0.7, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(sx + 13.1, sy + 19.6, 0.7, 0, Math.PI * 2); c.fill();
+    curve(c, sx + 9, sy + 21.6, sx + 12, sy + 23.8, sx + 15, sy + 21.6, 0.9, INK);
   }
 
   /* Friendly green alien: big domed head with two pink-tipped antennae,
