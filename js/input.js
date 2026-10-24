@@ -214,12 +214,12 @@
       var leftCx = lStrip / 2;
       var rightCx = canvasLogicalW() - rStrip / 2;
       var cy = canvasLogicalH() / 2;
-      /* D-pad sized off the actual strip width so a wider strip gives
-         larger, easier-to-hit buttons on iPhone. The 0.85 factor shrinks
-         the buttons 15% from the previous layout at Momoko's request so
-         they sit more comfortably in the left strip. */
-      var pad = Math.floor(Math.min(54, Math.floor(lStrip / 4.5)) * 0.85);
-      var spacing = Math.floor(Math.min(66, Math.floor(lStrip / 3.8)) * 0.85);
+      /* Same D-pad geometry as Momoko Treehouse so the controls sit in
+         identical spots across all the Momoko games. Diagonal neighbours
+         sit spacing*sqrt(2) apart, so spacing must be at least
+         (2*pad + gap)/sqrt(2) or the circles overlap. */
+      var pad = Math.min(40, Math.floor(lStrip / 6.5));
+      var spacing = Math.ceil((2 * pad + 8) / Math.SQRT2);
       touchButtons.up =    { x: leftCx, y: cy - spacing, r: pad, active: false };
       touchButtons.down =  { x: leftCx, y: cy + spacing, r: pad, active: false };
       touchButtons.left =  { x: leftCx - spacing, y: cy, r: pad, active: false };
@@ -367,7 +367,7 @@
     var centerY = (touchButtons.up.y + touchButtons.down.y) / 2;
     c.fillStyle = '#2a1436';
     c.beginPath();
-    c.arc(centerX, centerY, 26, 0, Math.PI * 2);
+    c.arc(centerX, centerY, Math.max(8, touchButtons.up.r * 0.4), 0, Math.PI * 2);
     c.fill();
     c.strokeStyle = 'rgba(232,184,96,0.5)';
     c.lineWidth = 2;
@@ -380,7 +380,7 @@
       var b = touchButtons[btns[i]];
       paintRoundButton(c, b, b.active ? ['#a868d8', '#6a34a0'] : ['#6c3a9c', '#3e1a64'], '#e8b860');
       c.fillStyle = b.active ? '#ffffff' : '#fbe8ff';
-      c.font = 'bold 30px "M PLUS Rounded 1c", sans-serif';
+      c.font = 'bold ' + Math.round(b.r * 0.78) + 'px "M PLUS Rounded 1c", sans-serif';
       c.textAlign = 'center';
       c.textBaseline = 'middle';
       c.fillText(arrows[i], b.x, b.y + (b.active ? 2 : 0));
@@ -390,7 +390,7 @@
     var ab = touchButtons.action;
     paintRoundButton(c, ab, ab.active ? ['#ffb8e4', '#f052b0'] : ['#ff8ad0', '#d0308c'], '#ffe6a0');
     c.fillStyle = '#ffffff';
-    c.font = 'bold 24px "M PLUS Rounded 1c", sans-serif';
+    c.font = 'bold 26px "M PLUS Rounded 1c", sans-serif';
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.shadowColor = 'rgba(110, 10, 70, 0.6)';
