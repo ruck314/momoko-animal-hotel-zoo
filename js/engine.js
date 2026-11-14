@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.20.0';
+  Game.VERSION = 'v0.21.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -668,13 +668,63 @@
 
   /* Back half of the corridor: ceiling, moulding, wallpaper, windows,
      wainscot and floor. Drawn before the level's decorations. */
+  /* Per-wing light: lamp colour, the shade the unlit wall falls into,
+     and the tint the window view throws into the corridor ('r,g,b'). */
+  var WING_LIGHT = {
+    lobby:  { light: '255,226,170', shade: '74,26,44',  spill: '255,176,150' },
+    safari: { light: '255,222,160', shade: '96,48,30',  spill: '255,196,120' },
+    wild:   { light: '255,214,150', shade: '8,30,34',   spill: '150,190,255' },
+    magic:  { light: '255,236,250', shade: '58,36,128', spill: '255,206,250' }
+  };
+
+  /* The wall is static per floor, so it is baked in screen-wide tiles
+     (three slots, re-used as the camera moves) with its lighting on
+     top; a frame then blits at most two tiles instead of repainting
+     the wallpaper, mouldings and gradients. */
+  var bakeCamX = 0;
+  function corridorTilePaint(b) {
+    var wing = (level && level.wing) || 'lobby';
+    paintCorridorWall(b, bakeCamX, WINGS[wing], wing, level.floorY);
+    paintCorridorLight(b, bakeCamX, WINGS[wing], wing, level.floorY);
+  }
+
   function drawHotelBackdrop() {
     var wing = (level && level.wing) || 'lobby';
     var th = WINGS[wing];
     var camX = camera.x;
     var floorY = level.floorY - camera.y;
     var c = ctx;
-    var i, sx, wxs;
+    var i, sx;
+
+    if (camera.y === 0) {
+      var d = Game.fx.dpr();
+      var t0 = Math.floor(camX / W);
+      for (i = t0; i <= t0 + 1; i++) {
+        var tx = Math.round((i * W - camX) * d) / d;
+        if (tx >= W || tx <= -W) continue;
+        bakeCamX = i * W;
+        Game.fx.bake(c, 'corr' + (((i % 3) + 3) % 3), currentZone + '|' + i + '|' + Game.fx.key(),
+                     tx, 0, W, floorY, corridorTilePaint);
+      }
+    } else {
+      paintCorridorWall(c, camX, th, wing, floorY);
+    }
+
+    /* Windows (live: their views drift with the camera and twinkle) */
+    var wins = level.windows || [];
+    for (i = 0; i < wins.length; i++) {
+      sx = wins[i] - camX;
+      if (sx < -80 || sx > W + 80) continue;
+      drawHotelWindow(sx, wins[i], th, wing);
+    }
+
+    paintCorridorFloor(c, camX, th, wing, floorY);
+  }
+
+  /* Ceiling, moulding, wallpaper, wainscot and skirting for the screen
+     whose left edge is world x `camX`. */
+  function paintCorridorWall(c, camX, th, wing, floorY) {
+    var sx, wxs;
 
     /* Ceiling plane, lit from below */
     var cg = c.createLinearGradient(0, 0, 0, CEIL_Y);
@@ -716,14 +766,6 @@
     c.fillStyle = th.trim;
     c.fillRect(0, CEIL_Y + 17, W, 3);
 
-    /* Windows */
-    var wins = level.windows || [];
-    for (i = 0; i < wins.length; i++) {
-      sx = wins[i] - camX;
-      if (sx < -80 || sx > W + 80) continue;
-      drawHotelWindow(sx, wins[i], th, wing);
-    }
-
     /* Wainscot: chair rail, raised panels, skirting */
     c.fillStyle = th.wains;
     c.fillRect(0, RAIL_Y, W, BASE_Y - RAIL_Y);
@@ -748,8 +790,140 @@
     c.fillRect(0, BASE_Y, W, floorY - BASE_Y);
     c.fillStyle = th.trimLo;
     c.fillRect(0, BASE_Y, W, 2);
+  }
 
-    /* Floor */
+  /* Baked over a wall tile: recessed downlights that scallop the wall,
+     shade pooling between them, occlusion under the mouldings and the
+     glow each window spills into the corridor. */
+  function paintCorridorLight(c, camX, th, wing, floorY) {
+    var FX = Game.FX, wl = WING_LIGHT[wing] || WING_LIGHT.lobby;
+    var wxs, sx, g, i;
+    var wins = level.windows || [];
+    if (FX.shadows) {
+      /* Shade mask at half resolution, with holes punched where light lands */
+      var m = Game.fx.slot('corrMask', W / 2, Math.ceil(floorY / 2)), mc = m.ctx;
+      mc.setTransform(0.5, 0, 0, 0.5, 0, 0);
+      mc.globalCompositeOperation = 'source-over';
+      mc.clearRect(0, 0, W, floorY);
+      g = mc.createLinearGradient(0, CEIL_Y, 0, floorY);
+      g.addColorStop(0, 'rgba(' + wl.shade + ',0.6)');
+      g.addColorStop(0.5, 'rgba(' + wl.shade + ',0.4)');
+      g.addColorStop(1, 'rgba(' + wl.shade + ',0.5)');
+      mc.fillStyle = g;
+      mc.fillRect(0, CEIL_Y, W, floorY - CEIL_Y);
+      mc.globalCompositeOperation = 'destination-out';
+      for (wxs = Math.floor(camX / 160) * 160 - 80; wxs < camX + W + 240; wxs += 160) {
+        sx = wxs - camX;
+        mc.save();
+        mc.translate(sx, WALL_Y - 30);
+        mc.scale(0.46, 1);
+        g = mc.createRadialGradient(0, 0, 20, 0, 0, 300);
+        g.addColorStop(0, 'rgba(0,0,0,1)');
+        g.addColorStop(0.6, 'rgba(0,0,0,0.8)');
+        g.addColorStop(0.82, 'rgba(0,0,0,0.25)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        mc.fillStyle = g;
+        mc.fillRect(-310, 0, 620, 310);
+        mc.restore();
+      }
+      for (i = 0; i < wins.length; i++) {
+        sx = wins[i] - camX;
+        if (sx < -260 || sx > W + 260) continue;
+        mc.save();
+        mc.translate(sx, 190);
+        mc.scale(0.7, 1);
+        g = mc.createRadialGradient(0, 0, 30, 0, 0, 250);
+        g.addColorStop(0, 'rgba(0,0,0,0.8)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        mc.fillStyle = g;
+        mc.fillRect(-260, -250, 520, 500);
+        mc.restore();
+      }
+      mc.globalCompositeOperation = 'source-over';
+      c.save();
+      c.globalCompositeOperation = 'multiply';
+      c.drawImage(m.cv, 0, 0, W, Math.ceil(floorY / 2) * 2);
+      c.restore();
+      /* Occlusion tucked under the crown moulding, on the chair rail and
+         along the skirting */
+      g = c.createLinearGradient(0, WALL_Y, 0, WALL_Y + 22);
+      g.addColorStop(0, 'rgba(' + wl.shade + ',0.5)');
+      g.addColorStop(1, 'rgba(' + wl.shade + ',0)');
+      c.fillStyle = g;
+      c.fillRect(0, WALL_Y, W, 22);
+      g = c.createLinearGradient(0, RAIL_Y - 12, 0, RAIL_Y);
+      g.addColorStop(0, 'rgba(' + wl.shade + ',0)');
+      g.addColorStop(1, 'rgba(' + wl.shade + ',0.3)');
+      c.fillStyle = g;
+      c.fillRect(0, RAIL_Y - 12, W, 12);
+      g = c.createLinearGradient(0, RAIL_Y + 10, 0, RAIL_Y + 24);
+      g.addColorStop(0, 'rgba(0,0,0,0.3)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = g;
+      c.fillRect(0, RAIL_Y + 10, W, 14);
+      g = c.createLinearGradient(0, BASE_Y - 14, 0, BASE_Y);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,0.28)');
+      c.fillStyle = g;
+      c.fillRect(0, BASE_Y - 14, W, 14);
+    }
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    for (wxs = Math.floor(camX / 160) * 160 - 80; wxs < camX + W + 240; wxs += 160) {
+      sx = wxs - camX;
+      if (FX.bloom) {
+        /* Scallop of warm light down the wall */
+        c.save();
+        c.beginPath();
+        c.rect(0, WALL_Y, W, RAIL_Y - WALL_Y);
+        c.clip();
+        c.translate(sx, WALL_Y - 26);
+        c.scale(0.44, 1);
+        g = c.createRadialGradient(0, 0, 10, 0, 0, 250);
+        g.addColorStop(0, 'rgba(' + wl.light + ',0.4)');
+        g.addColorStop(0.6, 'rgba(' + wl.light + ',0.2)');
+        g.addColorStop(0.8, 'rgba(' + wl.light + ',0.06)');
+        g.addColorStop(1, 'rgba(' + wl.light + ',0)');
+        c.fillStyle = g;
+        c.fillRect(-260, 0, 520, 260);
+        c.restore();
+        /* ...and a softer pool on the wainscot below it */
+        c.save();
+        c.translate(sx, RAIL_Y + 10);
+        c.scale(1, 0.6);
+        g = c.createRadialGradient(0, 0, 4, 0, 0, 90);
+        g.addColorStop(0, 'rgba(' + wl.light + ',0.14)');
+        g.addColorStop(1, 'rgba(' + wl.light + ',0)');
+        c.fillStyle = g;
+        c.fillRect(-90, 0, 180, 150);
+        c.restore();
+      }
+    }
+    if (FX.bloom) {
+      /* Window glow spilling onto the wall and down to the floor */
+      for (i = 0; i < wins.length; i++) {
+        sx = wins[i] - camX;
+        if (sx < -220 || sx > W + 220) continue;
+        Game.fx.glow(c, sx, 176, 190, wl.spill, 0.3, 210);
+        Game.fx.glow(c, sx, 372, 150, wl.spill, 0.2, 90);
+      }
+    }
+    c.restore();
+    /* The downlight fittings themselves, recessed in the ceiling */
+    for (wxs = Math.floor(camX / 160) * 160 - 80; wxs < camX + W + 240; wxs += 160) {
+      sx = wxs - camX;
+      c.fillStyle = th.trimLo;
+      c.beginPath(); c.ellipse(sx, CEIL_Y - 9, 11, 3.6, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#fff4d0';
+      c.beginPath(); c.ellipse(sx, CEIL_Y - 9, 8, 2.4, 0, 0, Math.PI * 2); c.fill();
+      Game.fx.glow(c, sx, CEIL_Y - 8, 26, wl.light, 0.7, 12);
+    }
+  }
+
+  /* Floor, runner and the contact shadow against the wall (live: the
+     marble joints fan out from the middle of the screen). */
+  function paintCorridorFloor(c, camX, th, wing, floorY) {
+    var sx, wxs;
     var fH = H - floorY;
     if (th.floor === 'marble') {
       var mg = c.createLinearGradient(0, floorY, 0, H);
@@ -933,11 +1107,16 @@
       c.restore();
     }
     c.restore();
+    var wl = WING_LIGHT[wing] || WING_LIGHT.lobby;
     for (i = 0; i < lights.length; i++) {
-      if (!lights[i].pendant) continue;
       sx = lights[i].x - camera.x;
-      if (sx < -40 || sx > W + 40) continue;
-      drawPendant(c, th.lamp, sx, lights[i].y, th);
+      if (sx < -90 || sx > W + 90) continue;
+      if (lights[i].pendant) {
+        drawPendant(c, th.lamp, sx, lights[i].y, th);
+        Game.fx.glow(c, sx, lights[i].y + 14, 44, wl.light, 0.5 * flick);
+      } else {
+        Game.fx.glow(c, sx, lights[i].y, 96, wl.light, 0.34 * flick);
+      }
     }
   }
 
@@ -1877,7 +2056,7 @@
     }
 
     /* Player */
-    if (player) player.draw(ctx, camera.x, camera.y);
+    if (player) drawHero();
 
     /* Shop-cart carry overlay — bobbing item icons floating above Momoko's
        head while she walks her purchases home. */
@@ -1895,12 +2074,92 @@
       particles[pa].draw(ctx, camera.x, camera.y);
     }
 
-    /* Warm vignette so the corridor feels lamp-lit at the edges */
-    var fogGrad = ctx.createRadialGradient(W / 2, H / 2, 160, W / 2, H / 2, W * 0.72);
-    fogGrad.addColorStop(0, 'rgba(40, 18, 6, 0)');
-    fogGrad.addColorStop(1, 'rgba(40, 18, 6, 0.32)');
-    ctx.fillStyle = fogGrad;
-    ctx.fillRect(0, 0, W, H);
+    /* Dust drifting through the lamplight */
+    Game.fx.motes(ctx, CORRIDOR_MOTES);
+
+    /* Soft-focus fronds along the bottom edge, sliding past faster than
+       the corridor so the floor reads as nearer than the wall. They stay
+       inside the runner strip, below every door and name plate. */
+    if (Game.FX.depth) {
+      var fgS = Game.fx.soft('corrFg', (level.wing || 'lobby'), 220, 80, 3.2, corridorFgPaint, 1);
+      var fgX = camera.x * 1.4;
+      for (var fk = Math.floor((fgX - 300) / 560); fk * 560 + 190 - fgX < W + 110; fk++) {
+        ctx.drawImage(fgS.cv, fk * 560 + 190 - fgX - 110, H - 62, 220, 80);
+      }
+    }
+
+    /* Lamp-lit vignette, baked once per wing */
+    if (Game.FX.vignette) {
+      Game.fx.bake(ctx, 'corrVig', (level.wing || 'lobby') + Game.fx.key(), 0, 0, W, H, corridorVignettePaint, 0.5);
+    } else {
+      var fogGrad = ctx.createRadialGradient(W / 2, H / 2, 160, W / 2, H / 2, W * 0.72);
+      fogGrad.addColorStop(0, 'rgba(40, 18, 6, 0)');
+      fogGrad.addColorStop(1, 'rgba(40, 18, 6, 0.32)');
+      ctx.fillStyle = fogGrad;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  /* ---- Corridor lighting helpers (module-level: no per-frame closures) ---- */
+  var CORRIDOR_MOTES = { kind: 'dust', n: 14, rgb: '255,236,200', x: 0, y: 70, w: W, h: 350, size: 2.2, a: 0.42, seed: 5 };
+  var CORRIDOR_FG = { lobby: ['#16321e', '#2c5a34'], safari: ['#4a3210', '#7a5a20'], wild: ['#0c2418', '#1e4a2c'], magic: ['#3a2278', '#7a54c8'] };
+
+  function corridorVignettePaint(b) {
+    var wl = WING_LIGHT[(level && level.wing) || 'lobby'] || WING_LIGHT.lobby;
+    var g = b.createRadialGradient(W / 2, H * 0.56, 170, W / 2, H * 0.56, W * 0.7);
+    g.addColorStop(0, 'rgba(' + wl.shade + ',0)');
+    g.addColorStop(1, 'rgba(' + wl.shade + ',0.46)');
+    b.fillStyle = g;
+    b.fillRect(0, 0, W, H);
+    if (Game.FX.grade) {
+      /* Lift the middle of the frame with a breath of lamp colour */
+      g = b.createRadialGradient(W / 2, H * 0.6, 20, W / 2, H * 0.6, 330);
+      g.addColorStop(0, 'rgba(' + wl.light + ',0.07)');
+      g.addColorStop(1, 'rgba(' + wl.light + ',0)');
+      b.fillStyle = g;
+      b.fillRect(0, 0, W, H);
+    }
+  }
+
+  function corridorFgPaint(b) {
+    var cols = CORRIDOR_FG[(level && level.wing) || 'lobby'] || CORRIDOR_FG.lobby;
+    /* A fan of broad leaves rising from below the frame */
+    for (var i = 0; i < 11; i++) {
+      var a = -Math.PI / 2 + (i - 5) * 0.27;
+      var len = 74 - Math.abs(i - 5) * 5 + hash01(i + 3) * 10;
+      b.save();
+      b.translate(110, 92);
+      b.rotate(a);
+      b.fillStyle = i % 2 ? cols[1] : cols[0];
+      b.beginPath();
+      b.moveTo(0, 0);
+      b.quadraticCurveTo(len * 0.5, -len * 0.2, len, 0);
+      b.quadraticCurveTo(len * 0.5, len * 0.2, 0, 0);
+      b.fill();
+      b.restore();
+    }
+  }
+
+  /* Momoko in the corridor: a soft shadow on the carpet, then the sprite
+     shaded and rim-lit from the nearest ceiling downlight, so the light
+     slides across her as she walks. */
+  var heroLight = { dx: 0, dy: -1, light: '255,226,170', shade: '74,26,44', key: 0.16, dark: 0.3, rim: 0.8 };
+  function heroPaint(a) { player.draw(a, player.x, player.y); }
+  function drawHero() {
+    var wl = WING_LIGHT[(level && level.wing) || 'lobby'] || WING_LIGHT.lobby;
+    var mid = player.x + player.w / 2;
+    var floorY = level.floorY - camera.y;
+    var lift = Math.max(0, level.floorY - (player.y + player.h));
+    var k = Math.max(0.25, 1 - lift / 160);
+    Game.fx.shadow(ctx, mid - camera.x, floorY + 2, 14 * k, 3.6 * k, '24,8,26', 0.6 * k);
+    var ddx = (Math.round((mid - 80) / 160) * 160 + 80 - mid) / 70;
+    var n = Math.sqrt(ddx * ddx + 1);
+    heroLight.dx = ddx / n;
+    heroLight.dy = -1 / n;
+    heroLight.light = wl.light;
+    heroLight.shade = wl.shade;
+    Game.fx.lit(ctx, 'hero', Math.round(player.x - camera.x), Math.round(player.y - camera.y),
+                player.w, player.h, 1, 12, heroPaint, heroLight);
   }
 
   function renderDecorations() {
@@ -3709,6 +3968,9 @@
     if (!lastTime) lastTime = timestamp;
     var delta = timestamp - lastTime;
     lastTime = timestamp;
+
+    /* Frame-time watchdog: sheds effects on devices that can't keep up */
+    Game.fx.tick(delta);
 
     /* Cap delta to avoid spiral of death */
     if (delta > 100) delta = 100;

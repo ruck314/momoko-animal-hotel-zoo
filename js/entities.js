@@ -2796,6 +2796,9 @@
   /* ---- Shared helpers for the species painters ---- */
   /* Soft ground shadow under an animal's feet. */
   function groundShadow(c, cx, cy, rx, ry) {
+    /* The suite renderer lays down its own soft tinted shadow and mutes
+       this one while it paints the guest into the lighting buffer. */
+    if (window.Game.entities.muteShadow) return;
     c.save(); c.globalAlpha = 0.22; c.fillStyle = '#000';
     c.beginPath(); c.ellipse(cx, cy, rx, ry || 3, 0, 0, Math.PI * 2); c.fill();
     c.restore();

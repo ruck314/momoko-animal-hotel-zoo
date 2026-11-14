@@ -89,7 +89,11 @@
     var oy = pressed ? 2 : 0;
     c.save();
     if (!pressed) {
-      c.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      /* Layered drop shadow: wide and faint, then tight and dark */
+      c.fillStyle = 'rgba(0, 0, 0, 0.16)';
+      roundRect(c, x - 2, y + 4, w + 4, h + 3, r + 2);
+      c.fill();
+      c.fillStyle = 'rgba(0, 0, 0, 0.38)';
       roundRect(c, x, y + 3, w, h, r);
       c.fill();
     }
@@ -99,13 +103,31 @@
     c.fillStyle = g;
     roundRect(c, x, y + oy, w, h, r);
     c.fill();
-    /* Soft top gloss */
-    c.fillStyle = 'rgba(255, 255, 255, ' + (primary ? 0.2 : 0.12) + ')';
-    roundRect(c, x + 3, y + oy + 2, w - 6, h * 0.42, Math.max(2, r - 3));
+    /* Shaded foot, glossy cap and a specular hairline under the top edge */
+    c.save();
+    roundRect(c, x, y + oy, w, h, r);
+    c.clip();
+    var fg = c.createLinearGradient(0, y + oy + h * 0.55, 0, y + oy + h);
+    fg.addColorStop(0, 'rgba(40, 0, 60, 0)');
+    fg.addColorStop(1, 'rgba(40, 0, 60, ' + (primary ? 0.22 : 0.3) + ')');
+    c.fillStyle = fg;
+    c.fillRect(x, y + oy + h * 0.55, w, h * 0.45);
+    var cg = c.createLinearGradient(0, y + oy, 0, y + oy + h * 0.5);
+    cg.addColorStop(0, 'rgba(255, 255, 255, ' + (primary ? 0.42 : 0.26) + ')');
+    cg.addColorStop(1, 'rgba(255, 255, 255, ' + (primary ? 0.08 : 0.03) + ')');
+    c.fillStyle = cg;
+    roundRect(c, x + 3, y + oy + 2, w - 6, h * 0.46, Math.max(2, r - 3));
     c.fill();
+    c.restore();
     c.strokeStyle = hover ? '#ffffff' : pal.edge;
     c.lineWidth = primary ? 3 : 2;
     roundRect(c, x, y + oy, w, h, r);
+    c.stroke();
+    c.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(x + r, y + oy + (primary ? 3 : 2.5));
+    c.lineTo(x + w - r, y + oy + (primary ? 3 : 2.5));
     c.stroke();
     c.fillStyle = '#ffffff';
     fitFont(c, text, w - 16, primary ? Math.min(28, Math.round(h * 0.46)) : Math.min(18, Math.round(h * 0.42)), 'bold');
@@ -524,13 +546,23 @@
   /* Warm dusk sky with twinkling stars – the hotel's signature backdrop,
      shared by the title and every pre-game screen so they read as one
      place. `starAlpha` lets busier screens tone the stars down. */
-  function drawDuskBackdrop(c, starAlpha) {
-    var grad = c.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#241430');
+  /* The sky itself is smooth, so it is baked at quarter resolution per
+     layout and blitted: gradient plus the last light of the day pooled
+     along the horizon. */
+  function duskPaint(b) {
+    b.translate(-VIEW.x, -VIEW.y);
+    var grad = b.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#1e1030');
     grad.addColorStop(0.5, '#4a2858');
-    grad.addColorStop(1, '#7a3a58');
-    c.fillStyle = grad;
-    c.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
+    grad.addColorStop(1, '#84405c');
+    b.fillStyle = grad;
+    b.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
+    Game.fx.glow(b, VIEW.x + VIEW.w / 2, H - 20, VIEW.w * 0.62, '255,120,110', 0.34, 210);
+    Game.fx.glow(b, VIEW.x + VIEW.w * 0.3, H, VIEW.w * 0.3, '255,170,90', 0.2, 120);
+  }
+  function drawDuskBackdrop(c, starAlpha) {
+    Game.fx.bake(c, 'dusk', VIEW.x + ',' + VIEW.y + ',' + VIEW.w + ',' + VIEW.h + Game.fx.key(),
+                 VIEW.x, VIEW.y, VIEW.w, VIEW.h, duskPaint, 0.25);
     for (var i = 0; i < titleBubbles.length; i++) {
       drawDuskStar(c, titleBubbles[i], i, starAlpha);
     }
@@ -560,15 +592,14 @@
      menu and passport, so overlays all look like hotel stationery. */
   function drawHotelPanel(c, x, y, w, h) {
     c.save();
-    c.fillStyle = 'rgba(0, 0, 0, 0.35)';
-    roundRect(c, x, y + 4, w, h, 14);
-    c.fill();
+    panelShadow(c, x, y, w, h, 14);
     var g = c.createLinearGradient(0, y, 0, y + h);
-    g.addColorStop(0, 'rgba(58, 30, 76, 0.96)');
-    g.addColorStop(1, 'rgba(36, 18, 50, 0.96)');
+    g.addColorStop(0, 'rgba(66, 34, 88, 0.97)');
+    g.addColorStop(1, 'rgba(32, 16, 46, 0.97)');
     c.fillStyle = g;
     roundRect(c, x, y, w, h, 14);
     c.fill();
+    panelSheen(c, x, y, w, h, 14);
     c.strokeStyle = '#e8b860';
     c.lineWidth = 2.5;
     roundRect(c, x, y, w, h, 14);
@@ -577,6 +608,43 @@
     c.lineWidth = 1;
     roundRect(c, x + 6, y + 6, w - 12, h - 12, 10);
     c.stroke();
+    c.restore();
+  }
+
+  /* Dark vignette for the full-frame cutscenes, baked once. */
+  function sceneVignettePaint(b) {
+    var g = b.createRadialGradient(W / 2, H / 2, 190, W / 2, H / 2, W * 0.68);
+    g.addColorStop(0, 'rgba(12, 6, 30, 0)');
+    g.addColorStop(1, 'rgba(12, 6, 30, 0.52)');
+    b.fillStyle = g;
+    b.fillRect(0, 0, W, H);
+  }
+  function drawSceneVignette(c) {
+    if (Game.FX.vignette) Game.fx.bake(c, 'sceneVig', 'v', 0, 0, W, H, sceneVignettePaint, 0.5);
+  }
+
+  /* Layered soft drop shadow under a modal card. */
+  function panelShadow(c, x, y, w, h, r) {
+    c.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    roundRect(c, x - 6, y + 4, w + 12, h + 10, r + 6);
+    c.fill();
+    c.fillStyle = 'rgba(0, 0, 0, 0.16)';
+    roundRect(c, x - 3, y + 4, w + 6, h + 6, r + 3);
+    c.fill();
+    c.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    roundRect(c, x, y + 4, w, h, r);
+    c.fill();
+  }
+  /* Light catching the top of a card, fading out a third of the way down. */
+  function panelSheen(c, x, y, w, h, r) {
+    c.save();
+    roundRect(c, x, y, w, h, r);
+    c.clip();
+    var g = c.createLinearGradient(0, y, 0, y + Math.min(h * 0.4, 120));
+    g.addColorStop(0, 'rgba(255, 255, 255, 0.13)');
+    g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    c.fillStyle = g;
+    c.fillRect(x, y, w, Math.min(h * 0.4, 120));
     c.restore();
   }
 
@@ -602,6 +670,13 @@
     drawTitleStreet(c, titleAnimTimer);
     clipGame(c);
     drawTitleHotel(c, titleAnimTimer);
+    /* Bloom: the moon, both street lamps, the lit windows and the light
+       the lobby doors throw across the pavement */
+    Game.fx.glow(c, 132, 178, 96, '255,236,190', 0.3);
+    Game.fx.glow(c, 34, 344, 70, '255,214,140', 0.4);
+    Game.fx.glow(c, 560, 344, 70, '255,214,140', 0.4);
+    Game.fx.glow(c, 690, 250, 124, '255,190,110', 0.42, 150);
+    Game.fx.glow(c, 690, STREET_Y + 10, 110, '255,206,120', 0.4, 20);
     drawTitleGuests(c, titleAnimTimer);
 
     /* Title text */
@@ -1609,11 +1684,7 @@
     c.beginPath(); c.ellipse(stageCX, 322, 50, 8, 0, 0, Math.PI * 2); c.fill();
 
     /* Momoko preview */
-    c.save();
-    c.translate(stageCX - 70, stageCY - 85);
-    c.scale(5, 5);
-    drawMomokoPreview(c, Game.customization);
-    c.restore();
+    Game.fx.lit(c, 'preview', stageCX - 70, stageCY - 85, 28, 36, 5, 12, previewPaint, PREVIEW_LIGHT);
 
     /* Tab bar */
     for (var ti = 0; ti < customTabs.length; ti++) {
@@ -1742,6 +1813,11 @@
       START_BTN_Y - 8
     );
   }
+
+  /* Stage lighting for the big preview: moonlight from the upper left,
+     plum shade on the far side. */
+  var PREVIEW_LIGHT = { dx: -0.6, dy: -0.8, light: '255,232,214', shade: '74,30,110', key: 0.1, dark: 0.26, rim: 0.75 };
+  function previewPaint(a) { drawMomokoPreview(a, Game.customization); }
 
   function drawMomokoPreview(c, cust) {
     if (!Game.entities) return;
@@ -2755,13 +2831,23 @@
     c.fillRect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
 
     /* Panel */
-    c.fillStyle = '#3a2418';
-    c.strokeStyle = '#ffd24a';
-    c.lineWidth = 3;
     /* Tall enough that the Cancel button sits clear of the bottom border. */
     var px = W / 2 - 280, py = 50, pw = 560, ph = 390;
+    panelShadow(c, px, py, pw, ph, 14);
+    var wood = c.createLinearGradient(0, py, 0, py + ph);
+    wood.addColorStop(0, '#4c2e1e');
+    wood.addColorStop(1, '#2a180e');
+    c.fillStyle = wood;
+    c.strokeStyle = '#ffd24a';
+    c.lineWidth = 3;
     roundRect(c, px, py, pw, ph, 14);
     c.fill();
+    panelSheen(c, px, py, pw, ph, 14);
+    roundRect(c, px, py, pw, ph, 14);
+    c.stroke();
+    c.strokeStyle = 'rgba(255, 210, 74, 0.3)';
+    c.lineWidth = 1;
+    roundRect(c, px + 6, py + 6, pw - 12, ph - 12, 10);
     c.stroke();
 
     /* Title */
@@ -2822,11 +2908,26 @@
     var isCurrent = idx === current;
     var isHighlighted = (idx === travelSelection) && !isCurrent;
     c.save();
+    c.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    roundRect(c, x, y + 3, w, h, 10);
+    c.fill();
     c.fillStyle = isCurrent ? '#5a3a22' : info.body;
     c.strokeStyle = info.accent;
     c.lineWidth = isHighlighted ? 4 : 2;
     roundRect(c, x, y, w, h, 10);
     c.fill();
+    /* Card shading: light across the top, shade at the foot */
+    c.save();
+    roundRect(c, x, y, w, h, 10);
+    c.clip();
+    var cs = c.createLinearGradient(0, y, 0, y + h);
+    cs.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+    cs.addColorStop(0.45, 'rgba(255, 255, 255, 0)');
+    cs.addColorStop(1, 'rgba(20, 0, 30, 0.28)');
+    c.fillStyle = cs;
+    c.fillRect(x, y, w, h);
+    c.restore();
+    roundRect(c, x, y, w, h, 10);
     c.stroke();
     /* Soft glow halo on the keyboard-highlighted card so it reads as
        "selected, ready to confirm" without requiring a mouse hover. */
@@ -3185,6 +3286,8 @@
       c.fillText(String(bn + 1), ppx + 25, bYY + 3);
     }
     c.textAlign = 'left';
+
+    drawSceneVignette(c);
 
     /* Status plaque, styled like the HUD ledger card */
     var msg = timer < 90 ? Game.i18n.t('rocketLaunching') : Game.i18n.t('rocketArriving');
@@ -6378,8 +6481,407 @@
     }
   }
 
-  function paintHabitat(c, habitat) {
+  /* ---- Scenery helpers shared by the habitat backdrops ---- */
+  /* Which side the key light is on while a backdrop paints: 1 = left,
+     -1 = right. Set at the top of each habitat so lit faces agree. */
+  var LIT = 1;
+  function vGradUI(c, y0, y1, a, m, b) {
+    var g = c.createLinearGradient(0, y0, 0, y1);
+    g.addColorStop(0, a);
+    if (m) g.addColorStop(0.55, m);
+    g.addColorStop(1, b);
+    return g;
+  }
+  /* Rolling silhouette line: three summed sines, seeded. */
+  function ridgeY(x, base, amp, seed) {
+    return base - amp * (0.5 + 0.3 * Math.sin(x * 0.009 + seed) +
+      0.15 * Math.sin(x * 0.023 + seed * 2.3) + 0.05 * Math.sin(x * 0.067 + seed * 5.1));
+  }
+  function paintRidge(c, base, amp, seed, fill, bottom) {
+    c.fillStyle = fill;
+    c.beginPath();
+    c.moveTo(-10, bottom);
+    for (var x = -10; x <= W + 10; x += 10) c.lineTo(x, ridgeY(x, base, amp, seed));
+    c.lineTo(W + 10, bottom);
+    c.closePath();
+    c.fill();
+  }
+  /* Horizontal fog band, densest at y1. */
+  function paintMist(c, y0, y1, rgb, a) {
+    var g = c.createLinearGradient(0, y0, 0, y1);
+    g.addColorStop(0, 'rgba(' + rgb + ',0)');
+    g.addColorStop(1, 'rgba(' + rgb + ',' + a + ')');
+    c.fillStyle = g;
+    c.fillRect(0, y0, W, y1 - y0);
+  }
+  /* Tiered conifer; `hi` paints the lit (left) half of each tier. */
+  function paintPine(c, x, base, h, col, hi) {
+    var w = h * 0.44, t, ty, tw, th;
+    c.fillStyle = col;
+    c.fillRect(x - h * 0.025, base - h * 0.16, h * 0.05, h * 0.16);
+    for (t = 0; t < 4; t++) {
+      ty = base - h * (0.1 + t * 0.2); tw = w * (1 - t * 0.2); th = h * 0.36;
+      c.beginPath();
+      c.moveTo(x, ty - th); c.lineTo(x + tw / 2, ty);
+      c.quadraticCurveTo(x, ty - th * 0.14, x - tw / 2, ty);
+      c.closePath(); c.fill();
+    }
+    if (!hi) return;
+    c.fillStyle = hi;
+    for (t = 0; t < 4; t++) {
+      ty = base - h * (0.1 + t * 0.2); tw = w * (1 - t * 0.2) * LIT; th = h * 0.36;
+      c.beginPath();
+      c.moveTo(x, ty - th); c.lineTo(x - tw / 2, ty);
+      c.quadraticCurveTo(x - tw * 0.2, ty - th * 0.1, x - tw * 0.06, ty - th * 0.2);
+      c.closePath(); c.fill();
+    }
+  }
+  function paintPineRow(c, base, count, hMin, hMax, seed, col, hi, ridge) {
+    for (var i = 0; i < count; i++) {
+      var x = (i + hash01(seed + i) * 0.8) * (W / count);
+      var h = hMin + hash01(seed + i * 3 + 7) * (hMax - hMin);
+      var y = ridge ? ridgeY(x, ridge[0], ridge[1], ridge[2]) + 3 : base;
+      paintPine(c, x, y, h, col, hi);
+    }
+  }
+  /* Puffy cloud, lit from above. */
+  function paintCloud(c, x, y, s, top, bot) {
+    c.fillStyle = vGradUI(c, y - 26 * s, y + 12 * s, top, null, bot);
+    c.beginPath();
+    c.arc(x - 26 * s, y, 14 * s, 0, Math.PI * 2);
+    c.arc(x - 6 * s, y - 10 * s, 20 * s, 0, Math.PI * 2);
+    c.arc(x + 16 * s, y - 4 * s, 16 * s, 0, Math.PI * 2);
+    c.arc(x + 32 * s, y + 2 * s, 11 * s, 0, Math.PI * 2);
+    c.rect(x - 30 * s, y, 62 * s, 12 * s);
+    c.fill();
+  }
+  function paintStars(c, n, seed, yMax, col) {
+    c.fillStyle = col;
+    for (var i = 0; i < n; i++) {
+      var r = 0.5 + hash01(seed + i * 3) * 0.9;
+      c.globalAlpha = 0.35 + hash01(seed + i * 7) * 0.65;
+      c.beginPath();
+      c.arc(hash01(seed + i) * W, hash01(seed + i + 40) * yMax, r, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+  /* Tapered trunk with a lit left edge. */
+  function paintTrunk(c, x, base, top, w0, w1, col, hi) {
+    c.fillStyle = col;
+    c.beginPath();
+    c.moveTo(x - w0 / 2, base); c.lineTo(x - w1 / 2, top); c.lineTo(x + w1 / 2, top); c.lineTo(x + w0 / 2, base);
+    c.closePath(); c.fill();
+    if (hi) {
+      c.fillStyle = hi;
+      c.beginPath();
+      c.moveTo(x - LIT * w0 / 2, base); c.lineTo(x - LIT * w1 / 2, top); c.lineTo(x - LIT * w1 * 0.22, top); c.lineTo(x - LIT * w0 * 0.2, base);
+      c.closePath(); c.fill();
+    }
+  }
+  /* Bamboo culm from the top of the frame down to `base`, with nodes. */
+  function paintBamboo(c, x, w, base, col, hi, node, seed) {
+    c.fillStyle = col;
+    c.fillRect(x - w / 2, 0, w, base);
+    c.fillStyle = hi;
+    c.fillRect(LIT > 0 ? x - w / 2 : x + w / 2 - w * 0.3, 0, w * 0.3, base);
+    c.fillStyle = node;
+    var y = base - 14 - hash01(seed) * 30, n = 0;
+    while (y > 0) {
+      c.fillRect(x - w / 2 - 1, y, w + 2, Math.max(1.5, w * 0.14));
+      y -= 42 + hash01(seed + (++n) * 7) * 16;
+    }
+  }
+  /* Cluster of overlapping discs (foliage, bushes, steam). */
+  function paintBlobs(c, x, y, rx, ry, n, seed, col, r0) {
+    c.fillStyle = col;
+    c.beginPath();
+    for (var i = 0; i < n; i++) {
+      var bx = x + (hash01(seed + i) - 0.5) * rx * 2;
+      var by = y + (hash01(seed + i + 31) - 0.5) * ry * 2;
+      var br = r0 * (0.6 + hash01(seed + i + 67) * 0.7);
+      c.moveTo(bx + br, by);
+      c.arc(bx, by, br, 0, Math.PI * 2);
+    }
+    c.fill();
+  }
+  /* Three-tone canopy: dark mass, mid, lit crown (light from upper left). */
+  function paintCanopy(c, x, y, r, cols, seed) {
+    paintBlobs(c, x, y, r, r * 0.55, 9, seed, cols[0], r * 0.5);
+    paintBlobs(c, x - LIT * r * 0.12, y - r * 0.14, r * 0.8, r * 0.42, 8, seed + 5, cols[1], r * 0.4);
+    paintBlobs(c, x - LIT * r * 0.3, y - r * 0.3, r * 0.5, r * 0.26, 6, seed + 11, cols[2], r * 0.26);
+  }
+  /* Broad tropical leaf from (x, y) at angle `ang`. */
+  function paintFrond(c, x, y, len, ang, col, rib) {
+    c.save();
+    c.translate(x, y);
+    c.rotate(ang);
+    c.fillStyle = col;
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.quadraticCurveTo(len * 0.45, -len * 0.26, len, 0);
+    c.quadraticCurveTo(len * 0.45, len * 0.26, 0, 0);
+    c.fill();
+    if (rib) {
+      c.strokeStyle = rib;
+      c.lineWidth = Math.max(1, len * 0.02);
+      c.beginPath(); c.moveTo(0, 0); c.lineTo(len * 0.94, 0); c.stroke();
+    }
+    c.restore();
+  }
+  /* Faceted peak with a lit west face, shaded east face and a snow cap. */
+  function paintPeak(c, x, base, w, h, lit, shade, snow) {
+    var hw = w / 2;
+    w *= LIT;
+    c.fillStyle = shade;
+    c.beginPath(); c.moveTo(x - hw, base); c.lineTo(x, base - h); c.lineTo(x + hw, base); c.closePath(); c.fill();
+    c.fillStyle = lit;
+    c.beginPath();
+    c.moveTo(x - w / 2, base); c.lineTo(x, base - h);
+    c.lineTo(x + w * 0.06, base - h * 0.62); c.lineTo(x - w * 0.04, base - h * 0.34); c.lineTo(x + w * 0.08, base);
+    c.closePath(); c.fill();
+    if (snow) {
+      c.fillStyle = snow;
+      c.beginPath();
+      c.moveTo(x, base - h);
+      c.lineTo(x - w * 0.15, base - h * 0.7); c.lineTo(x - w * 0.07, base - h * 0.76);
+      c.lineTo(x - w * 0.02, base - h * 0.64); c.lineTo(x + w * 0.05, base - h * 0.74);
+      c.lineTo(x + w * 0.1, base - h * 0.66); c.lineTo(x + w * 0.15, base - h * 0.7);
+      c.closePath(); c.fill();
+    }
+  }
+  /* Dappled light / leaf-litter flecks on the floor, bigger toward the viewer. */
+  function paintFlecks(c, n, seed, col, sx, sy) {
+    c.fillStyle = col;
+    for (var i = 0; i < n; i++) {
+      var fy = ROOM_FLOOR_TOP + 10 + hash01(seed + i * 5) * (H - ROOM_FLOOR_TOP - 16);
+      var k = 0.35 + (fy - ROOM_FLOOR_TOP) / 150;
+      c.beginPath();
+      c.ellipse(hash01(seed + i * 3) * W, fy, sx * k, sy * k, hash01(seed + i) * 3, 0, Math.PI * 2);
+      c.fill();
+    }
+  }
+
+  /* ---- Room lighting rigs ----
+     One per habitat: where the key light sits, its colour, the shadow
+     tint, and which ambient layers the room gets. Colours are 'r,g,b'.
+     sun: [x, y, glow radius, glow alpha]   rays: [count, alpha]
+     pool: alpha of the light pool under the guest   vig: vignette alpha
+     motes: spec for Game.fx.motes   fg: [kind, colour, highlight] */
+  var ROOM_RIGS = {
+    savanna:      { sun: [W - 150, 110, 190, 0.36], light: '255,214,150', shade: '92,48,86', rays: [0, 0], pool: 0.2, vig: 0.34,
+                    motes: { kind: 'dust', n: 16, rgb: '255,226,160', x: 0, y: 150, w: W, h: 260, size: 2.6, a: 0.5, seed: 3 }, fg: ['grass', '#6a4418', '#a87a30'] },
+    jungle:       { sun: [230, 70, 240, 0.29], light: '226,255,170', shade: '8,40,54', rays: [6, 0.1], pool: 0.22, vig: 0.42,
+                    motes: { kind: 'firefly', n: 14, rgb: '220,255,140', x: 60, y: 120, w: W - 120, h: 280, size: 4, a: 0.9, seed: 7 }, fg: ['leaves', '#0b2a1c', '#1c5a30'] },
+    pineForest:   { sun: [170, 150, 230, 0.32], light: '255,222,160', shade: '30,44,80', rays: [5, 0.08], pool: 0.2, vig: 0.38,
+                    motes: { kind: 'firefly', n: 10, rgb: '255,214,110', x: 80, y: 200, w: W - 160, h: 200, size: 3.4, a: 0.85, seed: 11 }, fg: ['ferns', '#14301e', '#2c5a30'] },
+    snowyMtn:     { sun: [620, 96, 170, 0.36], light: '206,226,255', shade: '22,34,96', rays: [0, 0], pool: 0.2, vig: 0.42,
+                    motes: { kind: 'snow', n: 26, rgb: '255,255,255', x: 0, y: 34, w: W, h: 440, size: 2.4, a: 0.9, seed: 13 }, fg: ['snow', '#dfeaff', '#ffffff'] },
+    mountain:     { sun: [640, 92, 200, 0.36], light: '255,240,206', shade: '50,58,110', rays: [0, 0], pool: 0.16, vig: 0.3,
+                    motes: { kind: 'dust', n: 10, rgb: '255,255,255', x: 0, y: 120, w: W, h: 220, size: 3, a: 0.4, seed: 17 }, fg: ['rocks', '#3a3028', '#6a5a48'] },
+    autumnForest: { sun: [300, 150, 260, 0.32], light: '255,214,140', shade: '84,30,40', rays: [6, 0.12], pool: 0.22, vig: 0.38,
+                    motes: { kind: 'dust', n: 16, rgb: '255,220,150', x: 0, y: 120, w: W, h: 280, size: 2.6, a: 0.55, seed: 19 }, fg: ['leaves', '#3a1608', '#8a3a14'] },
+    nightTree:    { sun: [526, 232, 150, 0.29], light: '255,206,140', shade: '22,26,70', rays: [0, 0], pool: 0.22, vig: 0.44,
+                    motes: { kind: 'dust', n: 14, rgb: '255,220,170', x: 380, y: 140, w: 300, h: 240, size: 2.2, a: 0.5, seed: 23 }, fg: ['none'] },
+    bamboo:       { sun: [560, 120, 240, 0.29], light: '238,255,190', shade: '14,52,48', rays: [5, 0.11], pool: 0.2, vig: 0.38,
+                    motes: { kind: 'dust', n: 14, rgb: '236,255,200', x: 0, y: 140, w: W, h: 260, size: 2.6, a: 0.5, seed: 29 }, fg: ['leaves', '#123a1e', '#2c6a30'] },
+    arctic:       { disc: 15, sun: [150, 124, 200, 0.29], light: '255,250,236', shade: '56,84,150', rays: [0, 0], pool: 0.12, vig: 0.3,
+                    motes: { kind: 'sparkle', n: 18, rgb: '255,255,255', x: 0, y: 340, w: W, h: 130, size: 2.2, a: 0.9, seed: 31 }, fg: ['snow', '#d6e8f8', '#ffffff'] },
+    meadow:       { disc: 18, sun: [340, 74, 210, 0.30], light: '255,246,196', shade: '40,84,90', rays: [0, 0], pool: 0.14, vig: 0.3,
+                    motes: { kind: 'dust', n: 16, rgb: '255,255,210', x: 0, y: 180, w: W, h: 240, size: 2.4, a: 0.55, seed: 37 }, fg: ['flowers', '#2c6a24', '#5aa838'] },
+    cozyRoom:     { sun: [W / 2 + 80, 116, 170, 0.29], light: '255,214,160', shade: '70,34,80', rays: [0, 0], pool: 0.2, vig: 0.4,
+                    motes: { kind: 'dust', n: 12, rgb: '255,226,180', x: 330, y: 120, w: 320, h: 230, size: 2.2, a: 0.45, seed: 41 }, fg: ['none'] },
+    backyard:     { disc: 18, sun: [246, 64, 210, 0.30], light: '255,246,200', shade: '36,76,96', rays: [0, 0], pool: 0.14, vig: 0.3,
+                    motes: { kind: 'dust', n: 14, rgb: '255,255,214', x: 0, y: 180, w: W, h: 240, size: 2.4, a: 0.5, seed: 43 }, fg: ['grass', '#1f5a22', '#4a9a38'] },
+    kelpForest:   { disc: 17, sun: [330, 76, 220, 0.29], light: '255,248,214', shade: '40,70,120', rays: [0, 0], pool: 0.12, vig: 0.3,
+                    motes: { kind: 'sparkle', n: 16, rgb: '255,255,255', x: 0, y: 176, w: W, h: 108, size: 2, a: 0.9, seed: 47 }, fg: ['rocks', '#5a4a3a', '#9a8468'] },
+    outback:      { sun: [560, 250, 250, 0.36], light: '255,190,120', shade: '74,24,70', rays: [0, 0], pool: 0.2, vig: 0.4,
+                    motes: { kind: 'dust', n: 16, rgb: '255,200,140', x: 0, y: 180, w: W, h: 240, size: 2.6, a: 0.5, seed: 53 }, fg: ['grass', '#5a1e10', '#c06a2a'] },
+    rainbowGrove: { sun: [400, 150, 280, 0.22], light: '255,244,255', shade: '120,80,170', rays: [0, 0], pool: 0.18, vig: 0.26,
+                    motes: { kind: 'sparkle', n: 26, rgb: '255,255,255', x: 0, y: 40, w: W, h: 420, size: 2.6, a: 1, seed: 59 }, fg: ['clouds', '#f4e6ff', '#ffffff'] },
+    starship:     { sun: [400, 140, 300, 0.18], light: '150,230,255', shade: '40,16,96', rays: [0, 0], pool: 0.26, vig: 0.46,
+                    motes: { kind: 'sparkle', n: 20, rgb: '190,240,255', x: 120, y: 60, w: 560, h: 160, size: 2, a: 0.9, seed: 61 }, fg: ['console', '#0c0824', '#5ae0ff'] },
+    eucalyptus:   { sun: [600, 110, 230, 0.29], light: '255,244,206', shade: '38,70,90', rays: [5, 0.09], pool: 0.16, vig: 0.32,
+                    motes: { kind: 'dust', n: 14, rgb: '250,255,220', x: 0, y: 140, w: W, h: 260, size: 2.4, a: 0.5, seed: 67 }, fg: ['leaves', '#1e3c2c', '#4a7a54'] },
+    riverBank:    { disc: 17, sun: [160, 96, 220, 0.30], light: '255,240,200', shade: '26,60,96', rays: [0, 0], pool: 0.14, vig: 0.34,
+                    motes: { kind: 'sparkle', n: 16, rgb: '255,255,255', x: 0, y: 310, w: W, h: 150, size: 2, a: 0.8, seed: 71 }, fg: ['reeds', '#1c3a24', '#3c6a34'] },
+    lilyPond:     { disc: 16, sun: [430, 70, 210, 0.29], light: '255,248,210', shade: '30,62,110', rays: [0, 0], pool: 0.14, vig: 0.32,
+                    motes: { kind: 'firefly', n: 8, rgb: '255,255,200', x: 60, y: 200, w: W - 120, h: 160, size: 3, a: 0.7, seed: 73 }, fg: ['reeds', '#1e4a2a', '#4a8a3c'] },
+    bedroom:      { sun: [W / 2 + 220, 70, 170, 0.26], light: '255,226,190', shade: '120,50,110', rays: [0, 0], pool: 0.12, vig: 0.3,
+                    motes: { kind: 'sparkle', n: 10, rgb: '255,240,250', x: 100, y: 50, w: 600, h: 200, size: 2, a: 0.7, seed: 79 }, fg: ['none'] }
+  };
+  var ROOM_RIG_DEFAULT = ROOM_RIGS.cozyRoom;
+  /* Sprite light (direction toward the key light from the stage centre),
+     derived once per rig. */
+  function rigLight(rig) {
+    if (rig.L) return rig.L;
+    var dx = rig.sun[0] - W / 2, dy = rig.sun[1] - 340;
+    var d = Math.sqrt(dx * dx + dy * dy) || 1;
+    rig.L = { dx: dx / d, dy: dy / d, light: rig.light, shade: rig.shade, key: 0.2, dark: 0.34, rim: 0.85 };
+    /* Cast shadows: the shade colour pulled down toward black */
+    var p = rig.shade.split(',');
+    rig.cast = Math.round(p[0] * 0.42) + ',' + Math.round(p[1] * 0.42) + ',' + Math.round(p[2] * 0.42);
+    return rig.L;
+  }
+
+  /* Baked over the habitat (and its door and bed): glow around the key
+     light, shafts, a light pool where the guest stands, the colour grade
+     and the vignette. Blend modes are fine here: it runs once per room. */
+  function paintRoomAtmos(c, rig) {
+    var FX = Game.FX, sx = rig.sun[0], sy = rig.sun[1], i, g;
+    if (rig.disc) {
+      /* Sun disc for the open-sky habitats that never drew one */
+      c.fillStyle = '#fffbe6';
+      c.beginPath(); c.arc(sx, sy, rig.disc, 0, Math.PI * 2); c.fill();
+    }
+    if (FX.bloom) {
+      Game.fx.glow(c, sx, sy, rig.sun[2], rig.light, rig.sun[3]);
+      Game.fx.glow(c, sx, sy, rig.sun[2] * 0.22, '255,255,255', rig.sun[3] * 0.4);
+      /* Parallel shafts slanting through the canopy, away from the light */
+      if (rig.rays[0]) {
+        var n = rig.rays[0], dir = sx < W / 2 ? 1 : -1;
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        for (i = 0; i < n; i++) {
+          var x0 = sx + (i - (n - 1) / 2) * 58 + (hash01(i * 9 + sx) - 0.5) * 26, y0 = 24;
+          var x1 = x0 + dir * (170 + hash01(i * 5 + sy) * 70), y1 = ROOM_FLOOR_BOTTOM + 14;
+          var w0 = 6 + hash01(i * 13 + 2) * 9, w1 = 24 + hash01(i * 17 + 4) * 28;
+          g = c.createLinearGradient(x0, y0, x1, y1);
+          g.addColorStop(0, 'rgba(' + rig.light + ',' + (rig.rays[1] * 1.2) + ')');
+          g.addColorStop(0.6, 'rgba(' + rig.light + ',' + (rig.rays[1] * 0.7) + ')');
+          g.addColorStop(1, 'rgba(' + rig.light + ',0)');
+          c.fillStyle = g;
+          c.beginPath();
+          c.moveTo(x0 - w0, y0); c.lineTo(x0 + w0, y0); c.lineTo(x1 + w1, y1); c.lineTo(x1 - w1, y1);
+          c.closePath(); c.fill();
+        }
+        c.restore();
+      }
+      /* Pool of light on the floor around the guest */
+      Game.fx.glow(c, W / 2, ROOM_FLOOR_BOTTOM - 50, 300, rig.light, rig.pool, 70);
+    }
+    if (FX.grade) {
+      /* Warm toward the light, cool away from it */
+      var L = rigLight(rig);
+      c.save();
+      c.globalCompositeOperation = 'soft-light';
+      g = c.createLinearGradient(W / 2 + L.dx * 420, 240 + L.dy * 300, W / 2 - L.dx * 420, 240 - L.dy * 300);
+      g.addColorStop(0, 'rgba(' + rig.light + ',0.5)');
+      g.addColorStop(0.5, 'rgba(128,128,128,0)');
+      g.addColorStop(1, 'rgba(' + rig.shade + ',0.5)');
+      c.fillStyle = g;
+      c.fillRect(0, 0, W, H);
+      c.restore();
+    }
+    if (FX.shadows) {
+      /* Foreground falls off into shade */
+      g = c.createLinearGradient(0, H - 70, 0, H);
+      g.addColorStop(0, 'rgba(' + rig.shade + ',0)');
+      g.addColorStop(1, 'rgba(' + rig.shade + ',0.22)');
+      c.fillStyle = g;
+      c.fillRect(0, H - 70, W, 70);
+    }
+    if (FX.vignette) {
+      g = c.createRadialGradient(W / 2, 250, 210, W / 2, 250, 540);
+      g.addColorStop(0, 'rgba(' + rig.shade + ',0)');
+      g.addColorStop(1, 'rgba(' + rig.shade + ',' + rig.vig + ')');
+      c.fillStyle = g;
+      c.fillRect(0, 0, W, H);
+    }
+  }
+
+  /* Soft-focus props along the bottom edge, in front of everything. The
+     strip is ROOM_FG_H tall and anchored to the bottom of the viewport;
+     shapes stay low in the middle so they never cover Momoko. */
+  var ROOM_FG_H = 96;
+  function paintRoomFg(c, fg) {
+    var kind = fg[0], col = fg[1], hi = fg[2], i, x, hgt, B = ROOM_FG_H + 8;
+    /* edge(x): how tall props may rise at x (taller toward the corners) */
+    function edge(px) {
+      /* Kept low in front of the exit door so its threshold stays clear */
+      if (px < 100) return 12;
+      var e = Math.abs(px - W / 2) / (W / 2);
+      return 14 + 50 * e * e * e;
+    }
+    if (kind === 'grass' || kind === 'flowers' || kind === 'reeds') {
+      c.lineCap = 'round';
+      for (i = 0; i < 70; i++) {
+        x = hash01(i * 3.3 + 1) * W;
+        hgt = edge(x) * (0.5 + hash01(i * 7.1) * 0.6) * (kind === 'reeds' ? 1.25 : 1);
+        c.strokeStyle = i % 3 === 0 ? hi : col;
+        c.lineWidth = kind === 'reeds' ? 4 : 5;
+        c.beginPath();
+        c.moveTo(x, B);
+        c.quadraticCurveTo(x + (hash01(i) - 0.5) * 10, B - hgt * 0.6, x + (hash01(i + 9) - 0.5) * 30, B - hgt);
+        c.stroke();
+        if (kind === 'flowers' && i % 5 === 0) {
+          c.fillStyle = ['#ff7ab8', '#ffd24a', '#ffffff', '#c89aff'][i % 4];
+          c.beginPath(); c.arc(x + (hash01(i + 9) - 0.5) * 30, B - hgt, 6, 0, Math.PI * 2); c.fill();
+        }
+        if (kind === 'reeds' && i % 4 === 0) {
+          c.fillStyle = '#5a3418';
+          c.beginPath(); c.ellipse(x + (hash01(i + 9) - 0.5) * 30, B - hgt, 4, 11, 0, 0, Math.PI * 2); c.fill();
+        }
+      }
+      c.lineCap = 'butt';
+    } else if (kind === 'leaves' || kind === 'ferns') {
+      for (i = 0; i < 5; i++) {
+        paintFrond(c, W + 20 - i * 22, B + 6, 84 - i * 9, -Math.PI + 1.25 - i * 0.3, i % 3 === 0 ? hi : col, null);
+      }
+      for (i = 0; i < 14; i++) {
+        x = 110 + hash01(i * 5.1) * (W - 220);
+        paintFrond(c, x, B + 4, 20 + hash01(i * 3) * 14, -Math.PI / 2 + (hash01(i) - 0.5) * 1.4, i % 3 === 0 ? hi : col, null);
+      }
+    } else if (kind === 'snow' || kind === 'clouds') {
+      c.fillStyle = col;
+      c.beginPath();
+      c.moveTo(-10, B + 10);
+      for (x = -10; x <= W + 10; x += 16) {
+        c.lineTo(x, B - edge(x) * (0.55 + 0.25 * Math.sin(x * 0.045)) - (kind === 'clouds' ? 6 * Math.abs(Math.sin(x * 0.09)) : 0));
+      }
+      c.lineTo(W + 10, B + 10);
+      c.closePath(); c.fill();
+      c.fillStyle = hi;
+      for (i = 0; i < 8; i++) {
+        x = i < 4 ? 120 + i * 40 : W - (i - 4) * 34;
+        c.beginPath(); c.ellipse(x, B - edge(x) * 0.62, 30, 7, 0, 0, Math.PI * 2); c.fill();
+      }
+    } else if (kind === 'rocks') {
+      for (i = 0; i < 12; i++) {
+        x = i < 6 ? 110 + i * 34 + hash01(i) * 14 : W + 10 - (i - 6) * 30 - hash01(i) * 14;
+        hgt = edge(x) * (0.5 + hash01(i * 3) * 0.45);
+        c.fillStyle = col;
+        c.beginPath(); c.ellipse(x, B + 4, 30 + hash01(i * 7) * 16, hgt, 0, Math.PI, 0); c.fill();
+        c.fillStyle = hi;
+        c.beginPath(); c.ellipse(x - 8, B + 4 - hgt * 0.55, 14, hgt * 0.3, -0.3, 0, Math.PI * 2); c.fill();
+      }
+    } else if (kind === 'console') {
+      /* Dark console silhouettes with indicator lights at both ends */
+      c.fillStyle = col;
+      c.beginPath();
+      c.moveTo(-10, B + 10); c.lineTo(-10, B - 12); c.lineTo(150, B - 12); c.lineTo(W - 150, B - 12);
+      c.lineTo(W - 90, B - 50); c.lineTo(W + 10, B - 66); c.lineTo(W + 10, B + 10);
+      c.closePath(); c.fill();
+      for (i = 0; i < 10; i++) {
+        if (i < 5) continue;
+        x = W - 12 - (i - 5) * 16;
+        c.fillStyle = i % 3 === 0 ? '#ff7ad8' : hi;
+        c.beginPath(); c.arc(x, B - 40 + (i % 5) * 3, 3.2, 0, Math.PI * 2); c.fill();
+      }
+    }
+  }
+
+  /* Habitats with moving parts. `pass` splits a habitat into the part
+     that can be baked ('static') and the part repainted every frame
+     ('live'); leave it out to paint everything in one go. */
+  var LIVE_HABITATS = { snowyMtn: 1, autumnForest: 1, arctic: 1, cozyRoom: 1, kelpForest: 1, lilyPond: 1 };
+  function paintHabitat(c, habitat, pass) {
+    var st = pass !== 'live', an = pass !== 'static';
+    if (!st && !LIVE_HABITATS[habitat]) return;
+    var FT = ROOM_FLOOR_TOP, i, x, y, g;
+    LIT = 1;
     if (habitat === 'savanna') {
+      LIT = -1;
       paintSky(c, '#ffa860', '#ffd28a', '#ffe8b8');
       /* Low sun with halo */
       var sunG = c.createRadialGradient(W - 150, 110, 10, W - 150, 110, 90);
@@ -6413,116 +6915,241 @@
       c.beginPath(); c.ellipse(W - 278, ROOM_FLOOR_TOP - 6, 6, 18, 0.1, 0, Math.PI * 2); c.fill();
       paintGrassTufts(c, '#9a7428', H - 30, 9, 22, 11);
     } else if (habitat === 'jungle') {
-      paintSky(c, '#1a3a18', '#2a5028', '#3a6838');
-      paintGround(c, '#3a4818', '#1f2810');
-      /* Vines hanging from top */
-      c.strokeStyle = '#4a8038'; c.lineWidth = 2;
-      for (var v = 0; v < 8; v++) {
-        var vx = 60 + v * 100;
-        c.beginPath();
-        c.moveTo(vx, 0);
-        c.bezierCurveTo(vx + 10, 60, vx - 10, 100, vx, 160);
-        c.stroke();
-        c.fillStyle = '#5fa040';
-        c.beginPath(); c.ellipse(vx + 4, 80, 6, 3, 0.4, 0, Math.PI * 2); c.fill();
-        c.beginPath(); c.ellipse(vx - 4, 130, 6, 3, -0.4, 0, Math.PI * 2); c.fill();
+      /* Rainforest: backlit mist, far trunks, mid foliage, near canopy */
+      LIT = 1;
+      c.fillStyle = vGradUI(c, 0, FT, '#0d3526', '#2c7a48', '#a6d870');
+      c.fillRect(0, 0, W, FT);
+      for (i = 0; i < 11; i++) {
+        x = 30 + i * 74 + hash01(i + 3) * 30;
+        paintTrunk(c, x, FT, 0, 10 + hash01(i) * 8, 7, 'rgba(40,110,80,0.55)', null);
       }
-      /* Big tropical leaves on sides */
-      c.fillStyle = '#3a6028';
-      for (var lf = 0; lf < 6; lf++) {
-        var lfa = -Math.PI / 2 + lf * 0.5;
-        c.beginPath();
-        c.ellipse(20, ROOM_FLOOR_TOP - 30 + lf * 6, 40, 10, lfa, 0, Math.PI * 2);
-        c.fill();
-        c.beginPath();
-        c.ellipse(W - 20, ROOM_FLOOR_TOP - 30 + lf * 6, 40, 10, -lfa, 0, Math.PI * 2);
-        c.fill();
+      paintBlobs(c, W / 2, 96, W / 2, 26, 26, 4, 'rgba(22,84,56,0.75)', 44);
+      paintMist(c, FT - 130, FT, '200,240,160', 0.45);
+      /* Mid layer: trunks, lianas and undergrowth */
+      for (i = 0; i < 5; i++) {
+        x = 110 + i * 150 + hash01(i + 20) * 40;
+        paintTrunk(c, x, FT + 6, 0, 26 + hash01(i + 5) * 10, 18, '#184a30', '#2c7040');
+      }
+      c.strokeStyle = '#2c7040'; c.lineWidth = 2.5;
+      for (i = 0; i < 4; i++) {
+        x = 150 + i * 160;
+        c.beginPath(); c.moveTo(x, 40); c.quadraticCurveTo(x + 70, 150 + i * 12, x + 150, 50); c.stroke();
+      }
+      paintRidge(c, FT + 4, 70, 2.2, '#17502f', FT + 8);
+      paintBlobs(c, W / 2, FT - 30, W / 2, 16, 30, 8, '#2f8040', 20);
+      paintBlobs(c, W / 2, FT - 44, W / 2, 10, 18, 12, '#58a848', 11);
+      for (i = 0; i < 9; i++) {
+        c.fillStyle = i % 2 ? '#ff7a9a' : '#ffd24a';
+        c.beginPath(); c.arc(40 + i * 90 + hash01(i + 60) * 30, FT - 22 - hash01(i + 70) * 26, 3.5, 0, Math.PI * 2); c.fill();
+      }
+      /* Canopy overhead with hanging vines */
+      paintBlobs(c, W / 2, 22, W / 2 + 20, 24, 34, 16, '#0b2a1e', 38);
+      paintBlobs(c, W / 2, 46, W / 2 + 20, 14, 22, 21, '#12402a', 22);
+      for (var v = 0; v < 9; v++) {
+        var vx = 40 + v * 92 + hash01(v + 80) * 30, vl = 90 + hash01(v + 90) * 90;
+        c.strokeStyle = '#1f5a30'; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(vx, 30); c.bezierCurveTo(vx + 10, 30 + vl * 0.4, vx - 10, 30 + vl * 0.7, vx, 30 + vl); c.stroke();
+        for (var vk = 1; vk < 4; vk++) {
+          paintFrond(c, vx + (vk % 2 ? 3 : -3), 30 + vl * vk / 4, 14, vk % 2 ? 0.5 : Math.PI - 0.5, '#3f9040', null);
+        }
+      }
+      /* Forest floor with dappled light */
+      paintGround(c, '#4f8a32', '#1a3a1c');
+      paintFlecks(c, 26, 5, 'rgba(210,255,150,0.13)', 26, 6);
+      paintGrassTufts(c, '#2f6a28', FT + 8, 18, 12, 3);
+      /* Big leaves framing the stage */
+      for (i = 0; i < 5; i++) {
+        paintFrond(c, -10, FT + 30 - i * 26, 120 - i * 8, -0.9 + i * 0.32, i % 2 ? '#1c5a30' : '#0f3a22', '#2c7a3c');
+        paintFrond(c, W + 10, FT + 30 - i * 26, 120 - i * 8, Math.PI + 0.9 - i * 0.32, i % 2 ? '#1c5a30' : '#0f3a22', '#2c7a3c');
       }
     } else if (habitat === 'pineForest') {
-      paintSky(c, '#3a4868', '#5a6878', '#7a8898');
-      paintGround(c, '#3a4828', '#1a2010');
-      /* Pine trees in the distance */
-      for (var pt = 0; pt < 6; pt++) {
-        var ptx = 80 + pt * 110;
-        c.fillStyle = '#1a3018';
-        c.beginPath();
-        c.moveTo(ptx, ROOM_FLOOR_TOP - 80);
-        c.lineTo(ptx - 28, ROOM_FLOOR_TOP);
-        c.lineTo(ptx + 28, ROOM_FLOOR_TOP);
-        c.closePath();
-        c.fill();
-        c.fillStyle = '#2a4018';
-        c.beginPath();
-        c.moveTo(ptx, ROOM_FLOOR_TOP - 60);
-        c.lineTo(ptx - 22, ROOM_FLOOR_TOP - 20);
-        c.lineTo(ptx + 22, ROOM_FLOOR_TOP - 20);
-        c.closePath();
-        c.fill();
+      /* Golden-hour mountain forest */
+      LIT = 1;
+      c.fillStyle = vGradUI(c, 0, FT, '#4c7fb0', '#f2c48c', '#ffe9b6');
+      c.fillRect(0, 0, W, FT);
+      paintCloud(c, 560, 84, 1.1, '#fff4dc', '#f0b890');
+      paintCloud(c, 330, 122, 0.7, '#fff4dc', '#f0b890');
+      paintRidge(c, FT - 20, 190, 1.3, '#9fb4cc', FT);
+      paintRidge(c, FT - 6, 130, 3.4, '#7f9db0', FT);
+      paintMist(c, FT - 110, FT, '255,236,196', 0.5);
+      paintPineRow(c, 0, 24, 30, 56, 5, '#5f8a7c', null, [FT - 6, 60, 0.6]);
+      paintRidge(c, FT - 6, 60, 0.6, '#5f8a7c', FT);
+      paintMist(c, FT - 70, FT, '255,230,180', 0.4);
+      paintPineRow(c, FT + 4, 9, 110, 170, 11, '#2c5c46', '#4c8258');
+      paintMist(c, FT - 40, FT + 2, '255,226,170', 0.35);
+      /* Near pines frame the hollow */
+      paintPine(c, 110, FT + 26, 300, '#173c2c', '#2a6040');
+      paintPine(c, 716, FT + 30, 330, '#173c2c', '#2a6040');
+      paintGround(c, '#6f9440', '#27482a');
+      paintFlecks(c, 22, 9, 'rgba(255,236,160,0.14)', 28, 6);
+      paintGrassTufts(c, '#4a7a30', FT + 8, 18, 12, 4);
+      /* Honey stump */
+      var hsx = 590, hsy = FT + 44;
+      c.fillStyle = 'rgba(20,30,20,0.3)';
+      c.beginPath(); c.ellipse(hsx + 6, hsy, 40, 7, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#6a4424';
+      c.fillRect(hsx - 26, hsy - 30, 52, 30);
+      c.beginPath(); c.ellipse(hsx, hsy, 26, 6, 0, 0, Math.PI); c.fill();
+      c.fillStyle = '#8a5c30';
+      c.fillRect(hsx - 26, hsy - 30, 12, 30);
+      c.fillStyle = '#d8ac6c';
+      c.beginPath(); c.ellipse(hsx, hsy - 30, 26, 7, 0, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = '#a87a40'; c.lineWidth = 1;
+      c.beginPath(); c.ellipse(hsx, hsy - 30, 16, 4.2, 0, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.ellipse(hsx, hsy - 30, 8, 2, 0, 0, Math.PI * 2); c.stroke();
+      c.fillStyle = '#e8a020';
+      c.beginPath(); c.moveTo(hsx - 10, hsy - 34); c.quadraticCurveTo(hsx - 14, hsy - 48, hsx - 7, hsy - 52);
+      c.lineTo(hsx + 7, hsy - 52); c.quadraticCurveTo(hsx + 14, hsy - 48, hsx + 10, hsy - 34); c.closePath(); c.fill();
+      c.fillStyle = '#ffd24a';
+      c.fillRect(hsx - 8, hsy - 55, 16, 4);
+      c.beginPath(); c.ellipse(hsx - 5, hsy - 44, 2, 5, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ffc030';
+      c.beginPath(); c.ellipse(hsx + 14, hsy - 28, 4, 2, 0, 0, Math.PI * 2); c.fill();
+      c.fillRect(hsx + 12.5, hsy - 28, 3, 9);
+      /* Toadstools */
+      for (i = 0; i < 5; i++) {
+        x = 220 + i * 118 + hash01(i + 14) * 40;
+        y = FT + 26 + hash01(i + 19) * 120;
+        var ms = 0.6 + (y - FT) / 160;
+        c.fillStyle = '#fff4e0';
+        c.fillRect(x - 1.5 * ms, y - 6 * ms, 3 * ms, 6 * ms);
+        c.fillStyle = '#d8402c';
+        c.beginPath(); c.ellipse(x, y - 6 * ms, 6 * ms, 4 * ms, 0, Math.PI, 0); c.fill();
+        c.fillStyle = '#ffffff';
+        c.beginPath(); c.arc(x - 2 * ms, y - 8 * ms, 0.9 * ms, 0, Math.PI * 2); c.arc(x + 2.4 * ms, y - 7.4 * ms, 0.8 * ms, 0, Math.PI * 2); c.fill();
       }
     } else if (habitat === 'snowyMtn') {
-      paintSky(c, '#5a7898', '#7a98b8', '#cce0ee');
-      paintGround(c, '#e8eef4', '#a8b8c8');
-      /* Mountain peaks */
-      c.fillStyle = '#7a98b8';
-      c.beginPath();
-      c.moveTo(0, ROOM_FLOOR_TOP);
-      c.lineTo(180, 120); c.lineTo(360, ROOM_FLOOR_TOP);
-      c.lineTo(420, 90);  c.lineTo(620, ROOM_FLOOR_TOP);
-      c.lineTo(720, 110); c.lineTo(W, ROOM_FLOOR_TOP);
-      c.closePath();
-      c.fill();
-      /* Snow caps */
-      c.fillStyle = '#ffffff';
-      c.beginPath(); c.moveTo(160, 138); c.lineTo(180, 120); c.lineTo(200, 138); c.closePath(); c.fill();
-      c.beginPath(); c.moveTo(400, 108); c.lineTo(420, 90);  c.lineTo(440, 108); c.closePath(); c.fill();
-      c.beginPath(); c.moveTo(700, 128); c.lineTo(720, 110); c.lineTo(740, 128); c.closePath(); c.fill();
-      /* Snowflakes */
-      c.fillStyle = '#ffffff';
-      for (var sf = 0; sf < 30; sf++) {
-        c.beginPath();
-        c.arc(((sf * 73) % W), ((sf * 41 + Date.now() * 0.05) % ROOM_FLOOR_TOP), 1.2, 0, Math.PI * 2);
-        c.fill();
+      LIT = -1;
+      if (st) {
+        /* Moonlit range under a starry sky */
+        c.fillStyle = vGradUI(c, 0, FT, '#0b123c', '#24408a', '#86a8dc');
+        c.fillRect(0, 0, W, FT);
+        paintStars(c, 70, 3, 190, '#ffffff');
+        c.fillStyle = '#fff8dc';
+        c.beginPath(); c.arc(620, 96, 30, 0, Math.PI * 2); c.fill();
+        c.fillStyle = 'rgba(206,196,160,0.5)';
+        c.beginPath(); c.arc(610, 88, 6, 0, Math.PI * 2); c.arc(630, 104, 8, 0, Math.PI * 2); c.arc(626, 82, 3.5, 0, Math.PI * 2); c.fill();
+        paintPeak(c, 120, FT, 300, 150, '#8fa8d8', '#5a74b0', '#dfe9ff');
+        paintPeak(c, 520, FT, 340, 170, '#8fa8d8', '#5a74b0', '#dfe9ff');
+        paintMist(c, FT - 120, FT, '150,180,230', 0.5);
+        paintPeak(c, 300, FT, 380, 214, '#c4d6f6', '#3c5796', '#ffffff');
+        paintPeak(c, 724, FT, 320, 180, '#c4d6f6', '#3c5796', '#ffffff');
+        paintMist(c, FT - 60, FT, '170,196,240', 0.5);
+        paintPineRow(c, FT + 4, 12, 50, 100, 21, '#15294c', '#9fb8e8');
+        /* Snowfield with soft drifts */
+        paintGround(c, '#eaf2ff', '#93acd8');
+        for (i = 0; i < 7; i++) {
+          x = 60 + i * 118 + hash01(i + 31) * 40;
+          y = FT + 30 + hash01(i + 37) * 110;
+          var dk = 0.6 + (y - FT) / 120;
+          c.fillStyle = 'rgba(110,140,210,0.2)';
+          c.beginPath(); c.ellipse(x, y + 4 * dk, 60 * dk, 7 * dk, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = 'rgba(255,255,255,0.7)';
+          c.beginPath(); c.ellipse(x + 6 * dk, y, 54 * dk, 5 * dk, 0, Math.PI, 0); c.fill();
+        }
+      }
+      if (an && !Game.FX.motes) {
+        /* Plain snowfall when the mote layer is switched off */
+        c.fillStyle = '#ffffff';
+        for (var sf = 0; sf < 30; sf++) {
+          c.beginPath();
+          c.arc(((sf * 73) % W), ((sf * 41 + Date.now() * 0.05) % ROOM_FLOOR_TOP), 1.2, 0, Math.PI * 2);
+          c.fill();
+        }
       }
     } else if (habitat === 'mountain') {
-      paintSky(c, '#3a78a8', '#88c8e8', '#ffeeb0');
-      paintGround(c, '#7a6a48', '#3a3018');
-      /* Distant peaks */
-      c.fillStyle = '#5a4838';
-      c.beginPath();
-      c.moveTo(0, ROOM_FLOOR_TOP);
-      c.lineTo(200, 80); c.lineTo(380, ROOM_FLOOR_TOP);
-      c.closePath();
-      c.fill();
-      /* Snow tip */
-      c.fillStyle = '#ffffff';
-      c.beginPath(); c.moveTo(180, 100); c.lineTo(200, 80); c.lineTo(220, 100); c.closePath(); c.fill();
-      /* Eagle nest twigs */
-      c.strokeStyle = '#5a3018'; c.lineWidth = 2;
-      for (var tw = 0; tw < 10; tw++) {
-        c.beginPath();
-        c.moveTo(W - 200 + tw * 4, ROOM_FLOOR_BOTTOM - 18);
-        c.lineTo(W - 180 + tw * 4, ROOM_FLOOR_BOTTOM - 14);
+      /* High ledge above a sea of cloud */
+      LIT = -1;
+      c.fillStyle = vGradUI(c, 0, FT, '#2866b0', '#86c4ee', '#ffeec4');
+      c.fillRect(0, 0, W, FT);
+      c.fillStyle = '#fffbe6';
+      c.beginPath(); c.arc(640, 92, 24, 0, Math.PI * 2); c.fill();
+      paintCloud(c, 180, 96, 0.8, '#ffffff', '#e4eefa');
+      paintCloud(c, 430, 70, 0.6, '#ffffff', '#e4eefa');
+      paintPeak(c, 140, FT, 340, 150, '#c4d4ea', '#9cb2d4', '#f8fbff');
+      paintPeak(c, 480, FT, 300, 124, '#c4d4ea', '#9cb2d4', '#f8fbff');
+      paintMist(c, FT - 130, FT, '255,244,220', 0.45);
+      paintPeak(c, 262, FT, 420, 236, '#b8a898', '#665e70', '#ffffff');
+      paintPeak(c, 700, FT, 300, 170, '#b8a898', '#665e70', '#ffffff');
+      for (i = 0; i < 9; i++) {
+        paintCloud(c, i * 100 + hash01(i + 5) * 30, FT - 12 - hash01(i + 9) * 22, 1.1 + hash01(i) * 0.6, '#ffffff', '#f0d8c8');
+      }
+      paintMist(c, FT - 26, FT, '255,255,255', 0.75);
+      /* Rocky ledge */
+      paintGround(c, '#a8987a', '#4c3e2c');
+      c.strokeStyle = 'rgba(60,40,20,0.22)'; c.lineWidth = 1.5;
+      for (i = 0; i < 6; i++) {
+        y = FT + 18 + i * 14 + i * i * 4;
+        c.beginPath(); c.moveTo(0, y);
+        for (x = 0; x <= W; x += 40) c.lineTo(x, y + Math.sin(x * 0.02 + i * 2) * (2 + i));
         c.stroke();
       }
-    } else if (habitat === 'autumnForest') {
-      paintSky(c, '#a85838', '#cc7a48', '#e89868');
-      paintGround(c, '#7a4818', '#3a2010');
-      /* Trees */
-      for (var ft = 0; ft < 5; ft++) {
-        var ftx = 60 + ft * 130;
-        c.fillStyle = '#3a2008';
-        c.fillRect(ftx - 4, ROOM_FLOOR_TOP - 80, 8, 80);
-        c.fillStyle = '#cc6020';
-        c.beginPath(); c.arc(ftx, ROOM_FLOOR_TOP - 90, 26, 0, Math.PI * 2); c.fill();
-        c.fillStyle = '#e88840';
-        c.beginPath(); c.arc(ftx + 6, ROOM_FLOOR_TOP - 95, 18, 0, Math.PI * 2); c.fill();
+      for (i = 0; i < 9; i++) {
+        x = 100 + i * 78 + hash01(i + 41) * 40;
+        y = FT + 22 + hash01(i + 47) * 140;
+        var rk = 0.5 + (y - FT) / 150;
+        c.fillStyle = 'rgba(30,20,10,0.25)';
+        c.beginPath(); c.ellipse(x + 3 * rk, y + 2 * rk, 13 * rk, 4 * rk, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#7a6c58';
+        c.beginPath(); c.ellipse(x, y, 11 * rk, 7 * rk, 0, Math.PI, 0); c.fill();
+        c.fillStyle = '#c4b49a';
+        c.beginPath(); c.ellipse(x + 3 * rk, y - 3 * rk, 5 * rk, 2.6 * rk, 0.3, 0, Math.PI * 2); c.fill();
       }
-      /* Falling leaves */
-      c.fillStyle = '#cc7a30';
-      for (var fal = 0; fal < 10; fal++) {
-        var flx = ((fal * 87 + Date.now() * 0.04) % W);
-        var fly = ((fal * 53 + Date.now() * 0.06) % ROOM_FLOOR_TOP);
-        c.beginPath(); c.ellipse(flx, fly, 3, 2, fal, 0, Math.PI * 2); c.fill();
+      /* Eagle's nest with two eggs */
+      var enx = 600, eny = ROOM_FLOOR_BOTTOM - 14;
+      c.fillStyle = 'rgba(30,20,10,0.3)';
+      c.beginPath(); c.ellipse(enx, eny + 8, 44, 7, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#f4f0e0';
+      c.beginPath(); c.ellipse(enx - 8, eny - 6, 7, 9, -0.2, 0, Math.PI * 2); c.ellipse(enx + 8, eny - 5, 7, 9, 0.2, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#6a4424';
+      c.beginPath(); c.ellipse(enx, eny, 38, 12, 0, 0, Math.PI); c.fill();
+      c.strokeStyle = '#8a6034'; c.lineWidth = 2; c.lineCap = 'round';
+      for (var tw = 0; tw < 14; tw++) {
+        var twx = enx - 36 + tw * 5.4;
+        c.strokeStyle = tw % 2 ? '#8a6034' : '#4a2c14';
+        c.beginPath(); c.moveTo(twx, eny + 2 + hash01(tw) * 6); c.lineTo(twx + 12, eny - 3 + hash01(tw + 5) * 6); c.stroke();
+      }
+      c.lineCap = 'butt';
+    } else if (habitat === 'autumnForest') {
+      LIT = 1;
+      if (st) {
+        /* Backlit autumn wood */
+        c.fillStyle = vGradUI(c, 0, FT, '#a8481c', '#f0a04a', '#ffe6a6');
+        c.fillRect(0, 0, W, FT);
+        for (i = 0; i < 12; i++) {
+          x = 20 + i * 68 + hash01(i + 2) * 30;
+          paintTrunk(c, x, FT, 0, 8 + hash01(i) * 6, 5, 'rgba(176,96,44,0.5)', null);
+        }
+        paintBlobs(c, W / 2, 70, W / 2, 40, 30, 7, 'rgba(214,110,40,0.6)', 46);
+        paintMist(c, FT - 130, FT, '255,226,160', 0.5);
+        for (i = 0; i < 5; i++) {
+          x = 90 + i * 160 + hash01(i + 4) * 30;
+          paintTrunk(c, x, FT + 6, 60, 22, 12, '#5c2c12', '#9a5424');
+          paintCanopy(c, x, 86 + hash01(i) * 30, 78, ['#a83a16', '#e06c24', '#ffb23c'], i * 13 + 2);
+        }
+        paintRidge(c, FT + 2, 44, 1.7, '#8a3a16', FT + 6);
+        paintBlobs(c, W / 2, FT - 16, W / 2, 10, 24, 15, '#d0661e', 14);
+        paintBlobs(c, 60, 34, 120, 22, 12, 31, '#6a2410', 34);
+        paintBlobs(c, W - 60, 34, 120, 22, 12, 37, '#6a2410', 34);
+        /* Floor of fallen leaves */
+        paintGround(c, '#c06c2a', '#5a2810');
+        paintFlecks(c, 22, 9, 'rgba(255,226,150,0.14)', 28, 6);
+        var lfCols = ['#e88a30', '#ffc04a', '#c8481c', '#8a3414'];
+        for (i = 0; i < 70; i++) {
+          y = FT + 12 + hash01(i * 5 + 1) * (H - FT - 18);
+          var lk = 0.5 + (y - FT) / 120;
+          c.fillStyle = lfCols[i % 4];
+          c.beginPath(); c.ellipse(hash01(i * 3 + 2) * W, y, 5 * lk, 2.4 * lk, hash01(i) * 3, 0, Math.PI * 2); c.fill();
+        }
+      }
+      if (an) {
+        /* Falling leaves */
+        for (var fal = 0; fal < 12; fal++) {
+          var flx = ((fal * 87 + Date.now() * 0.04) % W);
+          var fly = ((fal * 53 + Date.now() * 0.06) % ROOM_FLOOR_TOP);
+          c.fillStyle = fal % 3 === 0 ? '#ffc04a' : (fal % 3 === 1 ? '#e06c24' : '#c8481c');
+          c.beginPath(); c.ellipse(flx, fly, 4, 2.4, fal + Date.now() * 0.002, 0, Math.PI * 2); c.fill();
+        }
       }
     } else if (habitat === 'nightTree') {
       /* Owl's reading nook: panelled study, moonlit round window with
@@ -6621,30 +7248,56 @@
       c.fillStyle = '#e8c070';
       c.beginPath(); c.moveTo(rlx - 14, acy - 90); c.lineTo(rlx - 8, acy - 110); c.lineTo(rlx + 8, acy - 110); c.lineTo(rlx + 14, acy - 90); c.closePath(); c.fill();
     } else if (habitat === 'bamboo') {
-      paintSky(c, '#3a5028', '#5a7028', '#88a040');
-      paintGround(c, '#5a7028', '#3a4818');
-      /* Bamboo stalks */
-      c.fillStyle = '#88a040';
-      for (var bm = 0; bm < 12; bm++) {
-        var bmx = 50 + bm * 60;
-        c.fillRect(bmx, 30, 6, ROOM_FLOOR_TOP - 30);
-        c.strokeStyle = '#3a4818';
-        c.lineWidth = 1;
-        for (var bj = 0; bj < 6; bj++) {
-          c.beginPath();
-          c.moveTo(bmx, 60 + bj * 30); c.lineTo(bmx + 6, 60 + bj * 30);
-          c.stroke();
+      /* Bamboo grove with a steaming spring */
+      LIT = -1;
+      c.fillStyle = vGradUI(c, 0, FT, '#1d5638', '#6aa852', '#dcf2a4');
+      c.fillRect(0, 0, W, FT);
+      c.fillStyle = 'rgba(150,206,120,0.45)';
+      for (i = 0; i < 30; i++) c.fillRect(hash01(i * 3 + 1) * W, 0, 3 + hash01(i) * 2, FT);
+      paintMist(c, FT - 170, FT, '226,250,180', 0.5);
+      for (i = 0; i < 13; i++) {
+        paintBamboo(c, 26 + i * 62 + hash01(i + 7) * 24, 8, FT + 4, '#5a9a3c', '#96cc64', '#356a2a', i);
+      }
+      for (i = 0; i < 18; i++) {
+        x = hash01(i * 3 + 5) * W; y = 46 + hash01(i * 7 + 2) * 120;
+        for (var bk = 0; bk < 4; bk++) {
+          paintFrond(c, x, y, 20 + hash01(i + bk) * 12, 0.35 + bk * 0.42 + (i % 2 ? 1.2 : 0), i % 3 ? '#3f8a34' : '#74b84c', null);
         }
       }
-      /* Bamboo leaves */
-      c.fillStyle = '#5a8038';
-      for (var bml = 0; bml < 8; bml++) {
-        var bmlx = 80 + bml * 90;
-        c.beginPath(); c.ellipse(bmlx, 50 + (bml % 2) * 20, 12, 4, bml * 0.4, 0, Math.PI * 2); c.fill();
+      paintMist(c, FT - 50, FT + 2, '226,250,180', 0.4);
+      var nearB = [142, 256, 548, 676];
+      for (i = 0; i < nearB.length; i++) paintBamboo(c, nearB[i], 16, FT + 14, '#2f6e2c', '#84c458', '#1c4a20', i + 40);
+      paintGround(c, '#6f9e44', '#2a4e22');
+      paintFlecks(c, 20, 3, 'rgba(236,255,170,0.14)', 26, 6);
+      /* Hot spring at the back */
+      var spx = 590, spy = FT + 24;
+      c.fillStyle = '#5a5a52';
+      for (i = 0; i < 12; i++) {
+        var sa = i / 12 * Math.PI * 2;
+        c.beginPath(); c.ellipse(spx + Math.cos(sa) * 92, spy + Math.sin(sa) * 15, 13, 7, 0, 0, Math.PI * 2); c.fill();
+      }
+      c.fillStyle = vGradUI(c, spy - 14, spy + 14, '#c8f4ea', null, '#5ab8b0');
+      c.beginPath(); c.ellipse(spx, spy, 88, 13, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#8a8a80';
+      for (i = 0; i < 12; i++) {
+        sa = i / 12 * Math.PI * 2;
+        c.beginPath(); c.ellipse(spx + Math.cos(sa) * 92 + 2, spy + Math.sin(sa) * 15 - 3, 7, 2.6, 0, 0, Math.PI * 2); c.fill();
+      }
+      paintBlobs(c, spx, spy - 34, 60, 22, 9, 3, 'rgba(255,255,255,0.16)', 22);
+      /* Stepping stones */
+      for (i = 0; i < 5; i++) {
+        x = 160 + i * 112; y = ROOM_FLOOR_BOTTOM + 8 + (i % 2) * 10;
+        c.fillStyle = 'rgba(20,40,20,0.3)';
+        c.beginPath(); c.ellipse(x + 3, y + 4, 34, 9, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#8f9488';
+        c.beginPath(); c.ellipse(x, y, 32, 8, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#c4c8ba';
+        c.beginPath(); c.ellipse(x + 5, y - 2, 20, 3.6, 0, 0, Math.PI * 2); c.fill();
       }
     } else if (habitat === 'arctic') {
-      paintSky(c, '#5a78b8', '#a0c4e4', '#e4f2fa');
+      if (st) paintSky(c, '#5a78b8', '#a0c4e4', '#e4f2fa');
       /* Aurora ribbons */
+      if (an) {
       c.save();
       c.globalCompositeOperation = 'lighter';
       var auT = Date.now() * 0.0006;
@@ -6660,7 +7313,10 @@
         c.stroke();
       }
       c.restore();
+      }
       /* Far icebergs with a lit face and a shadow face */
+      var wTop = ROOM_FLOOR_TOP, wBot = ROOM_FLOOR_TOP + 40;
+      if (st) {
       var bergs = [[120, 70, 46], [380, 50, 30], [W - 150, 80, 56]];
       for (var bg = 0; bg < bergs.length; bg++) {
         var bgx = bergs[bg][0], bgw = bergs[bg][1], bgh = bergs[bg][2];
@@ -6670,12 +7326,13 @@
         c.beginPath(); c.moveTo(bgx, ROOM_FLOOR_TOP); c.lineTo(bgx + bgw * 0.1, ROOM_FLOOR_TOP - bgh * 0.8); c.lineTo(bgx + bgw * 0.5, ROOM_FLOOR_TOP - bgh * 0.5); c.lineTo(bgx + bgw, ROOM_FLOOR_TOP); c.closePath(); c.fill();
       }
       /* Open water band with drifting floes */
-      var wTop = ROOM_FLOOR_TOP, wBot = ROOM_FLOOR_TOP + 40;
       var awG = c.createLinearGradient(0, wTop, 0, wBot);
       awG.addColorStop(0, '#4a88b8');
       awG.addColorStop(1, '#2a5a8a');
       c.fillStyle = awG;
       c.fillRect(0, wTop, W, wBot - wTop);
+      }
+      if (an) {
       var flT = Date.now() * 0.002;
       c.strokeStyle = 'rgba(255,255,255,0.4)'; c.lineWidth = 1;
       for (var rp2 = 0; rp2 < 9; rp2++) {
@@ -6692,6 +7349,8 @@
         c.fillStyle = '#ffffff';
         c.beginPath(); c.ellipse(fox, foy, fow, 5, 0, 0, Math.PI * 2); c.fill();
       }
+      }
+      if (st) {
       /* Ice shelf (the walkable floor) with a crisp edge */
       var shG = c.createLinearGradient(0, wBot, 0, H);
       shG.addColorStop(0, '#ffffff');
@@ -6707,6 +7366,17 @@
       for (var ck = 0; ck < 7; ck++) {
         var ckx = 60 + ck * 110, cky = wBot + 30 + (ck % 3) * 26;
         c.beginPath(); c.moveTo(ckx, cky); c.lineTo(ckx + 14, cky + 6); c.lineTo(ckx + 30, cky + 2); c.stroke();
+      }
+      /* Blue shade pooling in the hollows of the shelf */
+      for (i = 0; i < 6; i++) {
+        x = 90 + i * 130 + hash01(i + 51) * 40;
+        y = wBot + 40 + hash01(i + 57) * 90;
+        var ak = 0.6 + (y - wBot) / 110;
+        c.fillStyle = 'rgba(120,160,214,0.2)';
+        c.beginPath(); c.ellipse(x, y + 4 * ak, 62 * ak, 7 * ak, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = 'rgba(255,255,255,0.75)';
+        c.beginPath(); c.ellipse(x + 6 * ak, y, 54 * ak, 5 * ak, 0, Math.PI, 0); c.fill();
+      }
       }
     } else if (habitat === 'meadow') {
       paintSky(c, '#88c8e0', '#cce0ee', '#fff8c0');
@@ -6747,8 +7417,19 @@
         c.beginPath(); c.arc(fx, ROOM_FLOOR_BOTTOM - 8, 2.4, 0, Math.PI * 2); c.fill();
       }
     } else if (habitat === 'cozyRoom') {
-      paintSky(c, '#cca0a0', '#e0c0c0', '#f0d8d8');
-      paintGround(c, '#ad7838', '#7a4818');
+      if (st) {
+      c.fillStyle = vGradUI(c, 0, ROOM_FLOOR_TOP, '#b88a98', null, '#ecc8c4');
+      c.fillRect(0, 0, W, ROOM_FLOOR_TOP);
+      /* Plank floor */
+      paintGround(c, '#b8804a', '#6a3e1c');
+      c.strokeStyle = 'rgba(60,30,10,0.28)'; c.lineWidth = 1;
+      for (i = 0; i < 6; i++) {
+        y = ROOM_FLOOR_TOP + 10 + i * 14 + i * i * 4;
+        c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
+        for (x = (i * 97) % 160; x < W; x += 160) {
+          c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 14 + (2 * i + 1) * 4); c.stroke();
+        }
+      }
       /* Patterned wallpaper — vertical pinstripes for parlor feel */
       c.save();
       c.globalAlpha = 0.18;
@@ -6761,6 +7442,56 @@
         c.stroke();
       }
       c.restore();
+      /* Cream wainscot, chair rail and skirting */
+      c.fillStyle = '#f4e2d6';
+      c.fillRect(0, ROOM_FLOOR_TOP - 66, W, 66);
+      for (x = 8; x < W; x += 88) {
+        c.fillStyle = '#dcc4b8';
+        c.fillRect(x, ROOM_FLOOR_TOP - 54, 72, 38);
+        c.fillStyle = '#fff4ea';
+        c.fillRect(x, ROOM_FLOOR_TOP - 54, 71, 37);
+        c.fillStyle = '#f4e2d6';
+        c.fillRect(x + 3, ROOM_FLOOR_TOP - 51, 66, 32);
+      }
+      c.fillStyle = '#fff6ee';
+      c.fillRect(0, ROOM_FLOOR_TOP - 70, W, 5);
+      c.fillStyle = '#c8a898';
+      c.fillRect(0, ROOM_FLOOR_TOP - 65, W, 2);
+      c.fillRect(0, ROOM_FLOOR_TOP - 9, W, 9);
+      /* Framed fish print */
+      c.fillStyle = 'rgba(60,20,40,0.25)';
+      c.fillRect(303, 73, 70, 54);
+      c.fillStyle = '#7a3050';
+      c.fillRect(300, 70, 70, 54);
+      c.fillStyle = '#d8f0f4';
+      c.fillRect(306, 76, 58, 42);
+      c.fillStyle = '#ff9a5a';
+      c.beginPath(); c.ellipse(332, 97, 13, 7, 0, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.moveTo(344, 97); c.lineTo(354, 89); c.lineTo(354, 105); c.closePath(); c.fill();
+      c.fillStyle = '#3a2030';
+      c.beginPath(); c.arc(325, 95, 1.5, 0, Math.PI * 2); c.fill();
+      /* Cat tree in the back corner */
+      var ctx0 = 606, cty = ROOM_FLOOR_TOP + 22;
+      c.fillStyle = 'rgba(40,20,10,0.3)';
+      c.beginPath(); c.ellipse(ctx0 + 6, cty, 50, 7, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#8a4a78';
+      c.fillRect(ctx0 - 40, cty - 8, 80, 8);
+      c.fillStyle = '#d8b888';
+      c.fillRect(ctx0 - 26, cty - 96, 12, 88); c.fillRect(ctx0 + 12, cty - 150, 12, 142);
+      c.strokeStyle = 'rgba(120,80,40,0.4)'; c.lineWidth = 1;
+      for (i = 0; i < 22; i++) {
+        y = cty - 12 - i * 6.4;
+        if (i < 13) { c.beginPath(); c.moveTo(ctx0 - 26, y); c.lineTo(ctx0 - 14, y - 2); c.stroke(); }
+        c.beginPath(); c.moveTo(ctx0 + 12, y); c.lineTo(ctx0 + 24, y - 2); c.stroke();
+      }
+      c.fillStyle = '#aa4488';
+      c.fillRect(ctx0 - 44, cty - 104, 50, 9); c.fillRect(ctx0 - 4, cty - 158, 54, 9);
+      c.fillStyle = '#cc66a0';
+      c.fillRect(ctx0 - 44, cty - 104, 50, 3); c.fillRect(ctx0 - 4, cty - 158, 54, 3);
+      c.strokeStyle = '#7a3050'; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(ctx0 - 36, cty - 95); c.lineTo(ctx0 - 36, cty - 74); c.stroke();
+      c.fillStyle = '#ffd24a';
+      c.beginPath(); c.arc(ctx0 - 36, cty - 70, 4.5, 0, Math.PI * 2); c.fill();
       /* Pendant lamp from the ceiling — the same warm glow as the
          sleep cutscene, signalling "comfy" without subtlety. */
       c.strokeStyle = '#5a3a18'; c.lineWidth = 1.5;
@@ -6822,7 +7553,7 @@
       c.ellipse(W / 2, ROOM_FLOOR_BOTTOM - 6, 80, 8, 0, 0, Math.PI * 2);
       c.fill();
       /* Side table with steaming teacup */
-      var tt_x = W / 2 - 250, tt_y = ROOM_FLOOR_BOTTOM - 50;
+      tt_x = W / 2 - 250; tt_y = ROOM_FLOOR_BOTTOM - 50;
       c.fillStyle = '#7a4828';
       c.fillRect(tt_x, tt_y, 60, 6);
       c.fillRect(tt_x + 4, tt_y + 6, 6, 38);
@@ -6848,7 +7579,10 @@
       c.beginPath();
       c.ellipse(tt_x + 30, tt_y - 11, 9, 2, 0, 0, Math.PI * 2);
       c.fill();
+      }
+      if (an) {
       /* Steam wisps from the cup */
+      var tt_x = W / 2 - 250, tt_y = ROOM_FLOOR_BOTTOM - 50;
       c.save();
       c.strokeStyle = '#ffffff'; c.lineWidth = 1.5;
       c.globalAlpha = 0.7;
@@ -6863,6 +7597,8 @@
         c.stroke();
       }
       c.restore();
+      }
+      if (st) {
       /* Yarn ball on the rug */
       c.fillStyle = '#ff66aa';
       c.beginPath(); c.arc(W / 2 + 140, ROOM_FLOOR_BOTTOM - 18, 10, 0, Math.PI * 2); c.fill();
@@ -6872,27 +7608,111 @@
         c.arc(W / 2 + 140, ROOM_FLOOR_BOTTOM - 18, 10, yb, yb + Math.PI);
         c.stroke();
       }
-    } else if (habitat === 'backyard') {
-      paintSky(c, '#88c8e0', '#cce0ee', '#fff8c0');
-      paintGround(c, '#5fc858', '#3a8030');
-      /* Picket fence */
-      c.fillStyle = '#fff8e0';
-      for (var pf = 0; pf < 16; pf++) {
-        c.fillRect(40 + pf * 50, ROOM_FLOOR_TOP - 30, 12, 30);
       }
-      c.fillRect(0, ROOM_FLOOR_TOP - 18, W, 4);
-      /* Bone */
+    } else if (habitat === 'backyard') {
+      /* Sunny garden: treeline, neighbour's house, fence, kennel */
+      LIT = 1;
+      c.fillStyle = vGradUI(c, 0, FT, '#4ea6e4', '#b4e0fa', '#f2f8d4');
+      c.fillRect(0, 0, W, FT);
+      paintCloud(c, 330, 84, 1.1, '#ffffff', '#dceafa');
+      paintCloud(c, 600, 112, 0.8, '#ffffff', '#dceafa');
+      paintCloud(c, 480, 58, 0.5, '#ffffff', '#dceafa');
+      paintRidge(c, FT - 30, 70, 2.6, '#8cc48a', FT);
+      paintBlobs(c, W / 2, FT - 62, W / 2, 14, 26, 9, '#a4d89a', 22);
+      /* House next door */
+      var nhx = 262, nhy = FT - 20;
+      c.fillStyle = '#f8e6c8';
+      c.fillRect(nhx, nhy - 76, 136, 76);
+      c.fillStyle = 'rgba(120,90,60,0.18)';
+      c.fillRect(nhx + 96, nhy - 76, 40, 76);
+      c.fillStyle = '#b8503e';
+      c.fillRect(nhx + 96, nhy - 136, 16, 30);
+      c.fillStyle = '#d86a54';
+      c.beginPath(); c.moveTo(nhx - 12, nhy - 76); c.lineTo(nhx + 68, nhy - 128); c.lineTo(nhx + 148, nhy - 76); c.closePath(); c.fill();
+      c.fillStyle = '#f08a70';
+      c.beginPath(); c.moveTo(nhx - 12, nhy - 76); c.lineTo(nhx + 68, nhy - 128); c.lineTo(nhx + 74, nhy - 118); c.lineTo(nhx + 8, nhy - 76); c.closePath(); c.fill();
+      c.fillStyle = '#9ad4f0';
+      c.fillRect(nhx + 20, nhy - 58, 30, 28); c.fillRect(nhx + 76, nhy - 58, 30, 28);
+      c.strokeStyle = '#ffffff'; c.lineWidth = 2.5;
+      c.strokeRect(nhx + 20, nhy - 58, 30, 28); c.strokeRect(nhx + 76, nhy - 58, 30, 28);
+      c.beginPath(); c.moveTo(nhx + 35, nhy - 58); c.lineTo(nhx + 35, nhy - 30); c.moveTo(nhx + 91, nhy - 58); c.lineTo(nhx + 91, nhy - 30); c.stroke();
+      /* Apple tree */
+      paintTrunk(c, 150, FT + 2, FT - 112, 22, 14, '#6a4424', '#9a6a3a');
+      paintCanopy(c, 150, FT - 150, 76, ['#2f7a34', '#4ea044', '#86cc5a'], 5);
+      c.fillStyle = '#e8402c';
+      for (i = 0; i < 8; i++) {
+        c.beginPath(); c.arc(100 + hash01(i + 3) * 100, FT - 176 + hash01(i + 8) * 56, 4, 0, Math.PI * 2); c.fill();
+      }
+      paintRidge(c, FT - 22, 26, 5.1, '#3f8a3c', FT);
+      /* Picket fence */
+      for (var pf = 0; pf < 27; pf++) {
+        var pfx = 4 + pf * 30;
+        c.fillStyle = vGradUI(c, FT - 42, FT, '#ffffff', null, '#e6dcc8');
+        c.beginPath();
+        c.moveTo(pfx, FT); c.lineTo(pfx, FT - 34); c.lineTo(pfx + 9, FT - 43); c.lineTo(pfx + 18, FT - 34); c.lineTo(pfx + 18, FT);
+        c.closePath(); c.fill();
+        c.fillStyle = 'rgba(120,100,80,0.22)';
+        c.fillRect(pfx + 14, FT - 36, 4, 36);
+      }
+      c.fillStyle = '#f6eedc';
+      c.fillRect(0, FT - 29, W, 5); c.fillRect(0, FT - 13, W, 5);
+      c.fillStyle = 'rgba(120,100,80,0.25)';
+      c.fillRect(0, FT - 24, W, 1.5); c.fillRect(0, FT - 8, W, 1.5);
+      /* Lawn with mowing stripes */
+      paintGround(c, '#74d064', '#2c8434');
+      c.fillStyle = 'rgba(255,255,255,0.07)';
+      for (i = 0; i < 6; i += 2) {
+        y = FT + i * 14 + i * i * 4;
+        c.fillRect(0, y, W, 14 + (2 * i + 1) * 4);
+      }
+      paintGrassTufts(c, '#4aa63c', FT + 10, 16, 12, 6);
+      /* Kennel */
+      var kx = 566, ky = FT + 36;
+      c.fillStyle = 'rgba(10,50,20,0.3)';
+      c.beginPath(); c.ellipse(kx + 8, ky, 62, 9, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#c8824a';
+      c.fillRect(kx - 44, ky - 54, 88, 54);
+      c.fillStyle = '#e09c60';
+      c.fillRect(kx - 44, ky - 54, 16, 54);
+      c.strokeStyle = 'rgba(90,50,20,0.3)'; c.lineWidth = 1;
+      for (i = 1; i < 4; i++) { c.beginPath(); c.moveTo(kx - 44, ky - 54 + i * 13.5); c.lineTo(kx + 44, ky - 54 + i * 13.5); c.stroke(); }
+      c.fillStyle = '#3a2010';
+      c.beginPath(); c.moveTo(kx - 16, ky); c.lineTo(kx - 16, ky - 26); c.arc(kx, ky - 26, 16, Math.PI, 0); c.lineTo(kx + 16, ky); c.closePath(); c.fill();
+      c.fillStyle = '#c84a3a';
+      c.beginPath(); c.moveTo(kx - 58, ky - 52); c.lineTo(kx, ky - 98); c.lineTo(kx + 58, ky - 52); c.closePath(); c.fill();
+      c.fillStyle = '#e8705c';
+      c.beginPath(); c.moveTo(kx - 58, ky - 52); c.lineTo(kx, ky - 98); c.lineTo(kx + 6, ky - 88); c.lineTo(kx - 40, ky - 52); c.closePath(); c.fill();
+      c.fillStyle = '#fff8e0';
+      c.beginPath(); c.ellipse(kx, ky - 62, 9, 2.6, 0, 0, Math.PI * 2); c.arc(kx - 9, ky - 62, 3, 0, Math.PI * 2); c.arc(kx + 9, ky - 62, 3, 0, Math.PI * 2); c.fill();
+      /* Daisies */
+      for (i = 0; i < 16; i++) {
+        x = 90 + hash01(i * 3 + 9) * (W - 180); y = FT + 24 + hash01(i * 5 + 4) * 150;
+        var dz = 0.6 + (y - FT) / 150;
+        c.fillStyle = '#ffffff';
+        for (var dp = 0; dp < 5; dp++) {
+          c.beginPath(); c.arc(x + Math.cos(dp * 1.257) * 2.6 * dz, y + Math.sin(dp * 1.257) * 2.6 * dz, 1.7 * dz, 0, Math.PI * 2); c.fill();
+        }
+        c.fillStyle = '#ffd24a';
+        c.beginPath(); c.arc(x, y, 1.5 * dz, 0, Math.PI * 2); c.fill();
+      }
+      /* Bone and ball */
       c.fillStyle = '#fff8e0';
       c.beginPath(); c.ellipse(180, ROOM_FLOOR_BOTTOM - 18, 14, 4, 0, 0, Math.PI * 2); c.fill();
       c.beginPath(); c.arc(166, ROOM_FLOOR_BOTTOM - 18, 4, 0, Math.PI * 2); c.fill();
       c.beginPath(); c.arc(194, ROOM_FLOOR_BOTTOM - 18, 4, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(10,50,20,0.3)';
+      c.beginPath(); c.ellipse(302, ROOM_FLOOR_BOTTOM + 14, 12, 3.5, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#e8402c';
+      c.beginPath(); c.arc(300, ROOM_FLOOR_BOTTOM + 4, 10, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ff9a7a';
+      c.beginPath(); c.arc(296, ROOM_FLOOR_BOTTOM, 4, 0, Math.PI * 2); c.fill();
     } else if (habitat === 'kelpForest') {
-      paintSky(c, '#7ec4f0', '#b8e2fa', '#e4f6ff');
-      c.fillStyle = '#ffffff';
-      c.beginPath(); c.arc(160, 70, 18, 0, Math.PI * 2); c.arc(186, 62, 24, 0, Math.PI * 2); c.arc(212, 72, 16, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(W - 220, 96, 14, 0, Math.PI * 2); c.arc(W - 198, 90, 18, 0, Math.PI * 2); c.arc(W - 178, 98, 12, 0, Math.PI * 2); c.fill();
-      /* Sea from the horizon to the shore */
       var seaTop = 170;
+      if (st) {
+      paintSky(c, '#7ec4f0', '#b8e2fa', '#e4f6ff');
+      paintCloud(c, 186, 76, 1.1, '#ffffff', '#d8ecfa');
+      paintCloud(c, W - 198, 100, 0.8, '#ffffff', '#d8ecfa');
+      /* Sea from the horizon to the shore */
       var seaG = c.createLinearGradient(0, seaTop, 0, ROOM_FLOOR_TOP);
       seaG.addColorStop(0, '#2a78b0');
       seaG.addColorStop(1, '#4aa8c8');
@@ -6901,7 +7721,35 @@
       /* Distant rocky islet */
       c.fillStyle = '#4a5a6a';
       c.beginPath(); c.moveTo(W - 210, seaTop + 2); c.quadraticCurveTo(W - 170, seaTop - 34, W - 120, seaTop + 2); c.closePath(); c.fill();
-      /* Sun glitter + animated ripple arcs */
+      /* Sun path glittering down the water */
+      g = c.createLinearGradient(0, seaTop, 0, ROOM_FLOOR_TOP);
+      g.addColorStop(0, 'rgba(255,250,220,0.5)'); g.addColorStop(1, 'rgba(255,250,220,0.08)');
+      c.fillStyle = g;
+      for (i = 0; i < 46; i++) {
+        y = seaTop + 3 + hash01(i + 5) * (ROOM_FLOOR_TOP - seaTop - 8);
+        var gw = 10 + (y - seaTop) * 0.5;
+        c.fillRect(330 + (hash01(i + 60) - 0.5) * gw * 2.2 - gw * 0.3, y, gw * (0.3 + hash01(i) * 0.5), 1.6);
+      }
+      /* Pebbly shore (the floor) */
+      paintGround(c, '#e8d4a4', '#b89466');
+      for (var pb = 0; pb < 26; pb++) {
+        var pbx = hash01(pb * 3) * W, pby = ROOM_FLOOR_TOP + 16 + hash01(pb * 5) * (H - ROOM_FLOOR_TOP - 24);
+        var pbs = 2 + (pby - ROOM_FLOOR_TOP) * 0.03;
+        c.fillStyle = 'rgba(90,60,30,0.25)';
+        c.beginPath(); c.ellipse(pbx + pbs * 0.5, pby + pbs * 0.6, pbs * 1.6, pbs * 0.8, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = pb % 3 === 0 ? '#9a8a7a' : (pb % 3 === 1 ? '#c0aa8a' : '#7a7a80');
+        c.beginPath(); c.ellipse(pbx, pby, pbs * 1.5, pbs, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = 'rgba(255,255,255,0.35)';
+        c.beginPath(); c.ellipse(pbx - pbs * 0.4, pby - pbs * 0.35, pbs * 0.6, pbs * 0.3, 0, 0, Math.PI * 2); c.fill();
+      }
+      /* Wet sand where the waves reach */
+      g = c.createLinearGradient(0, ROOM_FLOOR_TOP, 0, ROOM_FLOOR_TOP + 26);
+      g.addColorStop(0, 'rgba(120,90,50,0.35)'); g.addColorStop(1, 'rgba(120,90,50,0)');
+      c.fillStyle = g;
+      c.fillRect(0, ROOM_FLOOR_TOP, W, 26);
+      }
+      if (an) {
+      /* Animated ripple arcs */
       var rT = Date.now() * 0.002;
       c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 1.4;
       for (var rr2 = 0; rr2 < 22; rr2++) {
@@ -6919,97 +7767,300 @@
         c.fillStyle = '#8aa83a';
         c.beginPath(); c.arc(kpx + 6, kpy - 1, 2.6, 0, Math.PI * 2); c.fill();
       }
-      /* Pebbly shore (the floor) with lapping foam */
-      paintGround(c, '#e8d4a4', '#b89466');
+      /* Lapping foam */
       c.fillStyle = 'rgba(255,255,255,0.75)';
       c.beginPath();
       c.moveTo(0, ROOM_FLOOR_TOP);
       for (var fm = 0; fm <= W; fm += 20) c.lineTo(fm, ROOM_FLOOR_TOP + 4 + Math.sin(fm * 0.05 + rT) * 3);
       c.lineTo(W, ROOM_FLOOR_TOP); c.closePath(); c.fill();
-      for (var pb = 0; pb < 26; pb++) {
-        var pbx = hash01(pb * 3) * W, pby = ROOM_FLOOR_TOP + 16 + hash01(pb * 5) * (H - ROOM_FLOOR_TOP - 24);
-        var pbs = 2 + (pby - ROOM_FLOOR_TOP) * 0.03;
-        c.fillStyle = pb % 3 === 0 ? '#9a8a7a' : (pb % 3 === 1 ? '#c0aa8a' : '#7a7a80');
-        c.beginPath(); c.ellipse(pbx, pby, pbs * 1.5, pbs, 0, 0, Math.PI * 2); c.fill();
       }
     } else if (habitat === 'outback') {
-      paintSky(c, '#c84838', '#e87858', '#ffb888');
-      paintGround(c, '#a85028', '#5a2810');
-      /* Red rocks */
-      c.fillStyle = '#7a3018';
+      /* Red-centre sunset with the big rock */
+      LIT = -1;
+      g = c.createLinearGradient(0, 0, 0, FT);
+      g.addColorStop(0, '#35286c'); g.addColorStop(0.45, '#d8524a'); g.addColorStop(0.8, '#ffa24e'); g.addColorStop(1, '#ffdc94');
+      c.fillStyle = g;
+      c.fillRect(0, 0, W, FT);
+      paintStars(c, 26, 9, 90, '#fff4d8');
+      g = c.createLinearGradient(0, FT - 72, 0, FT + 18);
+      g.addColorStop(0, '#fff6c8'); g.addColorStop(1, '#ffa040');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(560, FT - 26, 44, 0, Math.PI * 2); c.fill();
+      /* Far mesas */
+      var mesas = [[400, 500, 30], [630, 790, 44]];
+      for (i = 0; i < mesas.length; i++) {
+        c.fillStyle = '#b25a4a';
+        c.beginPath();
+        c.moveTo(mesas[i][0] - 22, FT); c.lineTo(mesas[i][0], FT - mesas[i][2]); c.lineTo(mesas[i][1], FT - mesas[i][2]); c.lineTo(mesas[i][1] + 22, FT);
+        c.closePath(); c.fill();
+        c.fillStyle = '#ffb070';
+        c.fillRect(mesas[i][0], FT - mesas[i][2], mesas[i][1] - mesas[i][0], 2);
+      }
+      paintMist(c, FT - 80, FT, '255,170,110', 0.4);
+      /* The rock: shaded west flank, glowing east face */
+      g = c.createLinearGradient(10, 0, 350, 0);
+      g.addColorStop(0, '#7a2a24'); g.addColorStop(0.6, '#c85032'); g.addColorStop(1, '#f07a3c');
+      c.fillStyle = g;
       c.beginPath();
-      c.moveTo(50, ROOM_FLOOR_TOP);
-      c.lineTo(80, ROOM_FLOOR_TOP - 60);
-      c.lineTo(140, ROOM_FLOOR_TOP - 70);
-      c.lineTo(200, ROOM_FLOOR_TOP);
-      c.closePath();
-      c.fill();
-      c.fillStyle = '#5a2010';
-      c.fillRect(80, ROOM_FLOOR_TOP - 30, 80, 30);
+      c.moveTo(10, FT); c.bezierCurveTo(30, FT - 70, 60, FT - 104, 120, FT - 108);
+      c.lineTo(250, FT - 100); c.bezierCurveTo(300, FT - 92, 330, FT - 50, 350, FT);
+      c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(80,16,20,0.3)'; c.lineWidth = 2;
+      for (i = 0; i < 9; i++) {
+        x = 60 + i * 30;
+        c.beginPath(); c.moveTo(x, FT - 100 + Math.abs(i - 4) * 3); c.quadraticCurveTo(x - 6, FT - 50, x + 4, FT); c.stroke();
+      }
+      c.strokeStyle = '#ffb070'; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(122, FT - 108); c.lineTo(250, FT - 100); c.bezierCurveTo(300, FT - 92, 330, FT - 50, 350, FT); c.stroke();
+      /* Lone gum tree against the sun */
+      c.strokeStyle = '#3a1420'; c.lineCap = 'round';
+      c.lineWidth = 7;
+      c.beginPath(); c.moveTo(706, FT + 6); c.quadraticCurveTo(700, FT - 60, 716, FT - 110); c.stroke();
+      c.lineWidth = 3.5;
+      c.beginPath(); c.moveTo(708, FT - 64); c.quadraticCurveTo(680, FT - 90, 672, FT - 116); c.stroke();
+      c.beginPath(); c.moveTo(712, FT - 84); c.quadraticCurveTo(740, FT - 104, 752, FT - 126); c.stroke();
+      c.lineCap = 'butt';
+      paintBlobs(c, 716, FT - 128, 26, 10, 7, 3, '#4a1c26', 15);
+      paintBlobs(c, 672, FT - 122, 18, 8, 5, 9, '#4a1c26', 12);
+      paintBlobs(c, 754, FT - 132, 18, 8, 5, 13, '#4a1c26', 12);
+      paintGrassTufts(c, '#c87a34', FT - 2, 22, 10, 8);
+      /* Red earth */
+      paintGround(c, '#cc6238', '#6a2412');
+      paintFlecks(c, 26, 7, 'rgba(90,20,10,0.2)', 22, 1.6);
+      paintFlecks(c, 18, 13, 'rgba(255,190,130,0.16)', 10, 3);
+      paintGrassTufts(c, '#e0a040', FT + 12, 12, 14, 12);
+      paintGrassTufts(c, '#b8742a', H - 40, 7, 22, 15);
     } else if (habitat === 'rainbowGrove') {
-      paintSky(c, '#ffd2ee', '#ffe6f5', '#fff8c0');
-      paintGround(c, '#cca0e8', '#9870c8');
-      /* Rainbow arc */
+      /* Pastel cloud-land */
+      LIT = 1;
+      c.fillStyle = vGradUI(c, 0, FT, '#c4b0ff', '#ffd6f0', '#fff6cc');
+      c.fillRect(0, 0, W, FT);
+      paintStars(c, 34, 4, 150, '#ffffff');
+      paintCloud(c, 130, 112, 1.4, '#ffffff', '#ffd8ee');
+      paintCloud(c, 660, 92, 1.2, '#ffffff', '#ffd8ee');
+      paintCloud(c, 430, 62, 0.8, '#ffffff', '#ffd8ee');
+      paintRidge(c, FT + 4, 90, 1.1, '#e8c0f2', FT + 6);
+      paintRidge(c, FT + 6, 56, 3.3, '#d4a8ee', FT + 6);
+      paintGround(c, '#d8b0f0', '#9a74cc');
+      /* Rainbow with a soft halo */
+      c.strokeStyle = 'rgba(255,255,255,0.22)'; c.lineWidth = 76;
+      c.beginPath(); c.arc(W / 2, FT + 100, 260, Math.PI * 1.05, Math.PI * 1.95); c.stroke();
       var bands = ['#ff66aa', '#ff8a30', '#ffd24a', '#88ff88', '#88ddff', '#aa88ee'];
       for (var rb = 0; rb < bands.length; rb++) {
-        c.strokeStyle = bands[rb]; c.lineWidth = 8;
+        c.strokeStyle = bands[rb]; c.lineWidth = 8.5;
         c.beginPath();
-        c.arc(W / 2, ROOM_FLOOR_TOP + 100, 280 - rb * 8, Math.PI * 1.05, Math.PI * 1.95);
+        c.arc(W / 2, FT + 100, 280 - rb * 8, Math.PI * 1.05, Math.PI * 1.95);
         c.stroke();
       }
-      /* Sparkles */
-      c.fillStyle = '#ffffff';
-      for (var sp = 0; sp < 30; sp++) {
-        c.beginPath(); c.arc(((sp * 73) % W), ((sp * 31) % ROOM_FLOOR_TOP), 0.8, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 2;
+      c.beginPath(); c.arc(W / 2, FT + 100, 283, Math.PI * 1.05, Math.PI * 1.95); c.stroke();
+      /* Clouds at the rainbow's feet */
+      paintCloud(c, 132, 352, 1.3, '#ffffff', '#f0d4f8');
+      paintCloud(c, 668, 352, 1.3, '#ffffff', '#f0d4f8');
+      /* Candy flowers */
+      var cfCols = ['#ff7ab8', '#ffd24a', '#8adcff', '#ffffff'];
+      for (i = 0; i < 18; i++) {
+        x = 90 + hash01(i * 3 + 2) * (W - 180); y = FT + 30 + hash01(i * 5 + 6) * 150;
+        var cz = 0.6 + (y - FT) / 140;
+        c.fillStyle = cfCols[i % 4];
+        for (var cp = 0; cp < 5; cp++) {
+          c.beginPath(); c.arc(x + Math.cos(cp * 1.257) * 3 * cz, y + Math.sin(cp * 1.257) * 3 * cz, 2 * cz, 0, Math.PI * 2); c.fill();
+        }
+        c.fillStyle = '#fff8c0';
+        c.beginPath(); c.arc(x, y, 1.6 * cz, 0, Math.PI * 2); c.fill();
       }
     } else if (habitat === 'starship') {
-      paintSky(c, '#080418', '#10082a', '#1a0a3a');
-      paintGround(c, '#3a2058', '#1a0a3a');
-      /* Stars */
-      c.fillStyle = '#ffffff';
-      for (var ss = 0; ss < 80; ss++) {
-        c.beginPath(); c.arc(((ss * 53) % W), ((ss * 31) % ROOM_FLOOR_TOP), 1, 0, Math.PI * 2); c.fill();
+      /* Starship lounge with a panoramic window */
+      LIT = 1;
+      c.fillStyle = vGradUI(c, 0, FT, '#141038', null, '#2e2270');
+      c.fillRect(0, 0, W, FT);
+      var swx = 110, swy = 48, sww = 580, swh = 184;
+      c.save();
+      roundRect(c, swx, swy, sww, swh, 44);
+      c.clip();
+      c.fillStyle = vGradUI(c, swy, swy + swh, '#04030f', null, '#160a36');
+      c.fillRect(swx, swy, sww, swh);
+      c.globalCompositeOperation = 'lighter';
+      var neb = [[300, 150, 170, '200,60,180', 0.34], [520, 104, 190, '40,140,220', 0.3], [170, 90, 120, '120,70,230', 0.3]];
+      for (i = 0; i < neb.length; i++) {
+        g = c.createRadialGradient(neb[i][0], neb[i][1], 0, neb[i][0], neb[i][1], neb[i][2]);
+        g.addColorStop(0, 'rgba(' + neb[i][3] + ',' + neb[i][4] + ')');
+        g.addColorStop(1, 'rgba(' + neb[i][3] + ',0)');
+        c.fillStyle = g;
+        c.fillRect(swx, swy, sww, swh);
       }
-      /* Porthole window */
-      c.fillStyle = '#1a0838';
-      c.beginPath(); c.arc(W / 2, 80, 48, 0, Math.PI * 2); c.fill();
-      c.strokeStyle = '#caa040'; c.lineWidth = 4;
-      c.beginPath(); c.arc(W / 2, 80, 48, 0, Math.PI * 2); c.stroke();
-      /* Earth visible */
-      c.fillStyle = '#3a78c8';
-      c.beginPath(); c.arc(W / 2, 80, 24, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#5a9858';
-      c.beginPath(); c.arc(W / 2 - 6, 76, 8, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(W / 2 + 8, 86, 6, 0, Math.PI * 2); c.fill();
+      c.globalCompositeOperation = 'source-over';
+      paintStars(c, 150, 5, 240, '#ffffff');
+      /* Ringed planet */
+      c.strokeStyle = 'rgba(255,226,180,0.55)'; c.lineWidth = 3;
+      c.beginPath(); c.ellipse(566, 128, 58, 13, -0.35, Math.PI, 0); c.stroke();
+      g = c.createRadialGradient(554, 116, 4, 566, 128, 36);
+      g.addColorStop(0, '#ffe2a8'); g.addColorStop(1, '#b85c34');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(566, 128, 34, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(20,6,40,0.4)';
+      c.beginPath(); c.arc(566, 128, 34, -0.6, 1.9); c.arc(550, 122, 34, 1.5, -0.3, true); c.fill();
+      c.strokeStyle = 'rgba(255,236,200,0.9)'; c.lineWidth = 3;
+      c.beginPath(); c.ellipse(566, 128, 58, 13, -0.35, 0, Math.PI); c.stroke();
+      /* Earth */
+      g = c.createRadialGradient(240, 114, 2, 250, 124, 28);
+      g.addColorStop(0, '#8ad0ff'); g.addColorStop(1, '#1c4c9c');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(250, 124, 26, 0, Math.PI * 2); c.fill();
+      c.save();
+      c.beginPath(); c.arc(250, 124, 26, 0, Math.PI * 2); c.clip();
+      paintBlobs(c, 244, 118, 12, 10, 5, 3, '#5aa85a', 8);
+      paintBlobs(c, 262, 136, 8, 6, 3, 8, '#5aa85a', 6);
+      paintBlobs(c, 250, 112, 16, 6, 4, 12, 'rgba(255,255,255,0.6)', 5);
+      c.fillStyle = 'rgba(8,6,40,0.42)';
+      c.beginPath(); c.arc(264, 132, 28, 0, Math.PI * 2); c.fill();
+      c.restore();
+      c.strokeStyle = 'rgba(140,210,255,0.6)'; c.lineWidth = 2;
+      c.beginPath(); c.arc(250, 124, 27, 0, Math.PI * 2); c.stroke();
+      c.restore();
+      /* Window frame and struts */
+      c.fillStyle = '#3a2c80';
+      c.fillRect(299, swy, 8, swh); c.fillRect(493, swy, 8, swh);
+      c.fillStyle = '#7a6cd8';
+      c.fillRect(299, swy, 2, swh); c.fillRect(493, swy, 2, swh);
+      c.strokeStyle = '#3a2c80'; c.lineWidth = 10;
+      roundRect(c, swx, swy, sww, swh, 44); c.stroke();
+      c.strokeStyle = '#9a8cf0'; c.lineWidth = 2;
+      roundRect(c, swx - 4, swy - 4, sww + 8, swh + 8, 48); c.stroke();
+      /* Light tubes either side */
+      for (i = 0; i < 2; i++) {
+        x = i ? 714 : 86;
+        g = c.createLinearGradient(x - 26, 0, x + 26, 0);
+        g.addColorStop(0, 'rgba(90,224,255,0)'); g.addColorStop(0.5, 'rgba(90,224,255,0.3)'); g.addColorStop(1, 'rgba(90,224,255,0)');
+        c.fillStyle = g;
+        c.fillRect(x - 26, 56, 52, 180);
+        c.fillStyle = '#d8f8ff';
+        roundRect(c, x - 3, 62, 6, 168, 3); c.fill();
+      }
+      /* Wall panels under the window */
+      c.fillStyle = '#231a5a';
+      c.fillRect(0, 246, W, FT - 246);
+      c.fillStyle = '#5ae0ff';
+      c.fillRect(0, 244, W, 2);
+      c.fillStyle = '#ff7ad8';
+      c.fillRect(0, FT - 5, W, 2);
+      for (i = 0; i < 10; i++) {
+        c.strokeStyle = 'rgba(154,140,240,0.4)'; c.lineWidth = 1.5;
+        roundRect(c, 8 + i * 80, 252, 64, FT - 264, 6); c.stroke();
+        c.fillStyle = i % 3 === 0 ? '#ffd24a' : (i % 3 === 1 ? '#5ae0ff' : '#ff7ad8');
+        c.beginPath(); c.arc(20 + i * 80, 262, 2.4, 0, Math.PI * 2); c.fill();
+      }
+      /* Deck with a glowing grid */
+      paintGround(c, '#40308a', '#120a2c');
+      c.strokeStyle = 'rgba(120,220,255,0.2)'; c.lineWidth = 1;
+      for (i = -9; i <= 9; i++) {
+        c.beginPath(); c.moveTo(W / 2 + i * 46, FT); c.lineTo(W / 2 + i * 130, H); c.stroke();
+      }
+      for (i = 0; i < 6; i++) {
+        y = FT + 10 + i * 14 + i * i * 4;
+        c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
+      }
+      /* Landing pad ring under the guest */
+      c.fillStyle = 'rgba(90,224,255,0.1)';
+      c.beginPath(); c.ellipse(W / 2, ROOM_FLOOR_BOTTOM - 52, 124, 25, 0, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = '#5ae0ff'; c.lineWidth = 3;
+      c.beginPath(); c.ellipse(W / 2, ROOM_FLOOR_BOTTOM - 52, 124, 25, 0, 0, Math.PI * 2); c.stroke();
+      c.strokeStyle = '#ff7ad8'; c.lineWidth = 1.5;
+      c.beginPath(); c.ellipse(W / 2, ROOM_FLOOR_BOTTOM - 52, 108, 21, 0, 0, Math.PI * 2); c.stroke();
     } else if (habitat === 'eucalyptus') {
-      paintSky(c, '#8898a8', '#a8b8c8', '#cce0d8');
-      paintGround(c, '#5a7048', '#3a4828');
-      /* Eucalyptus trees */
-      for (var et = 0; et < 4; et++) {
-        var etx = 80 + et * 180;
-        c.fillStyle = '#9aa090';
-        c.fillRect(etx - 5, ROOM_FLOOR_TOP - 100, 10, 100);
-        c.fillStyle = '#7a9088';
-        c.beginPath(); c.ellipse(etx, ROOM_FLOOR_TOP - 110, 36, 24, 0, 0, Math.PI * 2); c.fill();
+      /* Misty gum forest */
+      LIT = -1;
+      c.fillStyle = vGradUI(c, 0, FT, '#74aecb', '#c2dcd0', '#f6f2cc');
+      c.fillRect(0, 0, W, FT);
+      paintRidge(c, FT - 10, 120, 0.9, '#a4c8c0', FT);
+      paintRidge(c, FT - 4, 76, 2.8, '#84b0a0', FT);
+      paintMist(c, FT - 110, FT, '250,246,214', 0.5);
+      for (i = 0; i < 8; i++) {
+        x = 40 + i * 100 + hash01(i + 3) * 40;
+        y = FT - 130 - hash01(i + 6) * 40;
+        paintTrunk(c, x, FT, y, 8, 5, 'rgba(214,214,200,0.7)', null);
+        paintBlobs(c, x, y, 34, 14, 7, i * 5, 'rgba(120,164,140,0.7)', 18);
       }
+      paintMist(c, FT - 70, FT, '250,246,214', 0.45);
+      var gums = [120, 290, 540, 700];
+      for (i = 0; i < gums.length; i++) {
+        x = gums[i];
+        paintTrunk(c, x, FT + 8, 60, 26, 16, '#cfc8b8', '#f6f0de');
+        c.fillStyle = '#a89c88';
+        for (var gb = 0; gb < 5; gb++) {
+          c.beginPath(); c.ellipse(x - 4 + hash01(i * 7 + gb) * 8, 100 + gb * 40, 3, 9, 0.1, 0, Math.PI * 2); c.fill();
+        }
+        c.strokeStyle = '#cfc8b8'; c.lineWidth = 6; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(x, 120); c.quadraticCurveTo(x - 30, 96, x - 50, 70); c.stroke();
+        c.beginPath(); c.moveTo(x, 104); c.quadraticCurveTo(x + 26, 84, x + 46, 62); c.stroke();
+        c.lineCap = 'butt';
+        paintCanopy(c, x, 66, 84, ['#4f8468', '#74a882', '#a8cca0'], i * 9 + 2);
+        for (var gl = 0; gl < 12; gl++) {
+          paintFrond(c, x - 80 + gl * 14 + hash01(i + gl) * 6, 92 + hash01(i * 3 + gl) * 24, 20, Math.PI / 2 + (hash01(gl + i) - 0.5) * 0.7, gl % 2 ? '#5f9474' : '#86b890', null);
+        }
+      }
+      paintGround(c, '#8fae62', '#3a5c32');
+      paintFlecks(c, 22, 4, 'rgba(255,250,200,0.13)', 26, 6);
+      paintFlecks(c, 16, 9, 'rgba(120,90,60,0.32)', 9, 2);
+      paintGrassTufts(c, '#6a8e48', FT + 8, 16, 12, 9);
     } else if (habitat === 'riverBank') {
-      paintSky(c, '#8898a8', '#a8b8c8', '#cce0d8');
-      paintGround(c, '#3a78a8', '#1a3848');
-      /* Mud bank */
-      c.fillStyle = '#5a4828';
-      c.fillRect(0, ROOM_FLOOR_TOP, W, 24);
-      /* Reeds */
-      c.strokeStyle = '#3a5028'; c.lineWidth = 2;
-      for (var rd = 0; rd < 10; rd++) {
-        var rdx = 30 + rd * 80;
-        c.beginPath();
-        c.moveTo(rdx, ROOM_FLOOR_TOP + 28);
-        c.lineTo(rdx, ROOM_FLOOR_TOP - 30);
-        c.stroke();
-        c.fillStyle = '#5a7028';
-        c.beginPath(); c.ellipse(rdx, ROOM_FLOOR_TOP - 28, 2, 8, 0, 0, Math.PI * 2); c.fill();
+      /* Slow river under a warm sky */
+      LIT = 1;
+      c.fillStyle = vGradUI(c, 0, FT, '#5eaad6', '#bfe2ea', '#f8eec4');
+      c.fillRect(0, 0, W, FT);
+      paintCloud(c, 520, 86, 1.1, '#ffffff', '#f0e2d0');
+      paintCloud(c, 300, 120, 0.7, '#ffffff', '#f0e2d0');
+      paintRidge(c, FT - 14, 110, 1.9, '#9cc8a0', FT);
+      paintMist(c, FT - 90, FT, '250,244,210', 0.45);
+      paintRidge(c, FT - 8, 60, 4.2, '#4f8e54', FT);
+      paintBlobs(c, W / 2, FT - 46, W / 2, 12, 26, 14, '#72b060', 16);
+      /* Palms on the far bank */
+      var palms = [170, 470, 724];
+      for (i = 0; i < palms.length; i++) {
+        x = palms[i];
+        c.strokeStyle = '#3a6a40'; c.lineWidth = 5; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(x, FT - 10); c.quadraticCurveTo(x + 8, FT - 70, x - 4, FT - 118); c.stroke();
+        c.lineCap = 'butt';
+        for (var pfr = 0; pfr < 7; pfr++) {
+          paintFrond(c, x - 4, FT - 118, 44, -Math.PI + 0.25 + pfr * 0.44, pfr % 2 ? '#2f7040' : '#4a8e4c', null);
+        }
       }
-      /* Ripples */
+      /* Mud bank */
+      c.fillStyle = '#9a7648';
+      c.fillRect(0, FT - 8, W, 16);
+      c.fillStyle = '#c8a070';
+      c.fillRect(0, FT - 8, W, 2);
+      /* Water */
+      paintGround(c, '#4f9cbc', '#184a6c');
+      g = c.createLinearGradient(0, FT + 6, 0, FT + 70);
+      g.addColorStop(0, 'rgba(40,96,60,0.5)'); g.addColorStop(1, 'rgba(40,96,60,0)');
+      c.fillStyle = g;
+      c.fillRect(0, FT + 6, W, 64);
+      c.fillStyle = '#9a7648';
+      c.fillRect(0, FT, W, 8);
+      c.fillStyle = 'rgba(255,255,255,0.22)';
+      for (i = 0; i < 34; i++) {
+        y = FT + 16 + hash01(i + 80) * (H - FT - 30);
+        c.fillRect(hash01(i + 90) * W, y, 10 + (y - FT) * 0.2, 1.5);
+      }
+      /* Reeds along the bank */
+      for (var rd = 0; rd < 30; rd++) {
+        x = hash01(rd * 3 + 4) * W;
+        var rh = 24 + hash01(rd * 7 + 1) * 30, lean = (hash01(rd + 9) - 0.5) * 12;
+        c.strokeStyle = rd % 3 ? '#3c6a34' : '#5a8a40'; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(x, FT + 12); c.quadraticCurveTo(x + lean * 0.3, FT - rh * 0.5, x + lean, FT - rh); c.stroke();
+        if (rd % 3 === 0) {
+          c.fillStyle = '#6a4424';
+          c.beginPath(); c.ellipse(x + lean, FT - rh + 5, 2.6, 8, lean * 0.02, 0, Math.PI * 2); c.fill();
+        }
+      }
+      /* Lily pads drifting at the back */
+      for (i = 0; i < 6; i++) {
+        x = 110 + i * 120 + hash01(i + 100) * 40; y = FT + 30 + hash01(i + 110) * 44;
+        c.fillStyle = '#4a9a40';
+        c.beginPath(); c.moveTo(x, y); c.ellipse(x, y, 12, 4, 0, 0.4, Math.PI * 2 - 0.1); c.closePath(); c.fill();
+      }
+      /* Ripples around the guest */
       c.strokeStyle = 'rgba(255,255,255,0.4)'; c.lineWidth = 1;
       for (var rp = 0; rp < 5; rp++) {
         c.beginPath();
@@ -7017,10 +8068,14 @@
         c.stroke();
       }
     } else if (habitat === 'lilyPond') {
-      paintSky(c, '#88c8e0', '#cce0ee', '#d8ecc8');
-      c.fillStyle = '#ffffff';
-      c.beginPath(); c.arc(170, 74, 16, 0, Math.PI * 2); c.arc(194, 66, 22, 0, Math.PI * 2); c.arc(218, 76, 14, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(W - 250, 104, 12, 0, Math.PI * 2); c.arc(W - 230, 98, 16, 0, Math.PI * 2); c.arc(W - 212, 106, 10, 0, Math.PI * 2); c.fill();
+      LIT = -1;
+      if (st) {
+      paintSky(c, '#6ab8e0', '#c4e2ee', '#e4f2c8');
+      LIT = 1;
+      paintCloud(c, 194, 80, 1, '#ffffff', '#dcecf6');
+      paintCloud(c, W - 230, 108, 0.75, '#ffffff', '#dcecf6');
+      paintRidge(c, ROOM_FLOOR_TOP - 10, 90, 2.4, '#a8d0a8', ROOM_FLOOR_TOP);
+      paintMist(c, ROOM_FLOOR_TOP - 80, ROOM_FLOOR_TOP, '240,250,220', 0.4);
       /* Far bank: a soft willow and bush line along the horizon */
       c.fillStyle = '#7ab070';
       for (var fb = 0; fb < 9; fb++) {
@@ -7047,6 +8102,13 @@
         c.fillStyle = '#7a4a28';
         c.beginPath(); c.ellipse(ctx2 + 1.6, ROOM_FLOOR_TOP - cth + 9, 2.6, 7, 0, 0, Math.PI * 2); c.fill();
       }
+      /* Sky and far bank mirrored in the still water */
+      g = c.createLinearGradient(0, ROOM_FLOOR_TOP + 8, 0, ROOM_FLOOR_TOP + 90);
+      g.addColorStop(0, 'rgba(50,120,80,0.4)'); g.addColorStop(0.4, 'rgba(180,220,240,0.22)'); g.addColorStop(1, 'rgba(180,220,240,0)');
+      c.fillStyle = g;
+      c.fillRect(0, ROOM_FLOOR_TOP + 8, W, 82);
+      }
+      if (an) {
       /* Gentle shimmer streaks drifting on the water */
       var lpT = Date.now() * 0.001;
       c.fillStyle = 'rgba(255, 255, 255, 0.28)';
@@ -7097,6 +8159,7 @@
         c.beginPath(); c.ellipse(lfx, lfy - 2, 2.2, 5, 0, 0, Math.PI * 2); c.fill();
         c.fillStyle = '#ffe070';
         c.beginPath(); c.arc(lfx, lfy + 1, 1.6, 0, Math.PI * 2); c.fill();
+      }
       }
     } else if (habitat === 'bedroom') {
       /* ---- Walls: pink stripes + heart wallpaper ---- */
@@ -7519,12 +8582,17 @@
   }
 
   /* Painter for an exit door — drawn after the habitat. */
-  function paintExitDoor(c) {
+  function paintExitDoor(c, pass) {
     /* Doorway is wider, brighter, and topped with a green-on-glow EXIT
        sign so it reads as "the way out" on first sight — the previous
-       thin yellow strip was easy to miss. */
+       thin yellow strip was easy to miss.
+       pass: 'static' = door and sign (bakeable), 'live' = the bobbing
+       floor arrow, omitted = both. */
     var dx = 14, dy = ROOM_FLOOR_BOTTOM - 130;
     var dw = 56, dh = 130;
+    if (pass !== 'live') {
+    /* Soft shadow where the frame meets the floor */
+    Game.fx.shadow(c, dx + dw / 2 + 6, ROOM_FLOOR_BOTTOM + 2, 46, 8, '20,10,30', 0.5);
     /* Frame */
     c.fillStyle = '#2a1808';
     c.fillRect(dx - 4, dy - 4, dw + 8, dh + 4);
@@ -7545,6 +8613,16 @@
     c.beginPath(); c.arc(dx + dw - 10, ROOM_FLOOR_BOTTOM - 50, 4, 0, Math.PI * 2); c.fill();
     c.fillStyle = '#ffd870';
     c.beginPath(); c.arc(dx + dw - 10, ROOM_FLOOR_BOTTOM - 50, 2.6, 0, Math.PI * 2); c.fill();
+    /* Bevel: lit top-left edges, shaded bottom-right, sheen down the stile */
+    c.fillStyle = 'rgba(255,244,200,0.5)';
+    c.fillRect(dx, dy, dw, 1.5);
+    c.fillRect(dx, dy, 1.5, dh);
+    c.fillStyle = 'rgba(70,40,0,0.35)';
+    c.fillRect(dx + dw - 2, dy, 2, dh);
+    c.fillRect(dx, dy + dh - 3, dw, 3);
+    c.fillStyle = 'rgba(255,255,255,0.14)';
+    c.fillRect(dx + 9, dy + 12, 5, dh / 2 - 20);
+    c.fillRect(dx + 9, dy + dh / 2 + 8, 5, dh / 2 - 20);
 
     /* Glowing EXIT sign over the doorway */
     var sx = dx - 6, sy = dy - 28, sw = dw + 12, sh = 22;
@@ -7568,6 +8646,9 @@
     c.fillText(Game.i18n.t('exitSign') || 'EXIT', sx + sw / 2, sy + sh / 2 + 1);
     c.textBaseline = 'alphabetic';
     c.textAlign = 'left';
+    Game.fx.glow(c, sx + sw / 2, sy + sh / 2, 60, '120,255,130', 0.22, 34);
+    }
+    if (pass === 'static') return;
 
     /* Animated arrow on the floor in front of the door pointing left
        so the player sees where to stand to leave. */
@@ -7720,35 +8801,68 @@
     });
   }
 
-  function drawRoomBackground(c, species) {
-    /* Habitat-themed environment */
+  /* Everything in a suite that never moves — habitat, exit door, bed and
+     the lighting over them — is baked into one layer per room, so a
+     frame costs one blit instead of a few dozen gradient fills. The
+     callbacks below are module-level so no closure is made per frame. */
+  function roomBakePaint(b) {
+    var species = roomState.species || 'lion';
     var hab = HABITAT_BY_SPECIES[species] || 'cozyRoom';
-    paintHabitat(c, hab);
-    /* Exit door */
-    paintExitDoor(c);
+    paintHabitat(b, hab, 'static');
+    if (roomState.bed) {
+      Game.fx.shadow(b, roomState.bed.x + 50, ROOM_FLOOR_BOTTOM + 2, 76, 9, '20,10,30', 0.45);
+      if (species === 'bedroom') {
+        /* Momoko's own bed: pink heart quilt */
+        paintSideBed(b, roomState.bed.x - 16, roomState.bed.y + 4, 120, 56, {
+          wood: '#e8b0c8', quilt: '#ff7ab0', quiltHi: '#ffa8cc', motif: 'hearts', dot: '#ffffff',
+        });
+      } else {
+        paintHabitatBed(b, species, roomState.bed.x, roomState.bed.y);
+      }
+    }
+    paintRoomAtmos(b, ROOM_RIGS[hab] || ROOM_RIG_DEFAULT);
+    /* The exit goes on after the lighting so it stays the brightest,
+       most readable thing on the left edge. */
+    paintExitDoor(b, 'static');
+  }
+  function roomFgPaint(b) {
+    var rig = ROOM_RIGS[HABITAT_BY_SPECIES[roomState.species] || 'cozyRoom'] || ROOM_RIG_DEFAULT;
+    paintRoomFg(b, rig.fg);
+  }
+  function roomAnimalPaint(a) {
+    roomState.animal.draw(a, roomState.animal.x, roomState.animal.y);
+  }
+  function roomHeroPaint(a) {
+    if (roomState.facing === -1) { a.translate(28, 0); a.scale(-1, 1); }
+    Game.entities.drawMomokoSprite(a, 0, 0, Game.customization, roomState.frame);
   }
 
   function drawAnimalRoomInterior(c) {
     var species = roomState.species || 'lion';
+    var hab = HABITAT_BY_SPECIES[species] || 'cozyRoom';
+    var rig = ROOM_RIGS[hab] || ROOM_RIG_DEFAULT;
+    var light = rigLight(rig);
     /* Backdrop */
     c.save();
-    drawRoomBackground(c, species);
+    Game.fx.bake(c, 'room', species + '|' + Game.fx.key() + '|' + Game.i18n.lang, 0, 0, W, H, roomBakePaint);
+    /* Moving scenery, kept off the exit door it used to sit behind */
+    if (LIVE_HABITATS[hab]) {
+      c.save();
+      c.beginPath();
+      c.rect(0, 0, W, 270);
+      c.rect(80, 270, W - 80, H - 270);
+      c.clip();
+      paintHabitat(c, hab, 'live');
+      c.restore();
+    }
+    paintExitDoor(c, 'live');
 
-    /* Themed bed in the corner of every room */
-    if (roomState.bed) {
-      if (species === 'bedroom') {
-        /* Momoko's own bed: pink heart quilt and a bobbing ZZZ prompt */
-        roomState.bed.update();
-        var mbx = roomState.bed.x - 16, mby = roomState.bed.y + 4;
-        paintSideBed(c, mbx, mby, 120, 56, {
-          wood: '#e8b0c8', quilt: '#ff7ab0', quiltHi: '#ffa8cc', motif: 'hearts', dot: '#ffffff',
-        });
-        c.fillStyle = '#88ddff';
-        c.font = 'bold 13px ' + FONT;
-        c.fillText('ZZZ', mbx + 44, mby - 12 + Math.sin(roomState.bed.timer * 0.08) * 2);
-      } else {
-        paintHabitatBed(c, species, roomState.bed.x, roomState.bed.y);
-      }
+    /* Momoko's own bed carries a bobbing ZZZ prompt */
+    if (roomState.bed && species === 'bedroom') {
+      roomState.bed.update();
+      c.fillStyle = '#88ddff';
+      c.font = 'bold 13px ' + FONT;
+      c.fillText('ZZZ', roomState.bed.x + 28, roomState.bed.y - 8 + Math.sin(roomState.bed.timer * 0.08) * 2);
     }
 
     /* Animal — scaled up so it reads like a zoo exhibit rather than a doll */
@@ -7758,12 +8872,15 @@
       var anchorX = roomState.animal.x + roomState.animal.w / 2;
       var anchorY = roomState.animal.y + roomState.animal.h;
       var animalTopY = anchorY - roomState.animal.h * scale;
-      c.save();
-      c.translate(anchorX, anchorY);
-      c.scale(scale, scale);
-      c.translate(-roomState.animal.w / 2, -roomState.animal.h);
-      roomState.animal.draw(c, roomState.animal.x, roomState.animal.y);
-      c.restore();
+      /* Grounded with a soft shadow in the room's shade colour, then lit
+         from the room's key light (the painter's own flat shadow is
+         muted while it draws into the lighting buffer). */
+      var groundY = roomState.animal.spawnY + roomState.animal.h;
+      Game.fx.shadow(c, anchorX, groundY - 2, 70, 12, rig.cast, 0.6);
+      Game.entities.muteShadow = Game.FX.shadows;
+      Game.fx.lit(c, 'guest', anchorX - roomState.animal.w / 2 * scale, anchorY - roomState.animal.h * scale,
+                  roomState.animal.w, roomState.animal.h, scale, 14, roomAnimalPaint, light);
+      Game.entities.muteShadow = false;
 
       /* Interaction prompt over the animal */
       var dx = roomState.px - anchorX;
@@ -7862,12 +8979,16 @@
       var bob = moving ? Math.abs(Math.sin(roomState.frame * Math.PI / 2 +
                                            roomState.frameTimer * 0.4)) * 2 : 0;
       var hy = Math.round(roomState.py - bob);
-      c.save();
-      c.translate(hx, hy);
-      c.scale(roomState.facing === -1 ? -heroScale : heroScale, heroScale);
-      c.translate(-14, -34);
-      Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, roomState.frame);
-      c.restore();
+      Game.fx.shadow(c, hx, Math.round(roomState.py) + 1, 20 - bob, 5, rig.cast, 0.6);
+      Game.fx.lit(c, 'hero', hx - 14 * heroScale, hy - 34 * heroScale, 28, 34, heroScale, 10, roomHeroPaint, light);
+    }
+
+    /* Air and foreground: drifting motes, then soft-focus props along
+       the bottom edge in front of everything. */
+    Game.fx.motes(c, rig.motes);
+    if (Game.FX.depth && rig.fg[0] !== 'none') {
+      var fgS = Game.fx.soft('roomFg', hab, W, ROOM_FG_H, 4, roomFgPaint, 1);
+      c.drawImage(fgS.cv, 0, H - ROOM_FG_H, W, ROOM_FG_H);
     }
 
     /* Room title band across the top — same plaque styling as the
@@ -8407,6 +9528,10 @@
     c.fillStyle = vg;
     c.fillRect(0, 0, W, H);
 
+    /* Moon and bedside lamp bloom, then the corners fall into night */
+    Game.fx.glow(c, 170, 100, 110, '200,214,255', 0.3);
+    drawSceneVignette(c);
+
     /* ---- Title text ---- */
     c.textAlign = 'center';
     c.textBaseline = 'alphabetic';
@@ -8458,13 +9583,20 @@
 
   function getBookshelfPageCount() { return BOOK_PAGE_KEYS.length; }
 
+  function storyBakePaint(b) {
+    paintHabitat(b, 'bedroom', 'static');
+    paintRoomAtmos(b, ROOM_RIGS.bedroom);
+    paintExitDoor(b, 'static');
+  }
+
   function drawBookshelfCutscene(c, timer, page) {
     c.save();
 
     /* Bedroom backdrop (reuse the bedroom habitat painter so the room
-       art stays consistent with where the cutscene was triggered). */
-    paintHabitat(c, 'bedroom');
-    paintExitDoor(c);
+       art stays consistent with where the cutscene was triggered),
+       baked with the same lighting as the room itself. */
+    Game.fx.bake(c, 'room', 'story|' + Game.fx.key() + '|' + Game.i18n.lang, 0, 0, W, H, storyBakePaint);
+    paintExitDoor(c, 'live');
 
     /* Soft warm lamp glow over the seating area. */
     c.save();
@@ -8640,11 +9772,20 @@
     var cardX = pad, cardY = pad;
     var cardW = W - pad * 2;
     var cardH = H - pad * 2;
-    c.fillStyle = '#fff4d8';
+    panelShadow(c, cardX, cardY, cardW, cardH, 12);
+    var paper = c.createLinearGradient(0, cardY, 0, cardY + cardH);
+    paper.addColorStop(0, '#fffaea');
+    paper.addColorStop(1, '#f6e4bc');
+    c.fillStyle = paper;
     roundRect(c, cardX, cardY, cardW, cardH, 12);
     c.fill();
     c.strokeStyle = '#caa040';
     c.lineWidth = 3;
+    c.stroke();
+    /* Hairline inset, like the ruled border of a real passport page */
+    c.strokeStyle = 'rgba(202, 160, 64, 0.45)';
+    c.lineWidth = 1;
+    roundRect(c, cardX + 6, cardY + 6, cardW - 12, cardH - 12, 8);
     c.stroke();
 
     /* Title row */
