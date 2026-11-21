@@ -4008,8 +4008,6 @@
 
   Animal.prototype.update = function () {
     this.timer++;
-    /* Soft idle bob */
-    this.y = this.spawnY + Math.sin(this.timer * 0.04) * 1.5;
     if (this.talking) {
       this.talkTimer--;
       if (this.talkTimer <= 0) this.talking = false;
@@ -4034,22 +4032,26 @@
   Animal.prototype.draw = function (c, camX, camY) {
     var sx = Math.round(this.x - camX);
     var sy = Math.round(this.y - camY);
-    /* Talking animals do an excited wiggle: scale-bounce + side-to-side
-       sway so each greeting feels like the animal *reacting* rather than
-       just standing there with a text bubble overlay. */
+    /* Idle guests breathe, squashing a touch about their feet so they stay
+       planted on the floor and their shadow. Talking animals do an excited
+       wiggle: a scale-bounce and a lean from side to side about the feet,
+       eased in and out so the greeting starts and ends without a pop. */
+    var br = Math.sin(this.timer * 0.04);
+    var kx = 1 - 0.012 * br, ky = 1 + 0.025 * br, lean = 0;
     if (this.talking) {
-      var wigT = (360 - this.talkTimer) || 0;
-      var bounce = 1 + 0.10 * Math.abs(Math.sin(wigT * 0.32));
-      var sway = Math.sin(wigT * 0.22) * 4;
-      c.save();
-      c.translate(sx + this.w / 2 + sway, sy + this.h);
-      c.scale(bounce, bounce);
-      c.translate(-(this.w / 2), -this.h);
-      drawAnimalSprite(c, this.species, 0, 0);
-      c.restore();
-    } else {
-      drawAnimalSprite(c, this.species, sx, sy);
+      var wigT = 360 - this.talkTimer;
+      var env = Math.min(1, wigT / 10, this.talkTimer / 30);
+      var bounce = 0.10 * Math.abs(Math.sin(wigT * 0.32)) * env;
+      kx += bounce; ky += bounce;
+      lean = Math.sin(wigT * 0.22) * 0.07 * env;
     }
+    c.save();
+    c.translate(sx + this.w / 2, sy + this.h);
+    c.rotate(lean);
+    c.scale(kx, ky);
+    c.translate(-(this.w / 2), -this.h);
+    drawAnimalSprite(c, this.species, 0, 0);
+    c.restore();
   };
 
   /* ========== ANIMAL DOOR (clone of HouseDoor with species-themed accent) ========== */

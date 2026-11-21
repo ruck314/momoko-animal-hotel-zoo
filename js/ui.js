@@ -2897,7 +2897,7 @@
     var slope = dir < 0 ? -1 : 1;
     dir = 1;
     var u = Math.max(0, Math.min(1, (timer - 80) / 40));
-    var R = Game.momoko.rig('stairs', { vmax: 192 });
+    var R = Game.momoko.rig('stairs', { vmax: 192, scale: 2.6 });
     if (timer <= 81) R.reset();
     var run = u * 150;                       /* px travelled along the flight */
     var heroX = W / 2 - 40 * dir, floorAt = H * 0.68;
@@ -8749,7 +8749,7 @@
   }
   /* Room walking is faster than the corridor (4.6 px/frame); the rig
      derives her walk, turn and secondary motion from roomState.px/py. */
-  function roomRig() { return Game.momoko.rig('room', { vmax: 276 }); }
+  function roomRig() { return Game.momoko.rig('room', { vmax: 276, scale: 1.6 }); }
   /* Momoko reacts when she greets a guest: a reach-and-pat, or a hop and
      both arms up the first time a guest is stamped into the ledger. */
   function heroGreets(animal) {

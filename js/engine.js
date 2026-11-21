@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.23.0';
+  Game.VERSION = 'v0.24.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -3724,7 +3724,7 @@
     }
     beachReady = true;
     if (Game.audio && Game.audio.play) Game.audio.play('elevatorDing');
-    /* Re-cue the BGM with this floor's flavor (transpose / tempo / wave). */
+    /* Crossfade to this floor's arrangement. */
     if (Game.audio && Game.audio.startMusic) Game.audio.startMusic('bgm', currentZone);
     state = State.PLAYING;
   }
@@ -3776,6 +3776,7 @@
     sleepCutsceneTimer = 0;
     state = State.SLEEP_CUTSCENE;
     if (Game.audio && Game.audio.play) Game.audio.play('snore');
+    if (Game.audio && Game.audio.startMusic) Game.audio.startMusic('lullaby');
   }
 
   function exitSleepCutscene() {
@@ -3796,6 +3797,7 @@
     sleepCutsceneTimer = 0;
     Game.currentRoom = 'bedroom';
     if (Game.ui && Game.ui.resetAnimalRoom) Game.ui.resetAnimalRoom('bedroom');
+    if (Game.audio && Game.audio.startMusic) Game.audio.startMusic('bgm', currentZone);
     state = State.ANIMAL_ROOM;
   }
 

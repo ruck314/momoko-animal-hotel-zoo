@@ -1963,6 +1963,7 @@
   function newPose() {
     return {
       mir: 1, look: 1, walk: 0, ph: 0, spd: 0, bob: 0, lean: 0, sq: 0, hop: 0, air: 0,
+      stride: 0, duty: 0.5, run: 0,
       breath: 0, open: 1, gx: 0, gy: 0, tilt: 0, hip: 0,
       hair: 0, hairY: 0, skirt: 0, ear: 0, charm: 0, flut: 0,
       expr: 'open', act: null, actU: 0, actT: 0, t: 0, climb: 0,
@@ -1983,6 +1984,8 @@
     P.look = P.walk ? 0.85 : 0.35;
     P.mir = 1;
     P.bob = P.walk * 0.6 * (0.5 - 0.5 * Math.cos(2 * P.ph));
+    P.stride = P.walk * (0.9 + 1.3 * P.spd) * (0.35 + 0.65 * P.look);
+    P.duty = 0.5; P.run = 0;
     P.lean = P.walk * 0.04;
     P.breath = Math.sin(t * TAU / 3.2);
     var bt = t % 4.3;
@@ -2040,18 +2043,20 @@
     var hs = Q.hair, hy = Q.hairY;
 
     /* ---- walk cycle: per-leg foot offset, lift and pitch ---- */
-    var spd = Q.spd;
-    var S = walk * (0.9 + 1.3 * spd) * (0.35 + 0.65 * look) * (1 + Q.climb * 0.3);
-    var LH = walk * (0.8 + 0.7 * spd + Q.climb * 1.6);
+    /* each foot is planted for `duty` of the cycle (0.5 walking, less
+       when she runs, leaving a short flight) and swings forward for the rest */
+    var spd = Q.spd, run = Q.run, duty = Q.duty;
+    var S = Q.stride;
+    var LH = walk * (0.8 + 0.7 * spd + Q.climb * 1.6) + run * 0.8;
     var feet = [0, 0, 0, 0, 0, 0];   /* near x, lift, pitch, far x, lift, pitch */
     for (var leg = 0; leg < 2; leg++) {
       var uu = ((Q.ph / TAU) + (leg ? 0.5 : 0)) % 1;
       if (uu < 0) uu += 1;
       var fxo, lift, pr;
-      if (uu < 0.5) {
-        fxo = S * (1 - 4 * uu); lift = 0; pr = 0;
+      if (uu < duty) {
+        fxo = S * (1 - 2 * uu / duty); lift = 0; pr = 0;
       } else {
-        var s = (uu - 0.5) * 2;
+        var s = (uu - duty) / (1 - duty);
         fxo = -S + 2 * S * (0.5 - 0.5 * Math.cos(Math.PI * s));
         lift = Math.sin(Math.PI * Math.pow(s, 0.8)) * LH;
         pr = (s < 0.55 ? -0.4 * Math.sin(s / 0.55 * Math.PI) : 0.22 * Math.sin((s - 0.55) / 0.45 * Math.PI)) * walk * look;
@@ -2059,8 +2064,10 @@
       feet[leg * 3] = fxo; feet[leg * 3 + 1] = lift; feet[leg * 3 + 2] = pr;
     }
     if (Q.air > 0) {
-      feet[1] = Math.max(feet[1], Q.air * 1.6); feet[4] = Math.max(feet[4], Q.air * 1.1);
-      feet[0] += Q.air * 0.6; feet[3] -= Q.air * 0.3;
+      var pad = Math.sin(t * 5.2);
+      feet[1] = Math.max(feet[1], Q.air * (1.6 + 0.5 * pad)); feet[4] = Math.max(feet[4], Q.air * (1.1 - 0.5 * pad));
+      feet[0] += Q.air * (0.6 + 0.4 * pad); feet[3] -= Q.air * (0.3 + 0.4 * pad);
+      feet[2] += Q.air * 0.25 * pad; feet[5] -= Q.air * 0.25 * pad;
     }
     if (floss) { feet[0] = -hip * 0.2; feet[3] = -hip * 0.2; }
 
@@ -2102,10 +2109,10 @@
     var nA1 = -0.3 + walk * look * 0.25, nA2 = 0.25, fA1 = 0.3 - walk * look * 0.25, fA2 = -0.25;
     var nH = 'rest', fH = 'rest';
     var sN = S > 0.01 ? feet[0] / S : 0;
-    var amp = walk * (0.45 + 0.35 * spd) * (0.4 + 0.6 * look);
-    nA1 += -amp * sN; nA2 += amp * Math.max(0, -sN) * 0.6;
-    fA1 += amp * sN; fA2 += amp * Math.max(0, sN) * 0.6;
-    if (Q.air > 0) { nA1 -= Q.air * 0.6; fA1 += Q.air * 0.6; }
+    var amp = walk * (0.45 + 0.35 * spd) * (0.4 + 0.6 * look) * (1 + run * 0.35);
+    nA1 += -amp * sN; nA2 += amp * Math.max(0, -sN) * 0.6 + run * 0.55;
+    fA1 += amp * sN; fA2 += amp * Math.max(0, sN) * 0.6 - run * 0.55;
+    if (Q.air > 0) { var fl = Math.sin(t * 3.4) * 0.18; nA1 -= Q.air * (0.6 + fl); fA1 += Q.air * (0.6 + fl); }
     if (Q.climb > 0) { fA1 = 1.1 + 0.1 * Math.sin(Q.ph); fA2 = -0.5; fH = 'fist'; }
     /* idle: arms settle slightly behind / clasp loosely */
     var idleW = 1 - walk;
@@ -2321,6 +2328,7 @@
   function Rig(id, o) {
     this.id = id;
     this.vmax = (o && o.vmax) || 190;
+    this.scale = (o && o.scale) || 1.4;        /* screen px per sprite unit where she is drawn */
     this.pose = newPose();
     this.hair = new Spring(70, 5.2);
     this.hairY = new Spring(120, 7);
@@ -2348,8 +2356,10 @@
   Rig.prototype.play = function (kind, dur) {
     this.act = kind;
     this.actT = 0;
+    this.landed = false;
+    this.tookOff = false;
     this.actDur = dur || ({ pet: 1.3, cheer: 1.4, wave: 1.2, pose: 0.9, surprise: 0.9 })[kind] || 1;
-    if (kind === 'cheer' || kind === 'pose') { this.hairY.v -= 14; this.ear.v += 10; }
+    if (kind === 'cheer' || kind === 'pose') { this.ear.v += 6; }
     if (kind === 'surprise') { this.hairY.v -= 10; this.sqS.v -= 6; }
     return this;
   };
@@ -2389,11 +2399,21 @@
     var moving = spd > 14 || climb > 0;
     var wantWalk = moving ? Math.min(1, 0.35 + spdN * 1.2) : 0;
     if (o && o.air) wantWalk *= 1 - o.air;
-    this.walk += (wantWalk - this.walk) * Math.min(1, dt * (wantWalk > this.walk ? 12 : 7));
+    this.walk += (wantWalk - this.walk) * Math.min(1, dt * (wantWalk > this.walk ? 12 : moving ? 7 : 9));
     if (moving && !this.moving) { this.sqS.v += 7; }               /* push-off dip */
     if (!moving && this.moving) { this.sqS.v += 5; this.idle = 0; } /* settle on stop */
     this.moving = moving;
-    var cad = 1.25 + 1.6 * spdN;
+    /* gait: the stride and duty set how far one cycle carries her, and the
+       cadence follows the ground she covers so planted feet stay put, up
+       to a quick little-kid trot; faster than that she runs (shorter
+       contact, a flight bounce, pumping arms) instead of blurring steps */
+    var run = this.walk * smooth((spdN - 0.4) / 0.5) * (1 - climb);
+    var duty = 0.5 - 0.22 * run;
+    var stride = this.walk * (1.1 + 1.7 * spdN) * (0.35 + 0.65 * Math.min(1, Math.abs(this.L))) * (1 + climb * 0.3);
+    var vu = spd / this.scale;
+    var cad = Math.min(1.6 + vu / 45, 4.4);
+    if (stride > 0.05) cad = Math.min(cad, vu * duty / (2 * stride));
+    if (!moving) cad = 2.4;                    /* settling steps as the stride shrinks */
     if (this.walk > 0.02) this.ph = (this.ph + dt * cad * TAU) % TAU;
     else this.ph += (Math.round(this.ph / Math.PI) * Math.PI - this.ph) * Math.min(1, dt * 8);
 
@@ -2441,17 +2461,37 @@
     }
 
     /* action clock */
-    var hop = 0, actU = 0;
+    var hop = 0, actU = 0, actSq = 0, actBob = 0, actTilt = 0, actLean = 0;
     if (this.act) {
       this.actT += dt;
       actU = this.actT / this.actDur;
-      if (this.act === 'cheer') hop = Math.max(0, Math.sin(Math.min(1, actU / 0.55) * Math.PI)) * 3.6;
-      if (this.act === 'pose') hop = Math.max(0, Math.sin(Math.min(1, actU / 0.45) * Math.PI)) * 1.6;
-      if (actU >= 1) { if (this.act === 'cheer' || this.act === 'pose') this.sqS.v += 6; this.act = null; }
+      var ae = smooth(actU / 0.18) * (1 - smooth((actU - 0.8) / 0.2));
+      if (this.act === 'cheer' || this.act === 'pose') {
+        /* crouch, spring up (stretched), land and squash */
+        var big = this.act === 'cheer', a0 = big ? 0.1 : 0.08, a1 = big ? 0.45 : 0.36;
+        var hu = (actU - a0) / a1;
+        if (actU < a0) actSq = Math.sin(actU / a0 * Math.PI * 0.5) * (big ? 1.1 : 0.7);
+        else if (hu < 1) {
+          if (!this.tookOff) { this.tookOff = true; this.hairY.v -= big ? 14 : 9; this.ear.v += 8; }
+          hop = Math.sin(hu * Math.PI) * (big ? 3.6 : 1.6);
+          actSq = -Math.abs(Math.cos(hu * Math.PI)) * (big ? 0.6 : 0.35) * (hu < 0.5 ? 1 : 0.6);
+        } else if (!this.landed) { this.landed = true; this.sqS.v += big ? 9 : 6; this.hairY.v += 8; }
+      } else if (this.act === 'pet') {
+        /* lean in, a little knee bob with each stroke, head tipped to the guest */
+        actBob = -0.45 * ae * (0.5 + 0.5 * Math.sin(this.actT * 15));
+        actTilt = 0.07 * ae;
+        actLean = 0.03 * ae;
+      } else if (this.act === 'wave') {
+        actTilt = -0.06 * ae + Math.sin(this.actT * 13) * 0.015 * ae;
+        actLean = -0.025 * ae;
+        actBob = 0.25 * ae * Math.max(0, Math.sin(this.actT * 13));
+      }
+      if (actU >= 1) this.act = null;
     }
 
     /* walk bob, and how fast it changes (it kicks the hair) */
-    var bob = this.walk * (0.55 + 0.6 * spdN + climb * 0.6) * (0.5 - 0.5 * Math.cos(2 * this.ph));
+    var walkB = 0.5 + 0.5 * Math.cos(2 * this.ph - duty * TAU);   /* high at mid-stance */
+    var bob = this.walk * (0.55 + 0.6 * spdN + climb * 0.6) * (walkB + run * (1 - 2 * walkB)) + run * 0.5 * (1 - walkB);
     var bv = (bob - this.prevBob) / dt;
     var bAcc = (bv - this.bobV) / dt;
     this.prevBob = bob; this.bobV = bv;
@@ -2474,17 +2514,20 @@
     Q.walk = this.walk;
     Q.ph = this.ph;
     Q.spd = spdN;
-    Q.bob = bob;
+    Q.stride = stride;
+    Q.duty = duty;
+    Q.run = run;
+    Q.bob = bob + actBob;
     Q.hop = hop;
     Q.air = (o && o.air) || 0;
     Q.climb = climb;
-    Q.lean = this.walk * (0.035 + 0.05 * spdN) + clamp(this.ax * mir / vm * 0.012, -0.06, 0.07) + climb * 0.08;
-    Q.sq = clamp(this.sqS.x * 0.18, -1, 1.2);
+    Q.lean = this.walk * (0.035 + 0.05 * spdN) + clamp(this.ax * mir / vm * 0.012, -0.06, 0.07) + climb * 0.08 + actLean;
+    Q.sq = clamp(this.sqS.x * 0.18 + actSq, -1, 1.2);
     Q.breath = Math.sin(t * TAU / 3.2) * (1 - this.walk * 0.6);
     Q.open = open;
     Q.gx = o && o.gaze ? o.gaze[0] * mir : gx * mir;
     Q.gy = o && o.gaze ? o.gaze[1] : gy;
-    Q.tilt = (gy < -0.3 ? -0.04 : 0) + Math.sin(t * 0.9) * 0.012 * (1 - this.walk);
+    Q.tilt = (gy < -0.3 ? -0.04 : 0) + Math.sin(t * 0.9) * 0.012 * (1 - this.walk) + actTilt;
     Q.hip = hipShift * mir;
     Q.hair = this.hair.x * mir + Math.sin(t * 1.3) * 0.25 * (1 - this.walk);
     Q.hairY = this.hairY.x;

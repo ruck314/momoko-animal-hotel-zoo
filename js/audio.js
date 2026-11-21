@@ -1,4 +1,4 @@
-/* audio.js – Web Audio API chiptune sound effects & music */
+/* audio.js – Web Audio API sound effects & music (music via Game.music) */
 (function () {
   'use strict';
   window.Game = window.Game || {};
@@ -8,6 +8,7 @@
   var musicGain = null;
   var sfxGain = null;
   var currentMusic = null;
+  var player = null;
   var muted = false;
   var initialized = false;
 
@@ -26,6 +27,8 @@
       sfxGain = ctx.createGain();
       sfxGain.gain.value = 0.6;
       sfxGain.connect(masterGain);
+
+      player = Game.music.createPlayer(ctx, musicGain);
 
       initialized = true;
     } catch (e) { /* Web Audio not available */ }
@@ -122,17 +125,35 @@
     playNote(660, 'square', 0.06, 0.15, sfxGain);
   }
 
+  /* Musical one-shots go through the Game.music instruments; jingleGain
+     lifts their softer timbres to the old square-wave loudness. */
+  var jingleGain = null;
+  function jingleBus() {
+    if (!jingleGain) {
+      jingleGain = ctx.createGain();
+      jingleGain.gain.value = 1.6;
+      jingleGain.connect(sfxGain);
+    }
+    return jingleGain;
+  }
+
   function victoryJingle() {
     if (!ctx) return;
-    var t = ctx.currentTime;
-    var notes = [523, 587, 659, 784, 659, 784, 1047];
+    var M = Game.music, out = jingleBus();
+    var notes = ['C5', 'D5', 'E5', 'G5', 'E5', 'G5', 'C6'];
     var dur = [0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.4];
-    var time = t;
-    for (var i = 0; i < notes.length; i++) {
-      playNote(notes[i], 'square', dur[i], 0.3, sfxGain, time);
-      playNote(notes[i] * 0.5, 'triangle', dur[i], 0.15, sfxGain, time);
-      time += dur[i];
+    var time = ctx.currentTime + 0.02, last = notes.length - 1;
+    for (var i = 0; i <= last; i++) {
+      if (i > 0) time += dur[i - 1];
+      M.voice(ctx, out, 'pluck', notes[i], time, dur[i], i === last ? 1 : 0.85, { decay: 0.3 });
+      M.voice(ctx, out, 'bell', notes[i], time, dur[i], 0.6, { decay: 0.4 });
     }
+    /* Final chord under the top C, with a triangle tap. */
+    M.voice(ctx, out, 'epiano', 'E4', time, 0.6, 0.7);
+    M.voice(ctx, out, 'epiano', 'G4', time, 0.6, 0.7);
+    M.voice(ctx, out, 'epiano', 'C5', time, 0.6, 0.7);
+    M.voice(ctx, out, 'bass', 'C3', time, 0.5, 0.8);
+    M.drum(ctx, out, 'tri', time, 0.8);
   }
 
   function gameOverSfx() {
@@ -386,9 +407,11 @@
 
   function elevatorDingSfx() {
     if (!ctx) return;
-    var t = ctx.currentTime;
-    playNote(880,  'sine', 0.25, 0.28, sfxGain, t);
-    playNote(1175, 'sine', 0.45, 0.22, sfxGain, t + 0.12);
+    var M = Game.music, out = jingleBus(), t = ctx.currentTime + 0.01;
+    M.voice(ctx, out, 'bell', 'A5', t, 0.25, 0.9, { decay: 0.45 });
+    M.voice(ctx, out, 'marimba', 'A4', t, 0.25, 0.5);
+    M.voice(ctx, out, 'bell', 'D6', t + 0.12, 0.45, 0.85, { decay: 0.8 });
+    M.voice(ctx, out, 'marimba', 'D5', t + 0.12, 0.45, 0.45);
   }
 
   /* New species SFX */
@@ -462,166 +485,20 @@
     growl(170, 90, 0.4, 'sawtooth');
   }
 
-  /* ---- Music (looping chiptune patterns) ---- */
-  var musicInterval = null;
-
-  /* Hotel lobby BGM — laid-back jazz progression in F major (ii–V–I)
-     with a lounge-y melody. Distinct from the space template's pentatonic
-     drift. Sevenths and walking bass give it that brass-and-velvet hotel
-     feel. */
-  var bgmPattern = [
-    /* Phrase A — Fmaj7 → Dm7 */
-    [349, 'sine'], [440, 'sine'], [523, 'sine'], [659, 'sine'],
-    [523, 'sine'], [440, 'sine'], [392, 'sine'], [349, 'sine'],
-    [294, 'sine'], [349, 'sine'], [440, 'sine'], [523, 'sine'],
-    [440, 'sine'], [349, 'sine'], [294, 'sine'], [220, 'sine'],
-    /* Phrase B — Gm7 → C7 → Fmaj7 */
-    [392, 'sine'], [466, 'sine'], [587, 'sine'], [466, 'sine'],
-    [392, 'sine'], [349, 'sine'], [294, 'sine'], [262, 'sine'],
-    [262, 'sine'], [330, 'sine'], [392, 'sine'], [523, 'sine'],
-    [440, 'sine'], [349, 'sine'], [330, 'sine'], [349, 'sine'],
-  ];
-
-  /* Walking bass — F → D → G → C around 1 octave */
-  var bgmBass = [
-    87, 110, 131, 110,    87, 110, 131, 110,
-    73, 98,  117, 98,     73, 98,  117, 98,
-    98, 117, 147, 117,    98, 117, 147, 117,
-    65, 87,  98, 110,     87, 73,  87, 87,
-  ];
-
-  /* Boss music – ominous, faster */
-  var bossPattern = [
-    [196, 'square'], [233, 'square'], [262, 'square'], [233, 'square'],
-    [196, 'square'], [175, 'square'], [196, 'square'], [147, 'square'],
-    [175, 'square'], [208, 'square'], [233, 'square'], [208, 'square'],
-    [175, 'square'], [165, 'square'], [175, 'square'], [131, 'square'],
-    [196, 'square'], [262, 'square'], [330, 'square'], [262, 'square'],
-    [196, 'square'], [175, 'square'], [147, 'square'], [131, 'square'],
-    [147, 'square'], [175, 'square'], [196, 'square'], [175, 'square'],
-    [147, 'square'], [131, 'square'], [147, 'square'], [196, 'square'],
-  ];
-
-  var bossBass = [
-    98, 98, 131, 131, 98, 98, 87, 87,
-    87, 87, 117, 117, 87, 87, 82, 82,
-    98, 98, 131, 131, 98, 98, 87, 87,
-    73, 73, 87, 87, 73, 73, 98, 98,
-  ];
-
-  /* Title-screen music – NES-era heroic march in C major, 16th-note
-     square lead over a triangle-bass walk with a kick-hat noise pulse
-     on every beat. Two 8-bar phrases so it doesn't loop too quickly. */
-  var titlePattern = [
-    /* Phrase A */
-    [523, 'square'], [659, 'square'], [784, 'square'], [659, 'square'],
-    [784, 'square'], [1047, 'square'], [988, 'square'], [784, 'square'],
-    [880, 'square'], [1047, 'square'], [1319, 'square'], [1047, 'square'],
-    [988, 'square'], [784, 'square'], [659, 'square'], [523, 'square'],
-    /* Phrase B */
-    [698, 'square'], [880, 'square'], [1047, 'square'], [880, 'square'],
-    [1047, 'square'], [1397, 'square'], [1319, 'square'], [1047, 'square'],
-    [1175, 'square'], [988, 'square'], [784, 'square'], [587, 'square'],
-    [659, 'square'], [784, 'square'], [1047, 'square'], [784, 'square'],
-  ];
-  var titleBass = [
-    131, 131, 131, 131, 196, 196, 196, 196,
-    220, 220, 220, 220, 131, 131, 196, 196,
-    175, 175, 175, 175, 220, 220, 220, 220,
-    196, 196, 147, 147, 131, 131, 196, 131,
-  ];
-  /* 1 = kick (noise burst), 0 = nothing — NES-era drum-less synth still
-     benefits from a small noise thump on the strong beats. */
-  var titleDrums = [
-    1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,1,0,
-    1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,1,0,
-  ];
-
-  /* Per-floor flavor for the lobby BGM. Each floor transposes the lead
-     by a few semitones, nudges tempo, and picks a complementary lead
-     waveform so the wings feel sonically distinct without needing a
-     whole new pattern.
-       semi  – semitones to transpose the melody (bass stays grounded)
-       wave  – override for the lead waveform
-       tempoMul – multiplier on the base tempo (1.0 = unchanged) */
-  var FLOOR_FLAVOR = [
-    /* Floor 0 (Lobby)   – default jazz lounge */
-    { semi:  0, wave: null,       tempoMul: 1.00, sparkle: false },
-    /* Floor 1 (Safari)  – brighter, slightly faster, square lead */
-    { semi:  4, wave: 'square',   tempoMul: 1.06, sparkle: false },
-    /* Floor 2 (Wild)    – a touch lower and more triangle-mellow */
-    { semi: -3, wave: 'triangle', tempoMul: 0.96, sparkle: false },
-    /* Floor 3 (Magic)   – ethereal: shimmery sine + sparkle drum */
-    { semi:  7, wave: 'sine',     tempoMul: 1.00, sparkle: true },
-  ];
-
-  function semiToRatio(semi) { return Math.pow(2, semi / 12); }
-
+  /* ---- Music (Game.music sequencer; songs live in songs.js) ---- */
+  /* Hotel BGM is one arrangement per floor ('bgm0'..'bgm3'); riding the
+     elevator crossfades between them instead of restarting. */
   function startMusic(type, floorIndex) {
-    stopMusic();
-    if (!ctx || muted) return;
-    var pattern, bass, drums, tempo;
-    if (type === 'boss') {
-      pattern = bossPattern; bass = bossBass; drums = null; tempo = 180;
-    } else if (type === 'title') {
-      pattern = titlePattern; bass = titleBass; drums = titleDrums; tempo = 150;
-    } else {
-      pattern = bgmPattern; bass = bgmBass; drums = null; tempo = 88;
-    }
-
-    /* Floor flavor only applies to the in-hotel BGM. */
-    var flavor = (type !== 'title' && type !== 'boss')
-      ? (FLOOR_FLAVOR[floorIndex || 0] || FLOOR_FLAVOR[0])
-      : { semi: 0, wave: null, tempoMul: 1.0, sparkle: false };
-    var pitchRatio = semiToRatio(flavor.semi);
-    tempo = Math.round(tempo * flavor.tempoMul);
-
-    var beatDur = 60 / tempo;
-    var noteIdx = 0;
-
-    function scheduleNotes() {
-      if (!ctx || muted) return;
-      var t = ctx.currentTime;
-      for (var i = 0; i < 4; i++) {
-        var idx = (noteIdx + i) % pattern.length;
-        var note = pattern[idx];
-        var bNote = bass[idx];
-        var when = t + i * beatDur;
-
-        /* Melody */
-        var melodyGain = type === 'title' ? 0.13 : 0.15;
-        var leadFreq = note[0] * pitchRatio;
-        var leadType = flavor.wave || note[1];
-        playNote(leadFreq, leadType, beatDur * 0.8, melodyGain, musicGain, when);
-        /* Title gets a subtle second square an octave lower for width */
-        if (type === 'title') {
-          playNote(note[0] * 0.5, 'square', beatDur * 0.8, 0.06, musicGain, when);
-        }
-        /* Bass */
-        playNote(bNote, 'triangle', beatDur * 0.9, 0.12, musicGain, when);
-
-        if (type === 'boss') {
-          if (idx % 4 === 0) noise(0.04, musicGain, when);
-        } else if (type === 'title' && drums && drums[idx]) {
-          noise(0.035, musicGain, when);
-        } else if (flavor.sparkle && idx % 4 === 2) {
-          /* Magic floor: a tiny high-pitched twinkle on the upbeat. */
-          playNote(2093, 'triangle', 0.06, 0.05, musicGain, when);
-        }
-      }
-      noteIdx = (noteIdx + 4) % pattern.length;
-    }
-
-    scheduleNotes();
-    musicInterval = setInterval(scheduleNotes, beatDur * 4 * 1000);
+    if (!ctx || muted || !player) { stopMusic(); return; }
+    var name = type === 'bgm' ? 'bgm' + (floorIndex || 0) : type;
+    var song = Game.songs[name] || Game.songs.bgm0;
+    if (player.current() === name) { currentMusic = type; return; }
+    player.play(song, { name: name, fade: (type === 'bgm' && currentMusic === 'bgm') ? 1.5 : 0.8 });
     currentMusic = type;
   }
 
   function stopMusic() {
-    if (musicInterval) {
-      clearInterval(musicInterval);
-      musicInterval = null;
-    }
+    if (player) player.stop(0.4);
     currentMusic = null;
   }
 
