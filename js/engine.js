@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.26.0';
+  Game.VERSION = 'v0.27.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -1425,8 +1425,10 @@
             /* Monkeys hang on the chandelier ~270px above the corridor;
                full Euclidean distance would never qualify. Use horizontal
                distance only so a kid walking directly under one can call
-               them down for a re-greeting. */
-            dist = Math.abs(player.x - npc.x);
+               them down for a re-greeting. Counted double, so only
+               standing right underneath (within 40px) calls one, and a
+               door next to a chandelier opens without a monkey chiming in. */
+            dist = Math.abs(player.x - npc.x) * 2;
           } else {
             dist = Math.sqrt(
               Math.pow(player.x - npc.x, 2) + Math.pow(player.y - npc.y, 2)

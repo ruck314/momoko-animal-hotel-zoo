@@ -34,12 +34,12 @@
       /* Marble columns flanking the lobby */
       { type: 'fancyColumn', x: 240,  y: 440 },
       { type: 'fancyColumn', x: 600,  y: 440 },
-      { type: 'fancyColumn', x: 1210, y: 440 },
+      { type: 'fancyColumn', x: 1260, y: 440 },
 
       /* Three crystal chandeliers — monkeys hang on these */
       { type: 'chandelier', x: 400,  y: 80 },
       { type: 'chandelier', x: 900,  y: 80 },
-      { type: 'chandelier', x: 1300, y: 80 },
+      { type: 'chandelier', x: 1220, y: 80 },
 
       /* Reception desk + adjacent decor */
       { type: 'receptionDesk', x: 750,  y: 440 },
@@ -48,14 +48,14 @@
       { type: 'luggageStand',  x: 980,  y: 440 },
 
       /* Plush velvet armchairs + tall potted palms */
-      { type: 'lobbySofa',  x: 1110, y: 440 },
-      { type: 'lobbyRug',   x: 1110, y: 440 },
+      { type: 'lobbySofa',  x: 400,  y: 440 },
+      { type: 'lobbyRug',   x: 400,  y: 440 },
       { type: 'lobbyPlant', x: 480,  y: 440 },
       { type: 'lobbyPlant', x: 1410, y: 440 },
 
       /* Gilded wall art */
       { type: 'goldFrame',    x: 280,  y: 200, art: 'cityscape' },
-      { type: 'goldFrame',    x: 1120, y: 200, art: 'jungle'    },
+      { type: 'goldFrame',    x: 1130, y: 200, art: 'jungle'    },
       { type: 'goldFrame',    x: 1310, y: 200, art: 'sea'       },
 
       /* Marquee neon over reception */
@@ -63,11 +63,12 @@
 
       /* Bedroom door + extra suite */
       { type: 'roomDoorFrame', x: 280,  y: 388, color: '#ff99cc' },
+      { type: 'roomDoorFrame', x: 1130, y: 388, color: '#a86a30' },
       { type: 'roomDoorFrame', x: 1310, y: 388, color: '#88ddff' },
 
       /* Peekers — cat + fox stalking Momoko from behind columns */
       { type: 'peeker', x: 600,  y: 200, species: 'cat', side: 1 },
-      { type: 'peeker', x: 1210, y: 200, species: 'fox', side: -1 },
+      { type: 'peeker', x: 1260, y: 200, species: 'fox', side: -1 },
 
       /* Elevator shaft + stairs */
       { type: 'elevatorShaft', x: 1446, y: 440 },
@@ -84,10 +85,14 @@
         /* Chandelier monkeys (the first one is the escort monkey) */
         { type: 'chandelierMonkey', x: 400,  y: 110, escort: true },
         { type: 'chandelierMonkey', x: 900,  y: 110 },
-        { type: 'chandelierMonkey', x: 1300, y: 110 },
+        { type: 'chandelierMonkey', x: 1220, y: 110 },
 
         /* Momoko's bedroom door (with bed inside that triggers the sleep cutscene) */
         { type: 'animalDoor', x: 280,  y: 388, species: 'bedroom' },
+
+        /* The monkeys' jungle gym, so the monkey can be greeted on foot
+           as well as at the check-in escort */
+        { type: 'animalDoor', x: 1130, y: 388, species: 'monkey' },
 
         /* Bonus suite — owl reading-nook (extra cozy) */
         { type: 'animalDoor', x: 1310, y: 388, species: 'owl' },
