@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.25.0';
+  Game.VERSION = 'v0.26.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -1655,7 +1655,7 @@
           /* The cutscene visually walks Momoko from her spawn to the
              elevator. Match her real position to where the camera left
              her so she doesn't snap back to the lobby door — otherwise
-             she has to walk the full 2100px again to reach what the
+             she has to walk the whole lobby again to reach what the
              monkey just escorted her to. */
           if (player && level) {
             var elev = null;
@@ -3821,7 +3821,7 @@
 
   /* ---- Hotel zoo side quest: guest ledger stamps ---- */
   /* Total unique species players can greet (excludes the bedroom door). */
-  var TOTAL_GUESTS = 26;
+  var TOTAL_GUESTS = 27;
   var ALL_STAMPED_FLAG = false;
   /* Mid-progress acknowledgment: at 10 stamps the chandelier monkey
      shouts a halfway-cheer. Tracked so we don't re-fire on subsequent

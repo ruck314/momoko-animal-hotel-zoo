@@ -1874,6 +1874,7 @@
     polarBear: { body: '#fafafa', shade: '#bcc8d6', accent: '#1a1a1a' },
     frog:      { body: '#5fc858', shade: '#2c8a30', accent: '#fff8c0' },
     gorilla:   { body: '#3a3a3a', shade: '#1a1a1a', accent: '#aa8866' },
+    deer:      { body: '#c98b52', shade: '#8f5a2c', accent: '#fbeedb' },
   };
 
   /* Tiny shared helper – draws eye + highlight at (cx, cy). */
@@ -3882,6 +3883,66 @@
     c.beginPath(); c.moveTo(sx + 19, sy + 23); c.quadraticCurveTo(sx + 22, sy + 25.5, sx + 25, sy + 23); c.stroke();
   }
 
+  /* ---- Deer: a spotted fawn on long legs, big ears, white tail flag ---- */
+  function drawDeerSprite(c, sx, sy) {
+    var p = ANIMAL_PALETTES.deer;
+    var CREAM = p.accent, HOOF = '#3a2418', INK = '#3a2418', PINK = '#f2c8c0';
+    groundShadow(c, sx + 24, sy + 45, 17, 2.6);
+    /* Short tail, flicked up, white underneath */
+    blob(c, sx + 37.6, sy + 20.6, 2.6, 3.6, 0.5, p.shade);
+    blob(c, sx + 38.6, sy + 21.6, 1.5, 2.6, 0.5, CREAM);
+    /* Far legs */
+    limb(c, sx + 17, sy + 29, sx + 16.4, sy + 42.5, 2.1, p.shade);
+    limb(c, sx + 32, sy + 29, sx + 33.6, sy + 36, 2.8, p.shade);
+    limb(c, sx + 33.6, sy + 36, sx + 33, sy + 42.5, 2.0, p.shade);
+    blob(c, sx + 16.4, sy + 43, 1.5, 1, 0, HOOF);
+    blob(c, sx + 33, sy + 43, 1.5, 1, 0, HOOF);
+    /* Body with a cream belly and fawn spots along the back */
+    c.fillStyle = vGrad(c, sy + 18, sy + 33, p.body, p.shade);
+    c.beginPath(); c.ellipse(sx + 25, sy + 25.5, 12.5, 6.8, -0.04, 0, Math.PI * 2); c.fill();
+    c.save();
+    c.beginPath(); c.ellipse(sx + 25, sy + 25.5, 12.5, 6.8, -0.04, 0, Math.PI * 2); c.clip();
+    blob(c, sx + 24, sy + 31.4, 10, 3.2, 0, CREAM);
+    c.restore();
+    var SP = [[19.5, 21.4, 1.0], [23.5, 20.2, 1.1], [27.5, 20.4, 1.0], [31.5, 21.2, 1.0], [34.6, 22.8, 0.8],
+              [21.6, 24.2, 0.9], [26, 23.4, 1.0], [30.2, 24.2, 0.9], [24, 26.4, 0.7], [28.4, 26.8, 0.7]];
+    for (var si = 0; si < SP.length; si++) blob(c, sx + SP[si][0], sy + SP[si][1], SP[si][2], SP[si][2] * 0.85, 0, 'rgba(255,248,232,0.92)');
+    /* Near legs: slim, with a knee and a hock, dark hooves */
+    limb(c, sx + 15, sy + 29, sx + 13.8, sy + 36, 2.6, p.body);
+    limb(c, sx + 13.8, sy + 36, sx + 14.2, sy + 42.5, 2.2, p.body);
+    c.fillStyle = vGrad(c, sy + 18, sy + 33, p.body, p.shade);
+    c.beginPath(); c.ellipse(sx + 30.4, sy + 27.6, 4.6, 5.4, 0.2, 0, Math.PI * 2); c.fill();
+    limb(c, sx + 30.6, sy + 30, sx + 31.6, sy + 36.4, 3.0, p.body);
+    limb(c, sx + 31.6, sy + 36.4, sx + 30.6, sy + 42.5, 2.2, p.body);
+    blob(c, sx + 14.2, sy + 43, 1.6, 1.05, 0, HOOF);
+    blob(c, sx + 30.6, sy + 43, 1.6, 1.05, 0, HOOF);
+    /* Neck rising to the head, cream throat */
+    limb(c, sx + 16.5, sy + 24, sx + 11, sy + 14.5, 6.4, p.body);
+    blob(c, sx + 12.8, sy + 20.2, 2.3, 4, 0.5, CREAM);
+    /* Head with a tapered muzzle */
+    c.fillStyle = vGrad(c, sy + 6, sy + 19, p.body, p.shade);
+    c.beginPath(); c.ellipse(sx + 9.5, sy + 11.5, 5.6, 5, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(sx + 3.8, sy + 14, 3.8, 2.7, 0.25, 0, Math.PI * 2); c.fill();
+    blob(c, sx + 2.6, sy + 14.9, 2.4, 1.8, 0.2, CREAM);
+    /* Big ears (far, then near) and two little antler nubs */
+    blob(c, sx + 15.6, sy + 5.8, 2.1, 4.4, 0.95, p.shade);
+    blob(c, sx + 12.4, sy + 4.6, 2.4, 4.8, 0.55, p.body);
+    blob(c, sx + 12.6, sy + 4.9, 1.2, 3.2, 0.55, PINK);
+    blob(c, sx + 8.4, sy + 6.6, 0.9, 1.4, -0.2, '#ead6ae');
+    blob(c, sx + 10.8, sy + 6.3, 0.9, 1.4, 0.2, '#ead6ae');
+    /* Nose, smile, big lashed eye, blush */
+    blob(c, sx + 0.5, sy + 13.6, 1.35, 1.05, 0, INK);
+    blob(c, sx + 0.1, sy + 13.2, 0.4, 0.3, 0, '#ffffff');
+    c.strokeStyle = INK; c.lineWidth = 0.5; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(sx + 1.2, sy + 15.8); c.quadraticCurveTo(sx + 3, sy + 16.8, sx + 4.8, sy + 16.2); c.stroke();
+    realEye(c, sx + 8, sy + 10.6, 1.65, '#4a2c14');
+    c.lineWidth = 0.45;
+    c.beginPath(); c.moveTo(sx + 6.4, sy + 9.4); c.lineTo(sx + 5.6, sy + 8.6);
+    c.moveTo(sx + 7.4, sy + 8.9); c.lineTo(sx + 7.0, sy + 7.9); c.stroke();
+    blob(c, sx + 6.6, sy + 13.2, 1.3, 0.75, 0, 'rgba(255,140,150,0.4)');
+    furLine(c, sx + 9.5, sy + 7.6, sx + 12.6, sy + 8.2, p.shade, 0.6);
+  }
+
   /* Map species id → painter. */
   var SPECIES_PAINTERS = {
     elephant: drawElephantSprite,
@@ -3911,6 +3972,7 @@
     polarBear: drawPolarBearSprite,
     frog: drawFrogSprite,
     gorilla: drawGorillaSprite,
+    deer: drawDeerSprite,
   };
 
   function drawAnimalSprite(c, species, sx, sy) {

@@ -24,8 +24,8 @@
   var FLOOR_1_LOBBY = {
     name: 'Floor 1 — Lobby',
     wing: 'lobby',
-    windows: [500, 1010, 1640],
-    width: 2400,
+    windows: [500, 1010],
+    width: 1620,
     height: 480,
     waterSurface: 60,
     floorY: 440,
@@ -34,13 +34,12 @@
       /* Marble columns flanking the lobby */
       { type: 'fancyColumn', x: 240,  y: 440 },
       { type: 'fancyColumn', x: 600,  y: 440 },
-      { type: 'fancyColumn', x: 1380, y: 440 },
-      { type: 'fancyColumn', x: 2080, y: 440 },
+      { type: 'fancyColumn', x: 1210, y: 440 },
 
       /* Three crystal chandeliers — monkeys hang on these */
       { type: 'chandelier', x: 400,  y: 80 },
       { type: 'chandelier', x: 900,  y: 80 },
-      { type: 'chandelier', x: 1500, y: 80 },
+      { type: 'chandelier', x: 1300, y: 80 },
 
       /* Reception desk + adjacent decor */
       { type: 'receptionDesk', x: 750,  y: 440 },
@@ -49,35 +48,30 @@
       { type: 'luggageStand',  x: 980,  y: 440 },
 
       /* Plush velvet armchairs + tall potted palms */
-      { type: 'lobbySofa',  x: 1100, y: 440 },
-      { type: 'lobbyRug',   x: 1100, y: 440 },
+      { type: 'lobbySofa',  x: 1110, y: 440 },
+      { type: 'lobbyRug',   x: 1110, y: 440 },
       { type: 'lobbyPlant', x: 480,  y: 440 },
-      { type: 'lobbyPlant', x: 1280, y: 440 },
-      { type: 'lobbyPlant', x: 1720, y: 440 },
-      { type: 'lobbyPlant', x: 1980, y: 440 },
+      { type: 'lobbyPlant', x: 1410, y: 440 },
 
       /* Gilded wall art */
       { type: 'goldFrame',    x: 280,  y: 200, art: 'cityscape' },
-      { type: 'goldFrame',    x: 1180, y: 200, art: 'jungle'    },
-      { type: 'goldFrame',    x: 1860, y: 200, art: 'sea'       },
+      { type: 'goldFrame',    x: 1120, y: 200, art: 'jungle'    },
+      { type: 'goldFrame',    x: 1310, y: 200, art: 'sea'       },
 
       /* Marquee neon over reception */
       { type: 'marqueeSign',  x: 720, y: 130, textKey: 'signPlazaZoo', color: '#ffd24a' },
 
-      /* Lobby midpoint wayfinder — keeps kids oriented in the wide lobby */
-      { type: 'wayfindSign',  x: 1200, y: 440 },
-
       /* Bedroom door + extra suite */
       { type: 'roomDoorFrame', x: 280,  y: 388, color: '#ff99cc' },
-      { type: 'roomDoorFrame', x: 1900, y: 388, color: '#88ddff' },
+      { type: 'roomDoorFrame', x: 1310, y: 388, color: '#88ddff' },
 
       /* Peekers — cat + fox stalking Momoko from behind columns */
       { type: 'peeker', x: 600,  y: 200, species: 'cat', side: 1 },
-      { type: 'peeker', x: 1380, y: 200, species: 'fox', side: -1 },
+      { type: 'peeker', x: 1210, y: 200, species: 'fox', side: -1 },
 
       /* Elevator shaft + stairs */
-      { type: 'elevatorShaft', x: 2176, y: 440 },
-      { type: 'stairwellDoor', x: 2300, y: 440 },
+      { type: 'elevatorShaft', x: 1446, y: 440 },
+      { type: 'stairwellDoor', x: 1520, y: 440 },
     ],
 
     spawns: {
@@ -90,17 +84,17 @@
         /* Chandelier monkeys (the first one is the escort monkey) */
         { type: 'chandelierMonkey', x: 400,  y: 110, escort: true },
         { type: 'chandelierMonkey', x: 900,  y: 110 },
-        { type: 'chandelierMonkey', x: 1500, y: 110 },
+        { type: 'chandelierMonkey', x: 1300, y: 110 },
 
         /* Momoko's bedroom door (with bed inside that triggers the sleep cutscene) */
         { type: 'animalDoor', x: 280,  y: 388, species: 'bedroom' },
 
         /* Bonus suite — owl reading-nook (extra cozy) */
-        { type: 'animalDoor', x: 1900, y: 388, species: 'owl' },
+        { type: 'animalDoor', x: 1310, y: 388, species: 'owl' },
 
         /* Elevator + stairs (lobby has only one set, on the right) */
-        { type: 'elevator', x: 2180, y: 388, side: 'right' },
-        { type: 'stairs',   x: 2310, y: 388, dir: 'up', side: 'right' },
+        { type: 'elevator', x: 1450, y: 388, side: 'right' },
+        { type: 'stairs',   x: 1530, y: 388, dir: 'up', side: 'right' },
       ],
       pickups: [],
     },
@@ -195,7 +189,7 @@
       { type: 'roomDoorFrame', x: 520,  y: 388, color: '#5a5a8a' }, /* wolf */
       { type: 'roomDoorFrame', x: 800,  y: 388, color: '#8a6a3a' }, /* eagle */
       { type: 'roomDoorFrame', x: 1080, y: 388, color: '#cc7733' }, /* fox */
-      { type: 'roomDoorFrame', x: 1360, y: 388, color: '#666688' }, /* owl */
+      { type: 'roomDoorFrame', x: 1360, y: 388, color: '#b07a48' }, /* deer */
       { type: 'roomDoorFrame', x: 1640, y: 388, color: '#222222' }, /* panda */
       { type: 'roomDoorFrame', x: 1920, y: 388, color: '#88aacc' }, /* penguin */
       { type: 'roomDoorFrame', x: 2200, y: 388, color: '#fafafa' }, /* polar bear */
@@ -223,7 +217,7 @@
         { type: 'animalDoor', x: 520,  y: 388, species: 'wolf'      },
         { type: 'animalDoor', x: 800,  y: 388, species: 'eagle'     },
         { type: 'animalDoor', x: 1080, y: 388, species: 'fox'       },
-        { type: 'animalDoor', x: 1360, y: 388, species: 'owl'       },
+        { type: 'animalDoor', x: 1360, y: 388, species: 'deer'      },
         { type: 'animalDoor', x: 1640, y: 388, species: 'panda'     },
         { type: 'animalDoor', x: 1920, y: 388, species: 'penguin'   },
         { type: 'animalDoor', x: 2200, y: 388, species: 'polarBear' },

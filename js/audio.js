@@ -275,6 +275,24 @@
     playNote(330, 'sine', 0.30, 0.20, sfxGain, t + 0.32);
   }
 
+  /* Deer: a soft, high fawn bleat, twice. */
+  function deerSfx() {
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    for (var i = 0; i < 2; i++) {
+      var o = ctx.createOscillator(), g = ctx.createGain(), t0 = t + i * 0.22;
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(760, t0);
+      o.frequency.linearRampToValueAtTime(980, t0 + 0.06);
+      o.frequency.exponentialRampToValueAtTime(620, t0 + 0.16);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(0.2, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.17);
+      o.connect(g); g.connect(sfxGain);
+      o.start(t0); o.stop(t0 + 0.18);
+    }
+  }
+
   function pandaSfx() {
     if (!ctx) return;
     var t = ctx.currentTime;
@@ -546,6 +564,7 @@
         case 'snore': snoreSfx(); break;
         case 'elevatorDing': elevatorDingSfx(); break;
         case 'koala': koalaSfx(); break;
+        case 'deer': deerSfx(); break;
         case 'hippo': hippoSfx(); break;
         case 'rhino': rhinoSfx(); break;
         case 'polarBear': polarBearSfx(); break;

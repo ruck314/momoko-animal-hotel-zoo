@@ -6252,6 +6252,7 @@
     alien: 'starship',    monkey: 'jungle',
     koala: 'eucalyptus',  hippo: 'riverBank',  rhino: 'savanna',
     polarBear: 'arctic',  frog: 'lilyPond',    gorilla: 'jungle',
+    deer: 'forestGlen',
     bedroom: 'bedroom',
   };
 
@@ -6630,6 +6631,8 @@
     bedroom:      { sun: [W / 2 + 220, 70, 170, 0.26], light: '255,226,190', shade: '120,50,110', rays: [0, 0], pool: 0.12, vig: 0.3,
                     motes: { kind: 'sparkle', n: 10, rgb: '255,240,250', x: 100, y: 50, w: 600, h: 200, size: 2, a: 0.7, seed: 79 }, fg: ['none'] }
   };
+  /* The deer's glen is the pine forest without the bear's honey stump. */
+  ROOM_RIGS.forestGlen = ROOM_RIGS.pineForest;
   var ROOM_RIG_DEFAULT = ROOM_RIGS.cozyRoom;
   /* Sprite light (direction toward the key light from the stage centre),
      derived once per rig. */
@@ -6882,8 +6885,9 @@
         paintFrond(c, -10, FT + 30 - i * 26, 120 - i * 8, -0.9 + i * 0.32, i % 2 ? '#1c5a30' : '#0f3a22', '#2c7a3c');
         paintFrond(c, W + 10, FT + 30 - i * 26, 120 - i * 8, Math.PI + 0.9 - i * 0.32, i % 2 ? '#1c5a30' : '#0f3a22', '#2c7a3c');
       }
-    } else if (habitat === 'pineForest') {
-      /* Golden-hour mountain forest */
+    } else if (habitat === 'pineForest' || habitat === 'forestGlen') {
+      /* Golden-hour mountain forest (the bear's has a honey stump, the
+         deer's glen a mossy log with clover) */
       LIT = 1;
       c.fillStyle = vGradUI(c, 0, FT, '#4c7fb0', '#f2c48c', '#ffe9b6');
       c.fillRect(0, 0, W, FT);
@@ -6903,6 +6907,32 @@
       paintGround(c, '#6f9440', '#27482a');
       paintFlecks(c, 22, 9, 'rgba(255,236,160,0.14)', 28, 6);
       paintGrassTufts(c, '#4a7a30', FT + 8, 18, 12, 4);
+      if (habitat === 'forestGlen') {
+        var lgx = 600, lgy = FT + 40;
+        c.fillStyle = 'rgba(20,30,20,0.3)';
+        c.beginPath(); c.ellipse(lgx, lgy + 4, 58, 7, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#6a4424';
+        c.beginPath(); c.ellipse(lgx, lgy - 10, 52, 13, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#8a5c30';
+        c.beginPath(); c.ellipse(lgx - 6, lgy - 15, 44, 6, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#d8ac6c';
+        c.beginPath(); c.ellipse(lgx + 50, lgy - 10, 7, 12, 0, 0, Math.PI * 2); c.fill();
+        c.strokeStyle = '#a87a40'; c.lineWidth = 1;
+        c.beginPath(); c.ellipse(lgx + 50, lgy - 10, 4, 7, 0, 0, Math.PI * 2); c.stroke();
+        c.fillStyle = '#5f9a3c';
+        c.beginPath(); c.ellipse(lgx - 14, lgy - 22, 26, 5, -0.05, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#7cba4c';
+        c.beginPath(); c.ellipse(lgx - 18, lgy - 24, 16, 3, -0.05, 0, Math.PI * 2); c.fill();
+        var CL = [[-40, 6], [-22, 10], [14, 8], [36, 12], [64, 6], [-58, 12]];
+        for (var cl = 0; cl < CL.length; cl++) {
+          var fx0 = lgx + CL[cl][0], fy0 = lgy + CL[cl][1];
+          c.fillStyle = '#3f7a2c';
+          c.beginPath(); c.arc(fx0 - 2, fy0, 2.4, 0, Math.PI * 2); c.arc(fx0 + 2, fy0, 2.4, 0, Math.PI * 2); c.arc(fx0, fy0 - 2.6, 2.4, 0, Math.PI * 2); c.fill();
+          c.fillStyle = cl % 2 ? '#fff4f8' : '#ffc0d8';
+          c.beginPath(); c.arc(fx0, fy0 - 7, 2.6, 0, Math.PI * 2); c.fill();
+          c.strokeStyle = '#3f7a2c'; c.beginPath(); c.moveTo(fx0, fy0 - 2); c.lineTo(fx0, fy0 - 5); c.stroke();
+        }
+      } else {
       /* Honey stump */
       var hsx = 590, hsy = FT + 44;
       c.fillStyle = 'rgba(20,30,20,0.3)';
@@ -6926,6 +6956,7 @@
       c.fillStyle = '#ffc030';
       c.beginPath(); c.ellipse(hsx + 14, hsy - 28, 4, 2, 0, 0, Math.PI * 2); c.fill();
       c.fillRect(hsx + 12.5, hsy - 28, 3, 9);
+      }
       /* Toadstools */
       for (i = 0; i < 5; i++) {
         x = 220 + i * 118 + hash01(i + 14) * 40;
@@ -9664,12 +9695,12 @@
    *  Sits over a paused PLAYING / ANIMAL_ROOM scene.
    * ============================================================ */
   /* Listed in floor order so the player can mentally map them. The
-     chandelier monkey is the 26th guest — Momoko meets them during the
+     chandelier monkey is the last (27th) guest — Momoko meets them during the
      lobby check-in escort, which is where the stamp is awarded. */
   var LEDGER_SPECIES = [
     'owl',
     'elephant', 'lion', 'tiger', 'bear', 'giraffe', 'zebra', 'hippo', 'rhino',
-    'wolf', 'eagle', 'fox', 'panda', 'penguin', 'polarBear', 'gorilla',
+    'wolf', 'eagle', 'fox', 'deer', 'panda', 'penguin', 'polarBear', 'gorilla',
     'bunny', 'cat', 'dog', 'seaOtter', 'kangaroo', 'unicorn', 'alien', 'koala', 'frog',
     'monkey'
   ];
@@ -9783,7 +9814,8 @@
     /* Stamp album: a perforated stamp per guest along the bottom of the
        page — the animal's portrait once greeted, a faint ghost until
        then, with a red postmark over the stamped ones. */
-    var stW = 46, stH = 50, stGap = 4, perRow = 13;
+    var perRow = Math.ceil(LEDGER_SPECIES.length / 2);
+    var stGap = 4, stW = Math.min(46, Math.floor((cardW - 40 - (perRow - 1) * stGap) / perRow)), stH = Math.round(stW * 50 / 46);
     var albumX = cardX + (cardW - (perRow * (stW + stGap) - stGap)) / 2;
     var albumY = gridY + Math.ceil(LEDGER_SPECIES.length / cols) * rowH + 10;
     var pal = (Game.entities && Game.entities.ANIMAL_PALETTES) || {};
@@ -9893,9 +9925,12 @@
     /* Original chandelier hangs at world x=400, y=110. */
     var chx = 400, chy = 110;
     /* Player worldX during cutscene goes from her current x toward
-       the elevator (x≈2180). */
+       the lobby elevator (where the engine places her afterwards). */
     var startPx = (player && player.x) ? player.x : 80;
-    var elevatorX = 2180;
+    var elevatorX = startPx;
+    for (var ei = 0; npcs && ei < npcs.length; ei++) {
+      if (npcs[ei].type === 'elevator' && npcs[ei].entity) { elevatorX = npcs[ei].entity.x - 60; break; }
+    }
     if (timer <= 120) {
       /* Drop animation */
       var t = timer / 120;
