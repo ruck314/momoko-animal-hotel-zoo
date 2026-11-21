@@ -2,7 +2,7 @@
    A new CACHE_NAME forces the activate handler to purge the old cache, so
    returning visitors pick up the new bundle on their next page load. */
 var CACHE_PREFIX = 'momoko-hotel-zoo-';
-var CACHE_NAME = CACHE_PREFIX + 'v0.21.0';
+var CACHE_NAME = CACHE_PREFIX + 'v0.22.0';
 /* Every game on ruck314.github.io shares one Cache Storage, so only purge
    this game's own caches. */
 function isOwnCache(n) {
@@ -22,6 +22,7 @@ var ASSETS = [
   './js/input.js',
   './js/levels.js',
   './js/fx.js',
+  './js/momoko.js',
   './js/entities.js',
   './js/ui.js',
   './js/engine.js',

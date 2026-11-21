@@ -201,7 +201,7 @@
       c.scale(scale, scale);
       paint(c);
       c.restore();
-      return;
+      return null;
     }
     var d = dpr(), k = d * scale;
     var pw = Math.ceil((w + pad * 2) * k), ph = Math.ceil((h + pad * 2) * k);
@@ -246,7 +246,10 @@
     a.globalCompositeOperation = 'source-over';
 
     /* Land on whole device pixels so the buffer isn't resampled (soft) */
-    c.drawImage(A.cv, Math.round((x - pad * scale) * d) / d, Math.round((y - pad * scale) * d) / d, pw / d, ph / d);
+    A.x = Math.round((x - pad * scale) * d) / d;
+    A.y = Math.round((y - pad * scale) * d) / d;
+    c.drawImage(A.cv, A.x, A.y, pw / d, ph / d);
+    return A;
   }
 
   /* ---- Ambient motes ----

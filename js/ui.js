@@ -519,11 +519,7 @@
     c.fillStyle = 'rgba(0, 0, 0, 0.3)';
     c.beginPath(); c.ellipse(134, STREET_Y + 2, 26, 5, 0, 0, Math.PI * 2); c.fill();
     if (Game.entities.drawMomokoSprite) {
-      c.save();
-      c.translate(98, STREET_Y - 86 + bob);
-      c.scale(2.6, 2.6);
-      Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, 0);
-      c.restore();
+      Game.fx.lit(c, 'titleHero', 98, STREET_Y - 86 + bob, 28, 34, 2.6, 12, titleHeroPaint, TITLE_LIGHT);
     }
 
     /* Waiting guests */
@@ -793,6 +789,7 @@
        Placed to the left of the menu buttons so she's visible but not
        competing for space. */
     if (Game.entities && Game.entities.drawMomokoFloss) {
+      Game.fx.shadow(c, 219, 340, 34, 6, '10,2,14', 0.6);
       c.save();
       c.translate(170, 220);
       c.scale(3.5, 3.5);
@@ -1667,21 +1664,12 @@
     clipGame(c);
     drawHotelHeading(c, Game.i18n.t('customize'), 30, 26);
 
-    /* Preview stage – a warm spotlight and a round brass-edged rug, like
-       a fitting-room mirror in the hotel boutique. */
+    /* Preview stage – a spotlight beam onto a round velvet fitting-room
+       pedestal with brass trim, like a mirror stand in the hotel boutique.
+       The pedestal is static, so it is baked once. */
     var stageCX = 160, stageCY = 240;
-    var stageGrad = c.createRadialGradient(stageCX, stageCY, 20, stageCX, stageCY, 150);
-    stageGrad.addColorStop(0, 'rgba(255,190,220,0.26)');
-    stageGrad.addColorStop(1, 'rgba(255,190,220,0)');
-    c.fillStyle = stageGrad;
-    c.fillRect(10, 70, 300, 340);
-    c.fillStyle = '#7a2840';
-    c.beginPath(); c.ellipse(stageCX, 324, 96, 18, 0, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = '#e8b860';
-    c.lineWidth = 2;
-    c.beginPath(); c.ellipse(stageCX, 324, 88, 14, 0, 0, Math.PI * 2); c.stroke();
-    c.fillStyle = 'rgba(0,0,0,0.3)';
-    c.beginPath(); c.ellipse(stageCX, 322, 50, 8, 0, 0, Math.PI * 2); c.fill();
+    Game.fx.bake(c, 'plinth', 'p1|' + Game.fx.key(), 0, 60, 320, 330, paintPlinth);
+    Game.fx.shadow(c, stageCX, 323, 40, 7, '40,8,30', 0.75);
 
     /* Momoko preview */
     Game.fx.lit(c, 'preview', stageCX - 70, stageCY - 85, 28, 36, 5, 12, previewPaint, PREVIEW_LIGHT);
@@ -1814,6 +1802,69 @@
     );
   }
 
+  /* Pedestal under the customize preview, painted in a 320x330 layer
+     whose origin is the canvas point (0, 60). Top face at y = 324. */
+  function paintPlinth(b) {
+    var cx = 160, top = 324, rx = 92, ry = 17, th = 14;
+    b.translate(0, -60);
+    /* spotlight beam falling from above */
+    var beam = b.createLinearGradient(0, 80, 0, top);
+    beam.addColorStop(0, 'rgba(255,214,236,0)');
+    beam.addColorStop(1, 'rgba(255,214,236,0.16)');
+    b.fillStyle = beam;
+    b.beginPath();
+    b.moveTo(cx - 34, 70); b.lineTo(cx + 34, 70);
+    b.lineTo(cx + rx * 0.95, top); b.lineTo(cx - rx * 0.95, top);
+    b.closePath();
+    b.fill();
+    var halo = b.createRadialGradient(cx, 240, 10, cx, 240, 150);
+    halo.addColorStop(0, 'rgba(255,190,220,0.22)');
+    halo.addColorStop(1, 'rgba(255,190,220,0)');
+    b.fillStyle = halo;
+    b.fillRect(10, 70, 300, 320);
+    /* floor bounce under the pedestal */
+    var fl = b.createRadialGradient(cx, top + th + 4, 4, cx, top + th + 4, rx * 1.3);
+    fl.addColorStop(0, 'rgba(20,6,20,0.55)');
+    fl.addColorStop(1, 'rgba(20,6,20,0)');
+    b.fillStyle = fl;
+    b.beginPath(); b.ellipse(cx, top + th + 4, rx * 1.3, ry * 1.4, 0, 0, Math.PI * 2); b.fill();
+    /* drum side: velvet, lit on the left, brass bands top and bottom */
+    var side = b.createLinearGradient(cx - rx, 0, cx + rx, 0);
+    side.addColorStop(0, '#8a2c48');
+    side.addColorStop(0.35, '#6a1c36');
+    side.addColorStop(1, '#3a0c20');
+    b.fillStyle = side;
+    b.beginPath();
+    b.ellipse(cx, top, rx, ry, 0, 0, Math.PI);
+    b.lineTo(cx - rx, top);
+    b.ellipse(cx, top + th, rx, ry, 0, Math.PI, 0, true);
+    b.closePath();
+    b.fill();
+    b.strokeStyle = '#c8943c';
+    b.lineWidth = 2;
+    b.beginPath(); b.ellipse(cx, top + th - 1, rx, ry, 0, 0.05, Math.PI - 0.05); b.stroke();
+    b.strokeStyle = 'rgba(255,226,150,0.55)';
+    b.lineWidth = 1;
+    b.beginPath(); b.ellipse(cx, top + 2, rx, ry, 0, 0.05, Math.PI - 0.05); b.stroke();
+    /* top face: velvet with a soft hot spot where the beam lands */
+    var tg = b.createRadialGradient(cx - 18, top - 4, 6, cx, top, rx);
+    tg.addColorStop(0, '#b0405e');
+    tg.addColorStop(0.55, '#8a2a48');
+    tg.addColorStop(1, '#5a1630');
+    b.fillStyle = tg;
+    b.beginPath(); b.ellipse(cx, top, rx, ry, 0, 0, Math.PI * 2); b.fill();
+    /* brass rim, gold inlay ring */
+    b.strokeStyle = '#e8b860';
+    b.lineWidth = 2.4;
+    b.beginPath(); b.ellipse(cx, top, rx - 1, ry - 0.5, 0, 0, Math.PI * 2); b.stroke();
+    b.strokeStyle = 'rgba(255,240,190,0.8)';
+    b.lineWidth = 1;
+    b.beginPath(); b.ellipse(cx, top, rx - 1, ry - 0.5, 0, Math.PI * 1.05, Math.PI * 1.6); b.stroke();
+    b.strokeStyle = 'rgba(232,184,96,0.55)';
+    b.lineWidth = 1;
+    b.beginPath(); b.ellipse(cx, top, rx - 14, ry - 4, 0, 0, Math.PI * 2); b.stroke();
+  }
+
   /* Stage lighting for the big preview: moonlight from the upper left,
      plum shade on the far side. */
   var PREVIEW_LIGHT = { dx: -0.6, dy: -0.8, light: '255,232,214', shade: '74,30,110', key: 0.1, dark: 0.26, rim: 0.75 };
@@ -1906,6 +1957,12 @@
 
   /* ---- Intro / Backstory ---- */
   var introAnimTimer = 0;
+  function introHeroPaint(a) {
+    Game.entities.drawMomokoSprite(a, 0, 0, Game.customization, Math.floor(introAnimTimer / 8) % 4);
+  }
+  /* Title: moonlight from the upper left over the street */
+  var TITLE_LIGHT = { dx: -0.7, dy: -0.7, light: '255,236,214', shade: '50,24,90', key: 0.1, dark: 0.28, rim: 0.8 };
+  function titleHeroPaint(a) { Game.entities.drawMomokoSprite(a, 0, 0, Game.customization, 0); }
 
   function drawIntroScreen(c) {
     introAnimTimer++;
@@ -1920,13 +1977,10 @@
     c.strokeStyle = '#e8b860';
     c.lineWidth = 2;
     c.beginPath(); c.ellipse(166, 312, 55, 9, 0, 0, Math.PI * 2); c.stroke();
-    c.save();
-    c.translate(120, 202);
-    c.scale(3.2, 3.2);
     if (Game.entities && Game.entities.drawMomokoSprite) {
-      Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, Math.floor(introAnimTimer / 8) % 4);
+      Game.fx.shadow(c, 166, 311, 30, 6, '40,8,30', 0.7);
+      Game.fx.lit(c, 'introHero', 120, 202, 28, 34, 3.2, 12, introHeroPaint, PREVIEW_LIGHT);
     }
-    c.restore();
 
     /* Story panel – sized to the text so it never sits half-empty */
     c.font = '16px "M PLUS Rounded 1c", sans-serif';
@@ -9367,7 +9421,7 @@
     c.beginPath(); c.ellipse(pX + 4, pY + 6, 38, 8, -0.06, 0, Math.PI); c.fill();
 
     /* ---- Momoko's head on the pillow (sprite clipped at the neck,
-       tipped as if snuggled in, eyes painted closed) ---- */
+       tipped as if snuggled in, eyes closed) ---- */
     var breathe = Math.sin(t * 0.045);
     if (Game.entities && Game.entities.drawMomokoSprite) {
       var hs = 2.6;
@@ -9377,22 +9431,7 @@
       c.scale(hs, hs);
       c.translate(-14, -16);
       c.beginPath(); c.rect(-6, -6, 40, 26); c.clip();
-      Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, 0);
-      var skin = (Game.customization && Game.customization.skin) || '#ffddbb';
-      for (var ey = 0; ey < 2; ey++) {
-        var ex = ey === 0 ? 10.3 : 17.7;
-        c.fillStyle = skin;
-        c.beginPath(); c.ellipse(ex, 13.6, 3.3, 3.1, 0, 0, Math.PI * 2); c.fill();
-        c.strokeStyle = '#1a0c14';
-        c.lineWidth = 0.8;
-        c.lineCap = 'round';
-        c.beginPath(); c.moveTo(ex - 2.5, 13.2); c.quadraticCurveTo(ex, 15.4, ex + 2.5, 13.2); c.stroke();
-        c.lineWidth = 0.5;
-        c.beginPath();
-        c.moveTo(ex - 1.4, 14.5); c.lineTo(ex - 1.9, 15.6);
-        c.moveTo(ex + 1.4, 14.5); c.lineTo(ex + 1.9, 15.6);
-        c.stroke();
-      }
+      Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, 0, { eyes: 'sleep' });
       c.restore();
     }
 

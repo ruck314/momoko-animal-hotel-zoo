@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.21.0';
+  Game.VERSION = 'v0.22.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -2144,6 +2144,7 @@
      shaded and rim-lit from the nearest ceiling downlight, so the light
      slides across her as she walks. */
   var heroLight = { dx: 0, dy: -1, light: '255,226,170', shade: '74,26,44', key: 0.16, dark: 0.3, rim: 0.8 };
+  var HERO_SCALE = 1.4;
   function heroPaint(a) { player.draw(a, player.x, player.y); }
   function drawHero() {
     var wl = WING_LIGHT[(level && level.wing) || 'lobby'] || WING_LIGHT.lobby;
@@ -2151,15 +2152,32 @@
     var floorY = level.floorY - camera.y;
     var lift = Math.max(0, level.floorY - (player.y + player.h));
     var k = Math.max(0.25, 1 - lift / 160);
-    Game.fx.shadow(ctx, mid - camera.x, floorY + 2, 14 * k, 3.6 * k, '24,8,26', 0.6 * k);
+    Game.fx.shadow(ctx, mid - camera.x, floorY + 2, 14 * HERO_SCALE * k, 3.6 * HERO_SCALE * k, '24,8,26', 0.6 * k);
     var ddx = (Math.round((mid - 80) / 160) * 160 + 80 - mid) / 70;
     var n = Math.sqrt(ddx * ddx + 1);
     heroLight.dx = ddx / n;
     heroLight.dy = -1 / n;
     heroLight.light = wl.light;
     heroLight.shade = wl.shade;
-    Game.fx.lit(ctx, 'hero', Math.round(player.x - camera.x), Math.round(player.y - camera.y),
-                player.w, player.h, 1, 12, heroPaint, heroLight);
+    /* Drawn a size up from her 28x34 collision box, anchored at the feet,
+       so she reads as the hero next to the guests; collisions are unchanged. */
+    var A = Game.fx.lit(ctx, 'hero', Math.round(mid - camera.x - player.w * HERO_SCALE / 2),
+                        Math.round(player.y + player.h - camera.y - player.h * HERO_SCALE),
+                        player.w, player.h, HERO_SCALE, 12, heroPaint, heroLight);
+    /* On the lobby's polished marble her reflection shows in the strip
+       between the skirting and the runner (the runner itself is carpet). */
+    if (A && Game.FX.shadows && (WINGS[level.wing] || WINGS.lobby).floor === 'marble') {
+      var d = Game.fx.dpr();
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, floorY, W, 12);
+      ctx.clip();
+      ctx.globalAlpha = 0.2 * k;
+      ctx.translate(0, floorY * 2);
+      ctx.scale(1, -1);
+      ctx.drawImage(A.cv, A.x, A.y, A.cv.width / d, A.cv.height / d);
+      ctx.restore();
+    }
   }
 
   function renderDecorations() {
