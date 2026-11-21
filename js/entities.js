@@ -202,29 +202,28 @@
 
   Momoko.prototype.draw = function (c, camX, camY) {
     var sx = Math.round(this.x - camX);
-    /* Walk-bob: a small vertical bounce while she's actually moving so
-       the corridor walk reads as cozy. Uses the animation timer so the
-       bob phase is tied to the leg-kick cycle. */
-    var spd = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-    var bob = spd > 0.4 ? Math.abs(Math.sin(this.animTimer * 0.5 +
-                                            this.animFrame * Math.PI / 2)) * 1.6 : 0;
-    var sy = Math.round(this.y - camY - bob);
+    var sy = Math.round(this.y - camY);
     var cust = window.Game.customization || {};
-
-    c.save();
-    if (this.facing === -1) {
-      c.translate(sx + this.w / 2, 0);
-      c.scale(-1, 1);
-      sx = -this.w / 2;
-    }
-    drawMomokoSprite(c, sx, sy, cust, this.animFrame);
-    /* Crab pet trails at foot level; drawn inside the flip transform so
-       it stays on the side opposite the facing direction (i.e. behind
-       her as she swims). */
+    /* The rig turns her position into the walk cycle, head turn, bob and
+       secondary motion, and mirrors her itself (through a three-quarter
+       turn), so only the pet dog is flipped here. Off the floor (Up held)
+       she tucks into a little float pose. */
+    var R = window.Game.momoko.rig('corridor', { vmax: 192 });
+    var airT = Math.abs(this.vy) > 0.15 ? 1 : 0;
+    this.air = (this.air || 0) + (airT - (this.air || 0)) * 0.2;
+    R.update(this.x + this.w / 2, this.y + this.h, this.facing, { air: this.air > 0.02 ? this.air : 0 });
+    drawMomokoSprite(c, sx, sy, cust, this.animFrame, { rig: R });
+    /* Crab pet trails at foot level, on the side opposite her facing. */
     if (cust.crab && cust.crab !== 'none') {
+      c.save();
+      if (this.facing === -1) {
+        c.translate(sx + this.w / 2, 0);
+        c.scale(-1, 1);
+        c.translate(-(sx + this.w / 2), 0);
+      }
       drawCrabPet(c, sx - 8, sy + 32, cust.crab, this.animTimer);
+      c.restore();
     }
-    c.restore();
   };
 
   /* Floss-dance Momoko – arms swing rigid across the body while the hips

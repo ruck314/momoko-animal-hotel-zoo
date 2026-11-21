@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.22.0';
+  Game.VERSION = 'v0.23.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -94,6 +94,8 @@
     shoes: 'maryJane',
     crab: 'none',
     food: 'none',
+    hat: 'none',
+    extra: 'none',
   };
 
   /* Quest state – persisted in localStorage. */
@@ -132,6 +134,9 @@
   /* Rocket travel animation timer & destination. */
   var rocketAnimTimer = 0;
   var rocketTarget = 0;
+  /* Set when the transition comes from the stairs, so the ride scene
+     shows her climbing a stairwell instead of the elevator cab. */
+  var rocketStairs = 0;
   /* House interior state. */
   var currentHouseId = null;
   /* Hotel-zoo: which animal room is open, sleep cutscene timer, lobby intro
@@ -1325,6 +1330,8 @@
 
         /* Player */
         player.update(keys, level);
+        /* The Talk button gets a little wave from her (visual only). */
+        if (jp.action && Game.momoko) Game.momoko.rig('corridor').play('wave');
 
         /* Bubbles (still ticked so any in-flight effects fade out
            cleanly; the action button no longer spawns new ones — it
@@ -1580,6 +1587,7 @@
           if (tvKb && typeof tvKb.zone === 'number') {
             rocketTarget = tvKb.zone;
             rocketAnimTimer = 0;
+            rocketStairs = 0;
             state = State.ROCKET_ANIM;
             Game.audio.play('victory');
           }
@@ -1797,7 +1805,7 @@
         break;
 
       case State.ROCKET_ANIM:
-        if (Game.ui.drawRocketAnim) Game.ui.drawRocketAnim(ctx, rocketAnimTimer, rocketTarget);
+        if (Game.ui.drawRocketAnim) Game.ui.drawRocketAnim(ctx, rocketAnimTimer, rocketTarget, rocketStairs);
         break;
 
       case State.HOUSE_INTERIOR:
@@ -3600,6 +3608,7 @@
           } else if (tvResult && typeof tvResult.zone === 'number') {
             rocketTarget = tvResult.zone;
             rocketAnimTimer = 0;
+            rocketStairs = 0;
             state = State.ROCKET_ANIM;
             Game.audio.play('victory');
           }
@@ -3741,6 +3750,7 @@
     if (target >= n) target = n - 1;
     if (target === currentZone) return;
     rocketTarget = target;
+    rocketStairs = target > currentZone ? 1 : -1;
     rocketAnimTimer = 80; /* Skip most of the rocket-anim — quick fade */
     state = State.ROCKET_ANIM;
     if (Game.audio && Game.audio.play) Game.audio.play('elevatorDing');
@@ -3964,7 +3974,21 @@
       var cs = localStorage.getItem(KEY('customization'));
       if (cs) {
         var parsed = JSON.parse(cs);
-        for (var k in parsed) { Game.customization[k] = parsed[k]; }
+        /* Older saves lack the newer fields (hat, extra) and newer saves
+           may hold values this build doesn't know: take only known keys
+           with string values, and fall back to the default for any
+           option the renderer doesn't offer. */
+        var opts = (Game.momoko && Game.momoko.options) || {};
+        var crabs = ['none', 'red', 'blue', 'gold'];
+        for (var k in parsed) {
+          if (!Object.prototype.hasOwnProperty.call(Game.customization, k)) continue;
+          var v = parsed[k];
+          if (typeof v !== 'string') continue;
+          if (opts[k] && opts[k].indexOf(v) < 0) continue;
+          if (k === 'crab' && crabs.indexOf(v) < 0) continue;
+          if ((k === 'hair' || k === 'suit' || k === 'skin' || k === 'flipper') && !/^#[0-9a-f]{3,6}$/i.test(v)) continue;
+          Game.customization[k] = v;
+        }
       }
       var qs = localStorage.getItem(KEY('quests'));
       if (qs) {

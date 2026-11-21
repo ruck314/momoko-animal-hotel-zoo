@@ -1201,75 +1201,60 @@
      Layout matches the sketch the user's daughter drew:
        - Title at top
        - Momoko preview on the left side (live, updates on every change)
-       - Tab bar along the top-right (hair / dress / swim / shoes / crab / food)
-       - 3x2 variant icon grid below the tabs
+       - Tab bar along the top-right, one tab per category
+       - a 4 x 2 grid of option tiles below the tabs, each a real render
+         of Momoko (or the item) from momoko.js; categories with more than
+         eight options get page arrows
        - Color swatches below the grid when the current tab has a color
        - Start button at the bottom */
-  var hairColors = ['#e06088', '#4a3728', '#f5d060', '#4488ff', '#222222', '#cc3333'];
-  var suitColors = ['#e06088', '#3366aa', '#cc3333', '#7733aa', '#228844', '#dd7722'];
-  var shoeColors = ['#ff99cc', '#33bb77', '#ffcc44', '#66aaff', '#ffffff', '#552211'];
+  var hairColors = ['#e06088', '#4a3728', '#f5d060', '#4488ff', '#222222', '#cc3333', '#a070d0', '#5cc8a8', '#e8e4f0'];
+  var suitColors = ['#e06088', '#3366aa', '#cc3333', '#7733aa', '#228844', '#dd7722', '#ff9ec8', '#40b0c0', '#f0c040'];
+  var shoeColors = ['#ff99cc', '#33bb77', '#ffcc44', '#66aaff', '#ffffff', '#552211', '#aa66ee', '#ff6644'];
   var skinTones  = ['#ffe0c0', '#ddb896', '#c68c5a', '#8d6e4c', '#5c3d2e'];
 
-  /* Tab definitions – order matches the sketch. `field` is the key inside
-     Game.customization this tab writes to. `colorField` (optional) enables
-     a color-swatch row below the grid. Icons are drawn by name-dispatch in
-     drawVariantIcon. */
+  /* Tab definitions. `field` is the key inside Game.customization this
+     tab writes to; `colorField` (optional) adds a swatch row; `crop` is
+     the part of her (sprite units [x, y, w, h]) the tiles show. */
+  function V(id, label, crop) { return { id: id, label: label, crop: crop }; }
+  var CROP_HEAD = [-4, -3, 36, 27], CROP_BODY = [-1, 14, 30, 19], CROP_HOOD = [-4, -8, 36, 32],
+      CROP_FEET = [5, 28.5, 18, 7], CROP_HAT = [-2, -7.5, 32, 27];
   var customTabs = [
-    { id: 'hair',  label: 'tabHair',  field: 'hairStyle', colorField: 'hair',    colors: hairColors,
-      variants: [
-        { id: 'twinTails',  label: 'varTwinTails' },
-        { id: 'longBraids', label: 'varLongBraids' },
-        { id: 'buns',       label: 'varBuns' },
-      ] },
-    { id: 'dress', label: 'tabDress', field: 'outfit',    colorField: 'suit',    colors: suitColors,
-      variants: [
-        { id: 'frillyDress', label: 'varFrillyDress' },
-        { id: 'sailorDress', label: 'varSailorDress' },
-        { id: 'starDress',   label: 'varStarDress' },
-      ] },
-    { id: 'swim',  label: 'tabSwim',  field: 'outfit',    colorField: 'suit',    colors: suitColors,
-      variants: [
-        { id: 'sailorSwimsuit', label: 'varSailorSwimsuit' },
-        { id: 'onePiece',       label: 'varOnePiece' },
-        { id: 'frillyBikini',   label: 'varFrillyBikini' },
-      ] },
-    { id: 'shoes', label: 'tabShoes', field: 'shoes',     colorField: 'flipper', colors: shoeColors,
-      variants: [
-        { id: 'maryJane', label: 'varMaryJane' },
-        { id: 'sneaker',  label: 'varSneaker' },
-        { id: 'flipper',  label: 'varFlipper' },
-      ] },
-    { id: 'crab',  label: 'tabCrab',  field: 'crab',      colorField: null, colors: null,
-      variants: [
-        { id: 'none', label: 'varNone' },
-        { id: 'red',  label: 'varCrabRed' },
-        { id: 'blue', label: 'varCrabBlue' },
-        { id: 'gold', label: 'varCrabGold' },
-      ] },
-    { id: 'food',  label: 'tabFood',  field: 'food',      colorField: null, colors: null,
-      variants: [
-        { id: 'none',       label: 'varNone' },
-        { id: 'iceCream',   label: 'varIceCream' },
-        { id: 'onigiri',    label: 'varOnigiri' },
-        { id: 'donut',      label: 'varDonut' },
-        { id: 'crepe',      label: 'varCrepe' },
-        { id: 'taiyaki',    label: 'varTaiyaki' },
-        { id: 'parfait',    label: 'varParfait' },
-        { id: 'macaron',    label: 'varMacaron' },
-        { id: 'strawberry', label: 'varStrawberry' },
-      ] },
+    { id: 'hair',  label: 'tabHair',  field: 'hairStyle', colorField: 'hair',    colors: hairColors, crop: CROP_HEAD,
+      variants: [V('twinTails', 'varTwinTails'), V('longBraids', 'varLongBraids'), V('buns', 'varBuns'),
+                 V('ponytail', 'varPonytail'), V('bob', 'varBob'), V('longHair', 'varLongHair')] },
+    { id: 'dress', label: 'tabDress', field: 'outfit',    colorField: 'suit',    colors: suitColors, crop: CROP_BODY,
+      variants: [V('frillyDress', 'varFrillyDress'), V('sailorDress', 'varSailorDress'), V('starDress', 'varStarDress'),
+                 V('bellhop', 'varBellhop'), V('overalls', 'varOveralls'), V('kimono', 'varKimono')] },
+    { id: 'swim',  label: 'tabSwim',  field: 'outfit',    colorField: 'suit',    colors: suitColors, crop: CROP_HOOD,
+      variants: [V('sailorSwimsuit', 'varSailorSwimsuit'), V('onePiece', 'varOnePiece'), V('frillyBikini', 'varFrillyBikini'),
+                 V('catPjs', 'varCatPjs'), V('bearPjs', 'varBearPjs'), V('frogPjs', 'varFrogPjs'), V('penguinPjs', 'varPenguinPjs')] },
+    { id: 'shoes', label: 'tabShoes', field: 'shoes',     colorField: 'flipper', colors: shoeColors, crop: CROP_FEET,
+      variants: [V('maryJane', 'varMaryJane'), V('sneaker', 'varSneaker'), V('flipper', 'varFlipper'),
+                 V('slipper', 'varSlipper'), V('highBoot', 'varHighBoot')] },
+    { id: 'hat',   label: 'tabHat',   field: 'hat',       colorField: null, colors: null, crop: CROP_HAT,
+      variants: [V('none', 'varNone'), V('hotelCap', 'varHotelCap'), V('bigBow', 'varBigBow'), V('hairClips', 'varHairClips'),
+                 V('flowerCrown', 'varFlowerCrown'), V('catEars', 'varCatEars'), V('tiara', 'varTiara')] },
+    { id: 'extra', label: 'tabExtra', field: 'extra',     colorField: null, colors: null, crop: [-2, 2, 32, 30],
+      variants: [V('none', 'varNone'), V('glasses', 'varGlasses', [2, 4, 24, 16]), V('heartGlasses', 'varHeartGlasses', [2, 4, 24, 16]),
+                 V('nameBadge', 'varNameBadge', [5, 15, 18, 12]), V('satchel', 'varSatchel', [0, 16, 28, 16]),
+                 V('backpack', 'varBackpack', [-1, 10, 30, 20]), V('scarf', 'varScarf', [0, 11, 28, 18])] },
+    { id: 'food',  label: 'tabFood',  field: 'food',      colorField: null, colors: null, item: true,
+      variants: [V('none', 'varNone'), V('iceCream', 'varIceCream'), V('onigiri', 'varOnigiri'), V('donut', 'varDonut'),
+                 V('crepe', 'varCrepe'), V('taiyaki', 'varTaiyaki'), V('parfait', 'varParfait'), V('macaron', 'varMacaron'),
+                 V('strawberry', 'varStrawberry'), V('lollipop', 'varLollipop'), V('dango', 'varDango'), V('cupcake', 'varCupcake'),
+                 V('balloon', 'varBalloon'), V('teddy', 'varTeddy')] },
+    { id: 'crab',  label: 'tabCrab',  field: 'crab',      colorField: null, colors: null, pet: true,
+      variants: [V('none', 'varNone'), V('red', 'varCrabRed'), V('blue', 'varCrabBlue'), V('gold', 'varCrabGold')] },
   ];
 
-  var customSelection = { tab: 'hair' };
+  var customSelection = { tab: 'hair', page: 0 };
 
-  /* ---- Layout constants (shared by draw + hit-test) ----
-     Grid is sized for up to 3 rows × 3 cols so the 9-variant food tab
-     fits without scrolling. Colors + skin sit below at fixed Y so the
-     layout stays stable when switching tabs. */
-  /* Tab row ends at x=771, in line with the grid, not flush with the edge. */
-  var TAB_X = 320, TAB_Y = 60, TAB_W = 71, TAB_H = 34, TAB_GAP = 5;
-  var GRID_X = 320, GRID_Y = 100, GRID_COLS = 3, GRID_TILE_W = 146, GRID_TILE_H = 58, GRID_GAP = 6;
-  var COLOR_X = 320, COLOR_STEP = 42;
+  /* ---- Layout constants (shared by draw + hit-test) ---- */
+  var TAB_X = 320, TAB_Y = 58, TAB_W = 54, TAB_H = 32, TAB_GAP = 4;
+  var GRID_X = 320, GRID_Y = 98, GRID_COLS = 4, GRID_ROWS = 2, GRID_TILE_W = 109, GRID_TILE_H = 86, GRID_GAP = 8;
+  var PER_PAGE = GRID_COLS * GRID_ROWS;
+  var COLOR_X = 320, COLOR_Y = 312, SKIN_Y = 360, COLOR_STEP = 34, SWATCH_R = 13;
+  var PAGE_Y = 284, PAGE_PREV_X = 682, PAGE_NEXT_X = 750, PAGE_W = 30, PAGE_H = 26;
   var START_BTN_W = 200, START_BTN_H = 46;
   var START_BTN_X = W / 2 - START_BTN_W / 2 + 150;
   var START_BTN_Y = 420;
@@ -1278,385 +1263,251 @@
     for (var i = 0; i < customTabs.length; i++) if (customTabs[i].id === id) return customTabs[i];
     return customTabs[0];
   }
-
-  /* Where the color-swatch row anchors for this tab. Sits just below the
-     active grid so tabs with fewer variants (e.g. hair) don't leave a
-     gap. Used by both the draw pass and the hit-test. */
-  function colorYFor(tab) {
-    var rows = Math.max(1, Math.ceil(tab.variants.length / GRID_COLS));
-    return GRID_Y + rows * (GRID_TILE_H + GRID_GAP) + 24;
+  function pageCount(tab) { return Math.ceil(tab.variants.length / PER_PAGE); }
+  function tileRect(i) {
+    var k = i % PER_PAGE, col = k % GRID_COLS, row = Math.floor(k / GRID_COLS);
+    return { x: GRID_X + col * (GRID_TILE_W + GRID_GAP), y: GRID_Y + row * (GRID_TILE_H + GRID_GAP) };
   }
-
-  /* Tile icon for a variant. Keeps per-tile drawing small and iconic so
-     the 6 tiles visually contrast even when they share the same tab. */
-  function drawVariantIcon(c, tabId, variantId, cx, cy, cust) {
-    c.save();
-    c.translate(cx, cy);
-    if (tabId === 'hair') drawHairIcon(c, variantId, cust.hair);
-    else if (tabId === 'dress' || tabId === 'swim') drawOutfitIcon(c, variantId, cust.suit);
-    else if (tabId === 'shoes') drawShoeIcon(c, variantId, cust.flipper);
-    else if (tabId === 'crab') drawCrabIcon(c, variantId);
-    else if (tabId === 'food') drawFoodIcon(c, variantId);
-    c.restore();
-  }
-
-  function drawHairIcon(c, id, hairC) {
-    var color = hairC || '#e06088';
-    /* Tiny head */
-    c.fillStyle = '#ffddbb';
-    c.beginPath(); c.arc(0, 4, 10, 0, Math.PI * 2); c.fill();
-    if (id === 'longBraids') {
-      c.fillStyle = color;
-      for (var side = -1; side <= 1; side += 2) {
-        for (var b = 0; b < 3; b++) {
-          c.beginPath();
-          c.ellipse(side * 10, -4 + b * 7, 3.4, 3.8, 0, 0, Math.PI * 2);
-          c.fill();
-        }
-      }
-      /* Top */
-      c.beginPath();
-      c.ellipse(0, -6, 12, 6, 0, Math.PI, 0);
-      c.fill();
-    } else if (id === 'buns') {
-      c.fillStyle = color;
-      c.beginPath(); c.arc(-8, -8, 5, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(8, -8, 5, 0, Math.PI * 2); c.fill();
-      c.beginPath();
-      c.ellipse(0, -2, 11, 5, 0, Math.PI, 0);
-      c.fill();
-    } else {
-      /* twinTails */
-      c.fillStyle = color;
-      c.beginPath();
-      c.ellipse(-11, 4, 4, 10, 0.1, 0, Math.PI * 2);
-      c.fill();
-      c.beginPath();
-      c.ellipse(11, 4, 4, 10, -0.1, 0, Math.PI * 2);
-      c.fill();
-      c.beginPath();
-      c.ellipse(0, -4, 12, 7, 0, Math.PI, 0);
-      c.fill();
+  /* Open a tab on the page that holds her current choice. */
+  function selectTab(id) {
+    customSelection.tab = id;
+    var tab = getTab(id), cur = Game.customization[tab.field];
+    customSelection.page = 0;
+    for (var i = 0; i < tab.variants.length; i++) {
+      if (tab.variants[i].id === cur) customSelection.page = Math.floor(i / PER_PAGE);
     }
   }
 
-  function drawOutfitIcon(c, id, suitC) {
-    var color = suitC || '#e06088';
-    if (id === 'frillyDress' || id === 'sailorDress' || id === 'starDress') {
-      /* Bodice */
-      c.fillStyle = color;
-      c.beginPath();
-      c.moveTo(-10, -12);
-      c.quadraticCurveTo(0, -14, 10, -12);
-      c.lineTo(8, -2);
-      c.lineTo(-8, -2);
-      c.closePath();
+  var tileCust = {};
+  function previewCust(field, value) {
+    var cu = Game.customization;
+    for (var k in cu) tileCust[k] = cu[k];
+    tileCust[field] = value;
+    return tileCust;
+  }
+
+  /* What a tile shows: a crop of Momoko wearing the option, rendered by
+     the real renderer at the tile's device resolution, or the held item
+     / pet on its own. */
+  function drawTilePreview(c, tab, v, x, y, w, h) {
+    c.save();
+    c.beginPath();
+    c.rect(x, y, w, h);
+    c.clip();
+    var cx = x + w / 2, cy = y + h / 2;
+    if (v.id === 'none' && (tab.item || tab.pet)) {
+      c.strokeStyle = 'rgba(255, 221, 136, 0.55)';
+      c.lineWidth = 2.5;
+      c.beginPath(); c.arc(cx, cy, 15, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.moveTo(cx - 10.6, cy + 10.6); c.lineTo(cx + 10.6, cy - 10.6); c.stroke();
+    } else if (tab.item) {
+      Game.momoko.drawItemIcon(c, v.id, cx, cy + (v.id === 'balloon' ? 12 : 2), v.id === 'balloon' ? 3.4 : 6.2);
+    } else if (tab.pet) {
+      if (Game.entities && Game.entities.drawCrabPet) {
+        c.translate(cx + 2, cy + 2);
+        c.scale(3.4, 3.4);
+        Game.entities.drawCrabPet(c, 0, 0, v.id, 0);
+      }
+    } else {
+      var crop = v.crop || tab.crop;
+      var s = Math.min(w / crop[2], h / crop[3]);
+      var m = c.getTransform(), dev = Math.sqrt(m.a * m.a + m.b * m.b) || 1;
+      var u = Math.round(s * dev * 20) / 20;
+      var cv = Game.momoko.renderCrop(previewCust(tab.field, v.id), crop, u);
+      var dw = crop[2] * s, dh = crop[3] * s;
+      c.drawImage(cv, cx - dw / 2, cy - dh / 2, dw, dh);
+    }
+    c.restore();
+  }
+
+  function drawCheckBadge(c, x, y) {
+    c.fillStyle = '#ffd24a';
+    c.beginPath(); c.arc(x, y, 8, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#8a5a14';
+    c.lineWidth = 1.2;
+    c.stroke();
+    c.strokeStyle = '#ffffff';
+    c.lineWidth = 2.2;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.beginPath(); c.moveTo(x - 3.6, y + 0.2); c.lineTo(x - 1, y + 2.8); c.lineTo(x + 3.8, y - 2.6); c.stroke();
+    c.lineCap = 'butt';
+  }
+
+  function drawSwatch(c, x, y, colr, selected, hot) {
+    if (selected) {
+      c.strokeStyle = 'rgba(255, 210, 120, 0.3)';
+      c.lineWidth = 7;
+      c.beginPath(); c.arc(x, y, SWATCH_R + 3.5, 0, Math.PI * 2); c.stroke();
+      c.strokeStyle = '#ffdd88';
+      c.lineWidth = 3;
+      c.stroke();
+    }
+    var g = c.createRadialGradient(x - SWATCH_R * 0.35, y - SWATCH_R * 0.4, 1, x, y, SWATCH_R);
+    g.addColorStop(0, 'rgba(255,255,255,0.55)');
+    g.addColorStop(0.35, 'rgba(255,255,255,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.28)');
+    c.fillStyle = colr;
+    c.beginPath(); c.arc(x, y, SWATCH_R, 0, Math.PI * 2); c.fill();
+    c.fillStyle = g;
+    c.fill();
+    c.strokeStyle = hot ? 'rgba(255, 236, 200, 0.9)' : 'rgba(30, 10, 30, 0.55)';
+    c.lineWidth = 1.2;
+    c.stroke();
+  }
+
+  function drawPageButton(c, x, label, enabled, hot) {
+    hot = enabled && hot;
+    c.fillStyle = !enabled ? 'rgba(46, 22, 64, 0.5)' : hot ? '#6a3490' : '#3e1e56';
+    roundRect(c, x, PAGE_Y, PAGE_W, PAGE_H, 7);
+    c.fill();
+    c.strokeStyle = enabled ? 'rgba(255, 221, 136, 0.7)' : 'rgba(255, 221, 136, 0.2)';
+    c.lineWidth = 1.5;
+    c.stroke();
+    c.fillStyle = enabled ? '#ffe8b0' : 'rgba(255, 232, 176, 0.3)';
+    c.beginPath();
+    var mx = x + PAGE_W / 2, my = PAGE_Y + PAGE_H / 2, d = label === '<' ? -1 : 1;
+    c.moveTo(mx + d * 5, my); c.lineTo(mx - d * 3.5, my - 6); c.lineTo(mx - d * 3.5, my + 6);
+    c.closePath();
+    c.fill();
+  }
+
+  /* Which panel control the pointer is over (index, or -1), worked out
+     against the live canvas so the baked panel can show hover states. */
+  var custHot = { tab: -1, tile: -1, color: -1, skin: -1, prev: false, next: false };
+  function updateCustHot(c, tab) {
+    var h = custHot, i;
+    h.tab = h.tile = h.color = h.skin = -1;
+    for (i = 0; i < customTabs.length; i++) if (pointerOver(c, TAB_X + i * (TAB_W + TAB_GAP), TAB_Y, TAB_W, TAB_H)) h.tab = i;
+    var first = customSelection.page * PER_PAGE, last = Math.min(tab.variants.length, first + PER_PAGE);
+    for (i = first; i < last; i++) { var r = tileRect(i); if (pointerOver(c, r.x, r.y, GRID_TILE_W, GRID_TILE_H)) h.tile = i; }
+    var n = tab.colors ? tab.colors.length : 0;
+    for (i = 0; i < n; i++) if (pointerOver(c, COLOR_X + i * COLOR_STEP + 16 - SWATCH_R, COLOR_Y - SWATCH_R, SWATCH_R * 2, SWATCH_R * 2)) h.color = i;
+    for (i = 0; i < skinTones.length; i++) if (pointerOver(c, COLOR_X + i * COLOR_STEP + 16 - SWATCH_R, SKIN_Y - SWATCH_R, SWATCH_R * 2, SWATCH_R * 2)) h.skin = i;
+    h.prev = pointerOver(c, PAGE_PREV_X, PAGE_Y, PAGE_W, PAGE_H);
+    h.next = pointerOver(c, PAGE_NEXT_X, PAGE_Y, PAGE_W, PAGE_H);
+  }
+
+  /* The option panel (tabs, tiles, page arrows, swatches) is static
+     between taps, so it is baked into a layer and only repainted when the
+     tab, page, her outfit, the language or the hover target changes. */
+  var PANEL_X = 300, PANEL_Y = 48, PANEL_W = 500, PANEL_H = 338;
+  function paintCustomPanel(c) {
+    c.translate(-PANEL_X, -PANEL_Y);
+    var activeTab = getTab(customSelection.tab), hot = custHot;
+    c.fillStyle = 'rgba(30, 12, 42, 0.55)';
+    roundRect(c, GRID_X - 6, TAB_Y + TAB_H - 2, 472, 380 - (TAB_Y + TAB_H - 2), 10);
+    c.fill();
+    c.strokeStyle = 'rgba(232, 184, 96, 0.35)';
+    c.lineWidth = 1;
+    c.stroke();
+    for (var ti = 0; ti < customTabs.length; ti++) {
+      var tx = TAB_X + ti * (TAB_W + TAB_GAP);
+      var tab = customTabs[ti];
+      var active = activeTab === tab;
+      var tabHot = hot.tab === ti;
+      var tg = c.createLinearGradient(0, TAB_Y, 0, TAB_Y + TAB_H);
+      tg.addColorStop(0, active ? '#a058d0' : tabHot ? '#62307e' : '#46225c');
+      tg.addColorStop(1, active ? '#7a3aa8' : tabHot ? '#4a2264' : '#331848');
+      c.fillStyle = tg;
+      roundRect(c, tx, TAB_Y, TAB_W, TAB_H, 7);
       c.fill();
-      /* Skirt */
-      c.beginPath();
-      c.moveTo(-8, -2);
-      c.lineTo(-14, 14);
-      c.lineTo(14, 14);
-      c.lineTo(8, -2);
-      c.closePath();
-      c.fill();
-      if (id === 'starDress') {
-        /* Gold bow on chest */
-        c.fillStyle = '#ffd24a';
-        c.beginPath(); c.ellipse(-2.4, -8, 2, 1.6, -0.3, 0, Math.PI * 2); c.fill();
-        c.beginPath(); c.ellipse( 2.4, -8, 2, 1.6,  0.3, 0, Math.PI * 2); c.fill();
-        c.fillStyle = '#c88a1a';
-        c.beginPath(); c.arc(0, -8, 0.9, 0, Math.PI * 2); c.fill();
-        /* Stars on skirt */
-        c.fillStyle = '#ffd24a';
-        var iconStar = function (sx, sy, r) {
-          c.beginPath();
-          for (var k = 0; k < 10; k++) {
-            var ang = -Math.PI / 2 + k * Math.PI / 5;
-            var rr = k % 2 === 0 ? r : r * 0.4;
-            var px = sx + Math.cos(ang) * rr;
-            var py = sy + Math.sin(ang) * rr;
-            if (k === 0) c.moveTo(px, py); else c.lineTo(px, py);
-          }
-          c.closePath(); c.fill();
-        };
-        iconStar(-6,  6, 1.3);
-        iconStar( 0, 10, 1.4);
-        iconStar( 6,  6, 1.3);
-        /* Silver hem */
-        c.strokeStyle = '#ffffff';
-        c.lineWidth = 0.8;
-        c.beginPath();
-        c.moveTo(-14, 14); c.lineTo(14, 14);
+      c.strokeStyle = active ? '#ffdd88' : 'rgba(255, 221, 136, 0.22)';
+      c.lineWidth = active ? 2 : 1;
+      c.stroke();
+      c.fillStyle = active ? '#ffffff' : '#dcc4e4';
+      fitFont(c, Game.i18n.t(tab.label), TAB_W - 6, 12, 'bold');
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(Game.i18n.t(tab.label), tx + TAB_W / 2, TAB_Y + TAB_H / 2 + 1);
+    }
+    c.textBaseline = 'alphabetic';
+
+    /* Option tiles for the active tab, one page at a time */
+    var pages = pageCount(activeTab);
+    var currentVariantId = Game.customization[activeTab.field];
+    var first = customSelection.page * PER_PAGE;
+    var last = Math.min(activeTab.variants.length, first + PER_PAGE);
+    for (var vi = first; vi < last; vi++) {
+      var r = tileRect(vi), gx = r.x, gy = r.y;
+      var v = activeTab.variants[vi];
+      var selected = v.id === currentVariantId;
+      var tileHot = hot.tile === vi;
+      if (selected) {
+        /* soft gold halo, built from strokes */
+        c.strokeStyle = 'rgba(255, 200, 110, 0.18)';
+        c.lineWidth = 9;
+        roundRect(c, gx, gy, GRID_TILE_W, GRID_TILE_H, 10);
         c.stroke();
-      } else {
-        /* Scalloped hem */
-        c.fillStyle = '#ffffff';
-        for (var s = -2; s <= 2; s++) {
-          c.beginPath(); c.arc(s * 5, 15, 2.2, Math.PI, 0); c.fill();
-        }
-        if (id === 'frillyDress') {
-          /* Heart gem */
-          c.fillStyle = '#ff5577';
-          c.beginPath();
-          c.arc(-1.4, -8, 1.3, 0, Math.PI * 2);
-          c.arc(1.4, -8, 1.3, 0, Math.PI * 2);
-          c.moveTo(-2.6, -7);
-          c.lineTo(0, -4);
-          c.lineTo(2.6, -7);
-          c.closePath();
-          c.fill();
-        } else {
-          /* Sailor collar */
-          c.fillStyle = '#ffffff';
-          c.beginPath();
-          c.moveTo(-8, -13);
-          c.lineTo(0, -6);
-          c.lineTo(8, -13);
-          c.closePath();
-          c.fill();
-        }
+        c.strokeStyle = 'rgba(255, 210, 130, 0.3)';
+        c.lineWidth = 5;
+        c.stroke();
       }
-    } else if (id === 'frillyBikini') {
-      /* Bunny Pjs preview */
-      c.fillStyle = color;
-      c.fillRect(-10, -12, 20, 22);
-      c.fillStyle = '#fff8f0';
-      c.beginPath(); c.ellipse(0, 0, 6, 5, 0, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#ff9944';
-      c.fillRect(-1, -2, 2, 4);
-      c.fillStyle = '#ff99bb';
-      c.beginPath(); c.arc(-5, -7, 0.8, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(5, -7, 0.8, 0, Math.PI * 2); c.fill();
-      /* Bunny ear hint */
-      c.fillStyle = '#fff8f0';
-      c.beginPath(); c.ellipse(-6, -16, 1.4, 4, -0.2, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.ellipse(6, -16, 1.4, 4, 0.2, 0, Math.PI * 2); c.fill();
-    } else if (id === 'sailorSwimsuit') {
-      /* Panda Pjs preview */
-      c.fillStyle = '#fafafa';
-      c.fillRect(-10, -12, 20, 22);
-      c.fillStyle = '#1a1a1a';
-      c.fillRect(-10, -12, 4, 22);
-      c.fillRect(6, -12, 4, 22);
-      c.fillStyle = '#5a8a38';
-      c.fillRect(-3, 0, 6, 7);
-      c.fillStyle = '#8aaa48';
-      c.fillRect(-1.5, 0, 0.8, 7);
-      c.fillRect(0.7, 0, 0.8, 7);
-      c.fillStyle = '#1a1a1a';
-      c.beginPath(); c.arc(-6, -15, 2.4, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(6, -15, 2.4, 0, Math.PI * 2); c.fill();
-    } else if (id === 'onePiece') {
-      /* Unicorn Pjs preview — pastel rainbow stripes */
-      var stripeColors = ['#ffb3d9', '#ffe6b3', '#d9ffb3', '#b3e6ff', '#d9b3ff'];
-      for (var psi = 0; psi < stripeColors.length; psi++) {
-        c.fillStyle = stripeColors[psi];
-        c.fillRect(-10, -12 + psi * 4.4, 20, 4.6);
+      var bg = c.createLinearGradient(0, gy, 0, gy + GRID_TILE_H);
+      bg.addColorStop(0, selected ? '#7e40ac' : tileHot ? '#4e2868' : '#3a1c50');
+      bg.addColorStop(1, selected ? '#4c2070' : tileHot ? '#381a4c' : '#26102f');
+      c.fillStyle = bg;
+      roundRect(c, gx, gy, GRID_TILE_W, GRID_TILE_H, 10);
+      c.fill();
+      /* soft spotlight behind the render */
+      var sp = c.createRadialGradient(gx + GRID_TILE_W / 2, gy + 34, 4, gx + GRID_TILE_W / 2, gy + 34, 52);
+      sp.addColorStop(0, selected ? 'rgba(255, 210, 236, 0.32)' : 'rgba(255, 190, 230, 0.13)');
+      sp.addColorStop(1, 'rgba(255, 190, 230, 0)');
+      c.fillStyle = sp;
+      roundRect(c, gx + 3, gy + 3, GRID_TILE_W - 6, GRID_TILE_H - 22, 8);
+      c.fill();
+      drawTilePreview(c, activeTab, v, gx + 6, gy + 5, GRID_TILE_W - 12, GRID_TILE_H - 24);
+      /* name band */
+      c.fillStyle = selected ? 'rgba(255, 221, 136, 0.2)' : 'rgba(0, 0, 0, 0.22)';
+      c.fillRect(gx + 2, gy + GRID_TILE_H - 19, GRID_TILE_W - 4, 17);
+      c.fillStyle = selected ? '#fff4d4' : '#f0dcef';
+      fitFont(c, Game.i18n.t(v.label), GRID_TILE_W - 12, 12, 'bold');
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(Game.i18n.t(v.label), gx + GRID_TILE_W / 2, gy + GRID_TILE_H - 10);
+      c.strokeStyle = selected ? '#ffdd88' : tileHot ? 'rgba(255, 221, 136, 0.55)' : 'rgba(255, 221, 136, 0.18)';
+      c.lineWidth = selected ? 2.5 : 1;
+      roundRect(c, gx, gy, GRID_TILE_W, GRID_TILE_H, 10);
+      c.stroke();
+      if (selected) drawCheckBadge(c, gx + GRID_TILE_W - 9, gy + 9);
+    }
+    c.textBaseline = 'alphabetic';
+
+    /* Page arrows when a category has more than one page */
+    if (pages > 1) {
+      drawPageButton(c, PAGE_PREV_X, '<', customSelection.page > 0, hot.prev);
+      drawPageButton(c, PAGE_NEXT_X, '>', customSelection.page < pages - 1, hot.next);
+      c.fillStyle = '#e8c890';
+      c.font = 'bold 12px ' + FONT;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText((customSelection.page + 1) + ' / ' + pages, (PAGE_PREV_X + PAGE_NEXT_X + PAGE_W) / 2, PAGE_Y + PAGE_H / 2 + 1);
+      c.textBaseline = 'alphabetic';
+    }
+
+    /* Color swatches (when the active tab has a color dimension) */
+    if (activeTab.colorField && activeTab.colors) {
+      var labelKey = activeTab.colorField === 'hair' ? 'hairColor'
+                   : activeTab.colorField === 'suit' ? 'suitColor'
+                   : 'shoeColor';
+      c.fillStyle = '#e8c890';
+      c.font = 'bold 13px ' + FONT;
+      c.textAlign = 'left';
+      c.fillText(Game.i18n.t(labelKey), COLOR_X, COLOR_Y - 18);
+      var selColor = Game.customization[activeTab.colorField];
+      for (var ci = 0; ci < activeTab.colors.length; ci++) {
+        drawSwatch(c, COLOR_X + ci * COLOR_STEP + 16, COLOR_Y, activeTab.colors[ci], activeTab.colors[ci] === selColor, hot.color === ci);
       }
-      c.fillStyle = '#ffd24a';
-      c.beginPath();
-      c.moveTo(-2, -16); c.lineTo(0, -22); c.lineTo(2, -16); c.closePath();
-      c.fill();
-      c.fillStyle = '#fff4a8';
-      var ss = 2;
-      c.beginPath();
-      for (var i = 0; i < 10; i++) {
-        var ang = -Math.PI / 2 + i * Math.PI / 5;
-        var rr = i % 2 === 0 ? ss : ss * 0.4;
-        var px = 0 + Math.cos(ang) * rr;
-        var py = 0 + Math.sin(ang) * rr;
-        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
-      }
-      c.closePath();
-      c.fill();
     }
-  }
 
-  function drawShoeIcon(c, id, shoeC) {
-    var color = shoeC || '#ff99cc';
-    if (id === 'flipper') {
-      c.fillStyle = color;
-      c.beginPath();
-      c.ellipse(0, 0, 14, 7, 0, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = 'rgba(0,0,0,0.15)';
-      c.beginPath();
-      c.ellipse(-5, -1, 4, 2, 0, 0, Math.PI * 2);
-      c.fill();
-    } else if (id === 'sneaker') {
-      c.fillStyle = color;
-      c.fillRect(-12, -5, 24, 8);
-      c.fillStyle = '#ffffff';
-      c.fillRect(-12, 3, 24, 2.5);
-      c.fillStyle = 'rgba(255,255,255,0.5)';
-      c.fillRect(-10, -4, 6, 1);
-      c.fillRect(-2, -4, 6, 1);
-    } else {
-      /* maryJane */
-      c.fillStyle = color;
-      c.beginPath();
-      c.ellipse(0, 1, 14, 7, 0, 0, Math.PI * 2);
-      c.fill();
-      c.strokeStyle = 'rgba(0,0,0,0.35)';
-      c.lineWidth = 1.6;
-      c.beginPath();
-      c.moveTo(-8, -3);
-      c.lineTo(8, -3);
-      c.stroke();
-      c.fillStyle = '#fff4aa';
-      c.beginPath(); c.arc(0, -3, 1.6, 0, Math.PI * 2); c.fill();
+    /* Skin tones – always visible regardless of tab */
+    c.fillStyle = '#e8c890';
+    c.font = 'bold 13px ' + FONT;
+    c.textAlign = 'left';
+    c.fillText(Game.i18n.t('skinTone'), COLOR_X, SKIN_Y - 18);
+    for (var ki = 0; ki < skinTones.length; ki++) {
+      drawSwatch(c, COLOR_X + ki * COLOR_STEP + 16, SKIN_Y, skinTones[ki], skinTones[ki] === Game.customization.skin, hot.skin === ki);
     }
-  }
-
-  function drawCrabIcon(c, id) {
-    if (id === 'none') {
-      c.strokeStyle = '#88aacc';
-      c.lineWidth = 2;
-      c.beginPath(); c.arc(0, 0, 10, 0, Math.PI * 2); c.stroke();
-      c.beginPath();
-      c.moveTo(-7, -7);
-      c.lineTo(7, 7);
-      c.stroke();
-      return;
-    }
-    if (Game.entities && Game.entities.drawCrabPet) {
-      c.save();
-      c.scale(2.2, 2.2);
-      Game.entities.drawCrabPet(c, 0, 0, id, 0);
-      c.restore();
-    }
-  }
-
-  function drawFoodIcon(c, id) {
-    if (id === 'none') {
-      c.strokeStyle = '#88aacc';
-      c.lineWidth = 2;
-      c.beginPath(); c.arc(0, 0, 10, 0, Math.PI * 2); c.stroke();
-      c.beginPath();
-      c.moveTo(-7, -7);
-      c.lineTo(7, 7);
-      c.stroke();
-      return;
-    }
-    c.save();
-    c.scale(2.8, 2.8);
-    if (id === 'iceCream') {
-      c.fillStyle = '#e0b070';
-      c.beginPath();
-      c.moveTo(-1.5, 2);
-      c.lineTo(1.5, 2);
-      c.lineTo(0, 6);
-      c.closePath();
-      c.fill();
-      c.fillStyle = '#ffc8d4';
-      c.beginPath(); c.arc(0, 1, 2.4, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#ff3355';
-      c.beginPath(); c.arc(0, -1.5, 0.75, 0, Math.PI * 2); c.fill();
-    } else if (id === 'onigiri') {
-      c.fillStyle = '#ffffff';
-      c.beginPath();
-      c.moveTo(0, -3);
-      c.lineTo(-3.5, 3);
-      c.lineTo(3.5, 3);
-      c.closePath();
-      c.fill();
-      c.fillStyle = '#2a3a2a';
-      c.fillRect(-3, 1, 6, 2);
-      c.fillStyle = 'rgba(255,160,180,0.7)';
-      c.beginPath(); c.arc(-1.1, 0, 0.55, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(1.1, 0, 0.55, 0, Math.PI * 2); c.fill();
-    } else if (id === 'donut') {
-      c.fillStyle = '#c88858';
-      c.beginPath(); c.arc(0, 0, 3, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#ff99cc';
-      c.beginPath(); c.arc(0, 0, 2.7, Math.PI + 0.3, -0.3, false); c.fill();
-      c.fillStyle = '#ffe4b0';
-      c.beginPath(); c.arc(0, 0, 1, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#ffff66'; c.fillRect(-1.4, -0.3, 0.5, 0.5);
-      c.fillStyle = '#66ddff'; c.fillRect(1, 0, 0.5, 0.5);
-    } else if (id === 'crepe') {
-      c.fillStyle = '#f2d8a4';
-      c.beginPath();
-      c.moveTo(-2.6, -2.6);
-      c.lineTo(2.6, -2.6);
-      c.lineTo(0, 4);
-      c.closePath();
-      c.fill();
-      c.fillStyle = '#ffdceb';
-      c.beginPath(); c.arc(0, -2.6, 2, Math.PI, 0); c.fill();
-      c.fillStyle = '#dd3355';
-      c.beginPath(); c.arc(-0.4, -3, 0.8, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#2a5d2a';
-      c.fillRect(-0.7, -3.8, 0.6, 0.6);
-    } else if (id === 'taiyaki') {
-      c.fillStyle = '#cc8844';
-      c.beginPath();
-      c.ellipse(-0.4, 0, 3.4, 1.8, 0, 0, Math.PI * 2);
-      c.fill();
-      c.beginPath();
-      c.moveTo(2.6, 0);
-      c.lineTo(4.4, -1.6);
-      c.lineTo(4.4, 1.6);
-      c.closePath();
-      c.fill();
-      c.fillStyle = '#e0a868';
-      c.beginPath(); c.ellipse(-1, -0.6, 1.6, 0.5, 0, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#1a0c14';
-      c.beginPath(); c.arc(-2.2, -0.4, 0.4, 0, Math.PI * 2); c.fill();
-      c.strokeStyle = '#8a5520';
-      c.lineWidth = 0.3;
-      c.beginPath();
-      c.moveTo(-1.4, 0.3); c.lineTo(1.6, 0.3);
-      c.stroke();
-    } else if (id === 'parfait') {
-      c.strokeStyle = 'rgba(255,255,255,0.7)';
-      c.lineWidth = 0.4;
-      c.strokeRect(-1.8, -2, 3.6, 5.6);
-      c.fillStyle = '#6b3a1a';
-      c.fillRect(-1.6, 2, 3.2, 1.4);
-      c.fillStyle = '#fff4dc';
-      c.fillRect(-1.6, 0.5, 3.2, 1.4);
-      c.fillStyle = '#ff6688';
-      c.fillRect(-1.6, -1, 3.2, 1.4);
-      c.fillStyle = '#ffffff';
-      c.beginPath(); c.arc(0, -2.3, 1.5, Math.PI, 0); c.fill();
-      c.beginPath(); c.arc(-0.5, -2.9, 0.8, Math.PI, 0); c.fill();
-      c.beginPath(); c.arc(0.4, -3.2, 0.6, Math.PI, 0); c.fill();
-      c.fillStyle = '#dd2244';
-      c.beginPath(); c.arc(0.7, -3.5, 0.55, 0, Math.PI * 2); c.fill();
-    } else if (id === 'macaron') {
-      c.fillStyle = '#ffbadb';
-      c.beginPath(); c.ellipse(0, -1.2, 3, 1.4, 0, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#ffffff';
-      c.fillRect(-3, -0.3, 6, 1.1);
-      c.fillStyle = '#ff9ac2';
-      c.beginPath(); c.ellipse(0, 1.6, 3, 1.4, 0, 0, Math.PI * 2); c.fill();
-      c.fillStyle = 'rgba(255,255,255,0.55)';
-      c.beginPath(); c.ellipse(-1, -1.5, 1.3, 0.4, 0, 0, Math.PI * 2); c.fill();
-    } else if (id === 'strawberry') {
-      c.fillStyle = '#e8344a';
-      c.beginPath();
-      c.moveTo(-2.6, -1.2);
-      c.quadraticCurveTo(0, 4.8, 2.6, -1.2);
-      c.closePath();
-      c.fill();
-      c.fillStyle = '#fff4a8';
-      c.beginPath(); c.arc(-1, 0.7, 0.3, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(0.8, 0.4, 0.3, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(0, 2, 0.3, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(-1.4, 2.3, 0.3, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#3caf3c';
-      c.beginPath();
-      c.moveTo(-2.8, -1.2);
-      c.lineTo(-0.8, -2.2);
-      c.lineTo(0.8, -2.2);
-      c.lineTo(2.8, -1.2);
-      c.lineTo(0, -0.3);
-      c.closePath();
-      c.fill();
-    }
-    c.restore();
   }
 
   function drawCustomizeScreen(c) {
@@ -1674,118 +1525,15 @@
     /* Momoko preview */
     Game.fx.lit(c, 'preview', stageCX - 70, stageCY - 85, 28, 36, 5, 12, previewPaint, PREVIEW_LIGHT);
 
-    /* Tab bar */
-    for (var ti = 0; ti < customTabs.length; ti++) {
-      var tx = TAB_X + ti * (TAB_W + TAB_GAP);
-      var tab = customTabs[ti];
-      var active = customSelection.tab === tab.id;
-      var tabHot = pointerOver(c, tx, TAB_Y, TAB_W, TAB_H);
-      c.fillStyle = active ? '#8a46b8' : tabHot ? '#55286e' : '#3a1c4e';
-      roundRect(c, tx, TAB_Y, TAB_W, TAB_H, 6);
-      c.fill();
-      if (active) {
-        c.strokeStyle = '#ffdd88';
-        c.lineWidth = 2;
-        roundRect(c, tx, TAB_Y, TAB_W, TAB_H, 6);
-        c.stroke();
-      }
-      c.fillStyle = active ? '#ffffff' : '#dcc4e4';
-      fitFont(c, Game.i18n.t(tab.label), TAB_W - 8, 12, 'bold');
-      c.textAlign = 'center';
-      c.textBaseline = 'middle';
-      c.fillText(Game.i18n.t(tab.label), tx + TAB_W / 2, TAB_Y + TAB_H / 2);
-    }
-    c.textBaseline = 'alphabetic';
-
-    /* Variant grid for the active tab */
+    /* Option panel */
     var activeTab = getTab(customSelection.tab);
-    var currentVariantId = Game.customization[activeTab.field];
-    for (var vi = 0; vi < activeTab.variants.length; vi++) {
-      var row = Math.floor(vi / GRID_COLS);
-      var col = vi % GRID_COLS;
-      var gx = GRID_X + col * (GRID_TILE_W + GRID_GAP);
-      var gy = GRID_Y + row * (GRID_TILE_H + GRID_GAP);
-      var v = activeTab.variants[vi];
-      var selected = v.id === currentVariantId;
-      /* Tile bg */
-      var tileHot = pointerOver(c, gx, gy, GRID_TILE_W, GRID_TILE_H);
-      c.fillStyle = selected ? '#6a3490' : tileHot ? '#4a2464' : '#2e1640';
-      roundRect(c, gx, gy, GRID_TILE_W, GRID_TILE_H, 8);
-      c.fill();
-      if (selected) {
-        c.strokeStyle = '#ffdd88';
-        c.lineWidth = 2.5;
-        roundRect(c, gx, gy, GRID_TILE_W, GRID_TILE_H, 8);
-        c.stroke();
-      }
-      /* Icon (left side of tile) */
-      drawVariantIcon(c, activeTab.id, v.id, gx + 32, gy + GRID_TILE_H / 2 - 2, Game.customization);
-      /* Label (right side) */
-      c.fillStyle = '#fbeefa';
-      fitFont(c, Game.i18n.t(v.label), GRID_TILE_W - 72, 12, 'bold');
-      c.textAlign = 'left';
-      c.textBaseline = 'middle';
-      c.fillText(Game.i18n.t(v.label), gx + 64, gy + GRID_TILE_H / 2);
-    }
-    c.textBaseline = 'alphabetic';
-
-    /* Color swatches (when the active tab has a color dimension) */
-    /* Color row anchor follows the grid so tabs with fewer variants pull
-       the colors up instead of leaving a big empty band. */
-    var colorY = colorYFor(activeTab);
-    if (activeTab.colorField && activeTab.colors) {
-      var labelKey = activeTab.colorField === 'hair' ? 'hairColor'
-                   : activeTab.colorField === 'suit' ? 'suitColor'
-                   : 'skinTone';
-      c.fillStyle = '#e8c890';
-      c.font = 'bold 13px "M PLUS Rounded 1c", sans-serif';
-      c.textAlign = 'left';
-      c.fillText(Game.i18n.t(labelKey), COLOR_X, colorY - 8);
-      var selColor = Game.customization[activeTab.colorField];
-      for (var ci = 0; ci < activeTab.colors.length; ci++) {
-        var ccx = COLOR_X + ci * COLOR_STEP + 16;
-        var ccy = colorY + 16;
-        c.fillStyle = activeTab.colors[ci];
-        c.beginPath();
-        c.arc(ccx, ccy, 14, 0, Math.PI * 2);
-        c.fill();
-        c.strokeStyle = 'rgba(0,0,0,0.35)';
-        c.lineWidth = 1;
-        c.stroke();
-        if (activeTab.colors[ci] === selColor) {
-          c.strokeStyle = '#ffdd88';
-          c.lineWidth = 3;
-          c.beginPath();
-          c.arc(ccx, ccy, 17, 0, Math.PI * 2);
-          c.stroke();
-        }
-      }
-    }
-
-    /* Skin tones – always visible regardless of tab (it's the only axis
-       that doesn't belong to a category but still matters) */
-    c.fillStyle = '#e8c890';
-    c.font = 'bold 13px "M PLUS Rounded 1c", sans-serif';
-    c.textAlign = 'left';
-    c.fillText(Game.i18n.t('skinTone'), COLOR_X, colorY + 48);
-    for (var ki = 0; ki < skinTones.length; ki++) {
-      var kcx = COLOR_X + ki * COLOR_STEP + 16;
-      var kcy = colorY + 68;
-      c.fillStyle = skinTones[ki];
-      c.beginPath();
-      c.arc(kcx, kcy, 14, 0, Math.PI * 2);
-      c.fill();
-      c.strokeStyle = 'rgba(0,0,0,0.35)';
-      c.lineWidth = 1;
-      c.stroke();
-      if (skinTones[ki] === Game.customization.skin) {
-        c.strokeStyle = '#ffdd88';
-        c.lineWidth = 3;
-        c.beginPath();
-        c.arc(kcx, kcy, 17, 0, Math.PI * 2);
-        c.stroke();
-      }
-    }
+    if (customSelection.page >= pageCount(activeTab)) customSelection.page = 0;
+    updateCustHot(c, activeTab);
+    var cu = Game.customization, h = custHot;
+    var key = [customSelection.tab, customSelection.page, cu.hair, cu.suit, cu.skin, cu.flipper, cu.hairStyle, cu.outfit,
+               cu.shoes, cu.crab, cu.food, cu.hat, cu.extra, Game.i18n.lang, h.tab, h.tile, h.color, h.skin,
+               h.prev, h.next, Game.fx.key(), document.fonts ? document.fonts.status : ''].join('|');
+    Game.fx.bake(c, 'custPanel', key, PANEL_X, PANEL_Y, PANEL_W, PANEL_H, paintCustomPanel);
 
     /* Start button */
     drawPrimaryButton(c, Game.i18n.t('startGame'), START_BTN_X, START_BTN_Y, START_BTN_W, START_BTN_H, titleAnimTimer++);
@@ -1793,7 +1541,7 @@
     /* Keyboard hint so kids on a laptop don't have to reach for the mouse.
        Sits above the Start button to stay within the 480-tall canvas. */
     c.fillStyle = '#dcc4e4';
-    c.font = '11px "M PLUS Rounded 1c", sans-serif';
+    c.font = '11px ' + FONT;
     c.textAlign = 'center';
     c.fillText(
       Game.i18n.t(Game.input.isTouch() ? 'customizeTouchHint' : 'customizeKbHint'),
@@ -1872,7 +1620,7 @@
 
   function drawMomokoPreview(c, cust) {
     if (!Game.entities) return;
-    if (Game.entities.drawMomokoSprite) Game.entities.drawMomokoSprite(c, 0, 0, cust, 0);
+    if (Game.entities.drawMomokoSprite) Game.entities.drawMomokoSprite(c, 0, 0, cust, 0, { rig: idleRig('preview') });
     /* Crab pet appears next to her feet in the preview so the player can
        see the companion they just picked. */
     if (Game.entities.drawCrabPet && cust.crab && cust.crab !== 'none') {
@@ -1899,35 +1647,47 @@
     for (var ti = 0; ti < customTabs.length; ti++) {
       var tx = TAB_X + ti * (TAB_W + TAB_GAP);
       if (hitButton(mx, my, tx, TAB_Y, TAB_W, TAB_H)) {
-        customSelection.tab = customTabs[ti].id;
+        selectTab(customTabs[ti].id);
         Game.audio.play('select');
         return null;
       }
     }
 
     var activeTab = getTab(customSelection.tab);
+    var pages = pageCount(activeTab);
 
-    /* Variant tiles */
-    for (var vi = 0; vi < activeTab.variants.length; vi++) {
-      var row = Math.floor(vi / GRID_COLS);
-      var col = vi % GRID_COLS;
-      var gx = GRID_X + col * (GRID_TILE_W + GRID_GAP);
-      var gy = GRID_Y + row * (GRID_TILE_H + GRID_GAP);
-      if (hitButton(mx, my, gx, gy, GRID_TILE_W, GRID_TILE_H)) {
-        Game.customization[activeTab.field] = activeTab.variants[vi].id;
+    /* Page arrows */
+    if (pages > 1) {
+      if (customSelection.page > 0 && hitButton(mx, my, PAGE_PREV_X - 4, PAGE_Y - 4, PAGE_W + 8, PAGE_H + 8)) {
+        customSelection.page--;
+        Game.audio.play('select');
+        return null;
+      }
+      if (customSelection.page < pages - 1 && hitButton(mx, my, PAGE_NEXT_X - 4, PAGE_Y - 4, PAGE_W + 8, PAGE_H + 8)) {
+        customSelection.page++;
         Game.audio.play('select');
         return null;
       }
     }
 
+    /* Option tiles on the current page */
+    var first = customSelection.page * PER_PAGE;
+    var last = Math.min(activeTab.variants.length, first + PER_PAGE);
+    for (var vi = first; vi < last; vi++) {
+      var r = tileRect(vi);
+      if (hitButton(mx, my, r.x, r.y, GRID_TILE_W, GRID_TILE_H)) {
+        Game.customization[activeTab.field] = activeTab.variants[vi].id;
+        Game.audio.play('select');
+        if (Game.momoko) Game.momoko.rig('preview').play('pose');
+        return null;
+      }
+    }
+
     /* Tab color swatches */
-    var colorY = colorYFor(activeTab);
     if (activeTab.colorField && activeTab.colors) {
       for (var ci = 0; ci < activeTab.colors.length; ci++) {
-        var ccx = COLOR_X + ci * COLOR_STEP + 16;
-        var ccy = colorY + 16;
-        var dx = mx - ccx, dy = my - ccy;
-        if (dx * dx + dy * dy < 17 * 17) {
+        var dx = mx - (COLOR_X + ci * COLOR_STEP + 16), dy = my - COLOR_Y;
+        if (dx * dx + dy * dy < (SWATCH_R + 4) * (SWATCH_R + 4)) {
           Game.customization[activeTab.colorField] = activeTab.colors[ci];
           Game.audio.play('select');
           return null;
@@ -1937,10 +1697,8 @@
 
     /* Skin tone swatches (always shown) */
     for (var ki = 0; ki < skinTones.length; ki++) {
-      var kcx = COLOR_X + ki * COLOR_STEP + 16;
-      var kcy = colorY + 68;
-      var kdx = mx - kcx, kdy = my - kcy;
-      if (kdx * kdx + kdy * kdy < 17 * 17) {
+      var kdx = mx - (COLOR_X + ki * COLOR_STEP + 16), kdy = my - SKIN_Y;
+      if (kdx * kdx + kdy * kdy < (SWATCH_R + 4) * (SWATCH_R + 4)) {
         Game.customization.skin = skinTones[ki];
         Game.audio.play('select');
         return null;
@@ -1957,12 +1715,19 @@
 
   /* ---- Intro / Backstory ---- */
   var introAnimTimer = 0;
+  /* Standing figures on the menus get an idle rig: breathing, blinks,
+     glances and weight shifts instead of a frozen pose. */
+  function idleRig(id) {
+    var R = Game.momoko.rig(id);
+    R.update(0, 0, 1);
+    return R;
+  }
   function introHeroPaint(a) {
-    Game.entities.drawMomokoSprite(a, 0, 0, Game.customization, Math.floor(introAnimTimer / 8) % 4);
+    Game.entities.drawMomokoSprite(a, 0, 0, Game.customization, 0, { rig: idleRig('intro') });
   }
   /* Title: moonlight from the upper left over the street */
   var TITLE_LIGHT = { dx: -0.7, dy: -0.7, light: '255,236,214', shade: '50,24,90', key: 0.1, dark: 0.28, rim: 0.8 };
-  function titleHeroPaint(a) { Game.entities.drawMomokoSprite(a, 0, 0, Game.customization, 0); }
+  function titleHeroPaint(a) { Game.entities.drawMomokoSprite(a, 0, 0, Game.customization, 0, { rig: idleRig('title') }); }
 
   function drawIntroScreen(c) {
     introAnimTimer++;
@@ -3124,7 +2889,92 @@
   /* ============================================================ */
   /*                    ROCKET LAUNCH ANIMATION                     */
   /* ============================================================ */
-  function drawRocketAnim(c, timer, target) {
+  /* Stairs transition (the last 40 ticks of the ride timer): a short
+     carpeted flight in a lamplit stairwell, the camera following Momoko
+     as she climbs (dir 1) or trots down (dir -1), fading in and out. */
+  var STEP_W = 26, STEP_H = 15;
+  function drawStairClimb(c, timer, dir) {
+    var slope = dir < 0 ? -1 : 1;
+    dir = 1;
+    var u = Math.max(0, Math.min(1, (timer - 80) / 40));
+    var R = Game.momoko.rig('stairs', { vmax: 192 });
+    if (timer <= 81) R.reset();
+    var run = u * 150;                       /* px travelled along the flight */
+    var heroX = W / 2 - 40 * dir, floorAt = H * 0.68;
+    var camX = run * dir, camY = -run * STEP_H / STEP_W * slope;
+    c.fillStyle = '#1c1018';
+    c.fillRect(0, 0, W, H);
+    /* wainscoted wall with sconces, scrolling with the climb */
+    var wallG = c.createLinearGradient(0, 0, 0, H);
+    wallG.addColorStop(0, '#62324a'); wallG.addColorStop(1, '#3a1a2c');
+    c.fillStyle = wallG;
+    c.fillRect(0, 0, W, H);
+    for (var sc = -2; sc < 6; sc++) {
+      var sx = ((sc * 220 - camX) % 1100 + 1100) % 1100 - 150;
+      var sy = 120 - camY * 0.9 + (sx - W / 2) * (-STEP_H / STEP_W) * slope;
+      var gl = c.createRadialGradient(sx, sy, 2, sx, sy, 90);
+      gl.addColorStop(0, 'rgba(255,214,150,0.6)'); gl.addColorStop(1, 'rgba(255,214,150,0)');
+      c.fillStyle = gl;
+      c.fillRect(sx - 90, sy - 90, 180, 180);
+      c.fillStyle = '#caa040';
+      c.fillRect(sx - 3, sy, 6, 10);
+      c.fillStyle = '#fff0c8';
+      c.beginPath(); c.ellipse(sx, sy - 4, 6, 8, 0, 0, Math.PI * 2); c.fill();
+    }
+    /* the flight: steps rising toward dir */
+    c.save();
+    c.translate(heroX, floorAt);
+    for (var k = -16; k < 28; k++) {
+      var x0 = k * STEP_W * dir - camX + 10 * dir, y0 = -k * STEP_H * slope - camY;
+      var xa = Math.min(x0, x0 + STEP_W * dir), xb = Math.max(x0, x0 + STEP_W * dir);
+      c.fillStyle = '#7a2438';
+      c.fillRect(xa, y0, xb - xa, H);
+      c.fillStyle = '#b8405a';
+      c.fillRect(xa, y0, xb - xa, 4);
+      c.fillStyle = '#e8b860';
+      c.fillRect(xa, y0 + 4, xb - xa, 1.5);
+      c.fillStyle = 'rgba(0,0,0,0.25)';
+      c.fillRect(slope > 0 ? xa : xb - 3, y0, 3, H);
+    }
+    c.restore();
+    /* Momoko, climbing: the rig gets a rising path and a climb flag */
+    var hs = 2.6;
+    R.update(camX, camY, dir, { climb: slope > 0 ? 1 : 0.5 });
+    /* feet land on the tread under her */
+    var kUnder = Math.floor((camX - 10 * dir) / STEP_W);
+    var feetY = floorAt - kUnder * STEP_H * slope - camY;
+    Game.fx.shadow(c, heroX, feetY + 2, 22, 5, '20,6,16', 0.5);
+    c.save();
+    c.translate(heroX - 14 * hs, feetY - 34 * hs);
+    c.scale(hs, hs);
+    Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, 0, { rig: R });
+    c.restore();
+    /* brass handrail in front, following the slope */
+    c.save();
+    c.translate(heroX, floorAt);
+    c.strokeStyle = '#3a2410';
+    c.lineWidth = 7;
+    c.beginPath();
+    c.moveTo(-W * dir - camX, -34 + W * STEP_H / STEP_W * slope - camY);
+    c.lineTo(W * dir - camX, -34 - W * STEP_H / STEP_W * slope - camY);
+    c.stroke();
+    c.strokeStyle = '#e8b860';
+    c.lineWidth = 3;
+    c.stroke();
+    for (var bl = -16; bl < 28; bl++) {
+      var bx = bl * STEP_W * dir - camX + 22 * dir, by = -bl * STEP_H * slope - camY;
+      var ry = -34 - (bx + camX) * STEP_H / STEP_W * slope - camY;
+      c.fillStyle = '#c8943c';
+      c.fillRect(bx - 1.5, ry, 3, by - ry);
+    }
+    c.restore();
+    drawSceneVignette(c);
+    var fade = Math.max(1 - u / 0.2, (u - 0.75) / 0.25, 0);
+    if (fade > 0) { c.fillStyle = 'rgba(10,4,10,' + Math.min(1, fade) + ')'; c.fillRect(0, 0, W, H); }
+  }
+
+  function drawRocketAnim(c, timer, target, stairs) {
+    if (stairs && Game.momoko) { drawStairClimb(c, timer, stairs); return; }
     /* Elevator-shaft transition: a brass-trimmed cab rides up a brick
        shaft past lit landings while the floor dial sweeps to the target.
        Reuses the rocket-anim wiring so we don't have to fork the engine
@@ -3311,7 +3161,14 @@
       c.save();
       c.translate(cx + cabW / 2 - 50, cy + cabH - 18 - 34 * 1.8);
       c.scale(1.8, 1.8);
-      Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, Math.floor(timer / 8) % 4);
+      /* She rides standing, eyes on the floor dial: the cab's lift and
+         stop (eased) feed the rig, so her hair sags as it pulls away and
+         bounces up when it settles. */
+      var rideR = Game.momoko.rig('ride');
+      if (timer <= 1) rideR.reset();
+      var rp = Math.min(1, timer / 100), re = rp * rp * (3 - 2 * rp);
+      rideR.update(0, -re * 120, 1, { ride: true, gaze: [0.25, -0.85] });
+      Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, 0, { rig: rideR });
       c.restore();
     }
 
@@ -6338,6 +6195,7 @@
     roomState.frame = 0;
     roomState.frameTimer = 0;
     roomState.interactCooldown = 30;
+    if (Game.momoko) roomRig().reset();
     roomState.hasGreeted = false;
     roomState.showedFollowUp = false;
     if (species === 'bedroom') {
@@ -8887,8 +8745,19 @@
     roomState.animal.draw(a, roomState.animal.x, roomState.animal.y);
   }
   function roomHeroPaint(a) {
-    if (roomState.facing === -1) { a.translate(28, 0); a.scale(-1, 1); }
-    Game.entities.drawMomokoSprite(a, 0, 0, Game.customization, roomState.frame);
+    Game.entities.drawMomokoSprite(a, 0, 0, Game.customization, roomState.frame, { rig: roomRig() });
+  }
+  /* Room walking is faster than the corridor (4.6 px/frame); the rig
+     derives her walk, turn and secondary motion from roomState.px/py. */
+  function roomRig() { return Game.momoko.rig('room', { vmax: 276 }); }
+  /* Momoko reacts when she greets a guest: a reach-and-pat, or a hop and
+     both arms up the first time a guest is stamped into the ledger. */
+  function heroGreets(animal) {
+    var fresh = !(Game.flags && Game.flags.stamps && Game.flags.stamps[animal.species]);
+    animal.interact();
+    /* turn to face the guest (facing only steers how she is drawn) */
+    roomState.facing = animal.x + animal.w / 2 >= roomState.px ? 1 : -1;
+    roomRig().play(fresh ? 'cheer' : 'pet');
   }
 
   function drawAnimalRoomInterior(c) {
@@ -9023,17 +8892,15 @@
       }
     }
 
-    /* Momoko (also scaled up to match the bigger room scale).
-       Walk-bob: a tiny vertical bounce while moving keeps the cozy
-       aesthetic even though room walking is grid-coarse. */
+    /* Momoko (also scaled up to match the bigger room scale). Her walk
+       cycle, bob and turn come from the rig, fed with her room position. */
     if (Game.entities && Game.entities.drawMomokoSprite) {
       var heroScale = 1.6;
       var hx = Math.round(roomState.px);
-      var moving = (roomState.frame !== 0) || (roomState.frameTimer > 0);
-      var bob = moving ? Math.abs(Math.sin(roomState.frame * Math.PI / 2 +
-                                           roomState.frameTimer * 0.4)) * 2 : 0;
-      var hy = Math.round(roomState.py - bob);
-      Game.fx.shadow(c, hx, Math.round(roomState.py) + 1, 20 - bob, 5, rig.cast, 0.6);
+      var hy = Math.round(roomState.py);
+      roomRig().update(roomState.px, roomState.py, roomState.facing);
+      var bob = roomRig().pose.bob * heroScale;
+      Game.fx.shadow(c, hx, hy + 1, 20 - bob, 5, rig.cast, 0.6);
       Game.fx.lit(c, 'hero', hx - 14 * heroScale, hy - 34 * heroScale, 28, 34, heroScale, 10, roomHeroPaint, light);
     }
 
@@ -9170,10 +9037,12 @@
             roomState.animal.currentText = follow;
             roomState.animal.talkTimer = 360;
             roomState.showedFollowUp = true;
+            roomState.facing = roomState.animal.x + roomState.animal.w / 2 >= roomState.px ? 1 : -1;
+            roomRig().play('pet');
             if (Game.audio && Game.audio.play) Game.audio.play('select');
           }
         } else {
-          roomState.animal.interact();
+          heroGreets(roomState.animal);
           roomState.showedFollowUp = false;
         }
         roomState.hasGreeted = true;
@@ -9237,7 +9106,7 @@
       var ax = roomState.animal.x, ay = roomState.animal.y;
       if (mx >= ax && mx <= ax + roomState.animal.w &&
           my >= ay - 10 && my <= ay + roomState.animal.h + 10) {
-        roomState.animal.interact();
+        heroGreets(roomState.animal);
       }
     }
     return null;
@@ -9672,7 +9541,7 @@
       c.translate(momokoSeatX, seatY);
       c.scale(-mScale, mScale); /* face left toward the receptionist */
       c.translate(-14, -34);
-      Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, 0);
+      Game.entities.drawMomokoSprite(c, 0, 0, Game.customization, 0, { rig: idleRig('book') });
       c.restore();
       /* Tiny attentive sparkle while the story is told */
       if (sitting) {
