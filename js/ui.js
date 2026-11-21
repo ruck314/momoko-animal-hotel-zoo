@@ -1303,11 +1303,7 @@
     } else if (tab.item) {
       Game.momoko.drawItemIcon(c, v.id, cx, cy + (v.id === 'balloon' ? 12 : 2), v.id === 'balloon' ? 3.4 : 6.2);
     } else if (tab.pet) {
-      if (Game.entities && Game.entities.drawCrabPet) {
-        c.translate(cx + 2, cy + 2);
-        c.scale(3.4, 3.4);
-        Game.entities.drawCrabPet(c, 0, 0, v.id, 0);
-      }
+      if (Game.pet) Game.pet.drawIcon(c, cx, cy + 22, v.id, 2.6);
     } else {
       var crop = v.crop || tab.crop;
       var s = Math.min(w / crop[2], h / crop[3]);
@@ -1524,6 +1520,7 @@
 
     /* Momoko preview */
     Game.fx.lit(c, 'preview', stageCX - 70, stageCY - 85, 28, 36, 5, 12, previewPaint, PREVIEW_LIGHT);
+    drawPreviewPet(c);
 
     /* Option panel */
     var activeTab = getTab(customSelection.tab);
@@ -1621,11 +1618,23 @@
   function drawMomokoPreview(c, cust) {
     if (!Game.entities) return;
     if (Game.entities.drawMomokoSprite) Game.entities.drawMomokoSprite(c, 0, 0, cust, 0, { rig: idleRig('preview') });
-    /* Crab pet appears next to her feet in the preview so the player can
-       see the companion they just picked. */
-    if (Game.entities.drawCrabPet && cust.crab && cust.crab !== 'none') {
-      Game.entities.drawCrabPet(c, -8, 32, cust.crab, 0);
-    }
+  }
+
+  /* The pet dog she picked sits on the pedestal beside her, on its own
+     idle rig (wags, blinks, tilts its head, looks up at her). */
+  var PREVIEW_PET_X = 74, PREVIEW_PET_Y = 328, PREVIEW_PET_S = 3.7;
+  var previewPetV = null;
+  function previewPetPaint(a) {
+    Game.pet.draw(a, 16, 22, previewPetV, Game.pet.rig('preview', { scale: PREVIEW_PET_S, gap: 0 }).P, 1);
+  }
+  function drawPreviewPet(c) {
+    var v = Game.customization.crab;
+    if (!Game.pet || !Game.pet.coat(v)) return;
+    previewPetV = v;
+    Game.pet.rig('preview', { scale: PREVIEW_PET_S, gap: 0 }).update(PREVIEW_PET_X + 80, 1);
+    Game.fx.shadow(c, PREVIEW_PET_X, PREVIEW_PET_Y + 1, 30, 5, '40,8,30', 0.5);
+    Game.fx.lit(c, 'previewPet', PREVIEW_PET_X - 16 * PREVIEW_PET_S, PREVIEW_PET_Y - 22 * PREVIEW_PET_S,
+                32, 24, PREVIEW_PET_S, 4, previewPetPaint, PREVIEW_LIGHT);
   }
 
   function roundRect(c, x, y, w, h, r) {
@@ -2527,10 +2536,9 @@
         var frame = mm.moving ? Math.floor(mm.walkPhase) : 0;
         Game.entities.drawMomokoSprite(c, -14, -34, Game.customization, frame);
       }
-      /* Companion crab trails behind her opposite facing direction */
-      if (Game.entities && Game.entities.drawCrabPet &&
-          Game.customization.crab && Game.customization.crab !== 'none') {
-        Game.entities.drawCrabPet(c, -22, -2, Game.customization.crab, beachTimer);
+      /* Pet dog trails behind her opposite facing direction */
+      if (Game.pet && Game.pet.coat(Game.customization.crab)) {
+        Game.pet.drawIcon(c, -26, 0, Game.customization.crab, 1);
       }
       c.restore();
     }

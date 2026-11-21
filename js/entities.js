@@ -132,72 +132,10 @@
   /* Shared Momoko sprite painter – gameplay, the customize preview and
      every cutscene call this, so they all show the same character. The
      renderer itself lives in momoko.js; opts is passed through
-     ({ eyes: 'sleep' } closes her eyes). Crab companion lives outside this
-     painter so it can follow the player in world space – see drawCrabPet. */
+     ({ eyes: 'sleep' } closes her eyes). The pet dog lives outside this
+     painter so it can follow the player in world space – see pet.js. */
   function drawMomokoSprite(c, sx, sy, cust, frame, opts) {
     window.Game.momoko.draw(c, sx, sy, cust, frame, opts);
-  }
-
-  /* Pet-dog companion — re-themed from crab. `variant` picks the coat
-     palette (brown/blue/gold remapped to brown/spotted/golden) or 'none'. */
-  function drawCrabPet(c, px, py, variant, frame) {
-    if (!variant || variant === 'none') return;
-    var body, accent;
-    if (variant === 'blue' || variant === 'spotted') {
-      body = '#dddddd'; accent = '#553322';
-    } else if (variant === 'gold' || variant === 'golden') {
-      body = '#ffcc66'; accent = '#aa6622';
-    } else {
-      /* red → brown */
-      body = '#8a5a32'; accent = '#5a3818';
-    }
-    var wobble = Math.sin((frame || 0) * 0.2) * 0.8;
-    /* Body — plump ellipse */
-    c.fillStyle = body;
-    c.beginPath();
-    c.ellipse(px, py, 6, 4, 0, 0, Math.PI * 2);
-    c.fill();
-    /* Head */
-    c.beginPath();
-    c.arc(px - 5, py - 1, 3, 0, Math.PI * 2);
-    c.fill();
-    /* Ear */
-    c.fillStyle = accent;
-    c.beginPath();
-    c.moveTo(px - 6, py - 3.5);
-    c.lineTo(px - 4.5, py - 4.6);
-    c.lineTo(px - 4, py - 3);
-    c.closePath();
-    c.fill();
-    /* Spots for 'spotted' coat */
-    if (variant === 'blue' || variant === 'spotted') {
-      c.fillStyle = '#443322';
-      c.beginPath(); c.arc(px + 1, py - 1, 0.9, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(px + 3, py + 1, 0.8, 0, Math.PI * 2); c.fill();
-    }
-    /* Snout */
-    c.fillStyle = accent;
-    c.beginPath(); c.arc(px - 7, py, 0.8, 0, Math.PI * 2); c.fill();
-    /* Eye */
-    c.fillStyle = '#000000';
-    c.beginPath(); c.arc(px - 5.5, py - 1.4, 0.5, 0, Math.PI * 2); c.fill();
-    /* Tail (wagging) */
-    c.strokeStyle = body;
-    c.lineWidth = 1.8;
-    c.lineCap = 'round';
-    c.beginPath();
-    c.moveTo(px + 5, py - 1);
-    c.lineTo(px + 8, py - 2 + wobble * 2);
-    c.stroke();
-    /* Legs */
-    c.strokeStyle = accent;
-    c.lineWidth = 0.9;
-    c.beginPath();
-    c.moveTo(px - 3, py + 3); c.lineTo(px - 3, py + 4.8);
-    c.moveTo(px - 1, py + 3); c.lineTo(px - 1, py + 4.8);
-    c.moveTo(px + 1, py + 3); c.lineTo(px + 1, py + 4.8);
-    c.moveTo(px + 3, py + 3); c.lineTo(px + 3, py + 4.8);
-    c.stroke();
   }
 
   Momoko.prototype.draw = function (c, camX, camY) {
@@ -206,24 +144,13 @@
     var cust = window.Game.customization || {};
     /* The rig turns her position into the walk cycle, head turn, bob and
        secondary motion, and mirrors her itself (through a three-quarter
-       turn), so only the pet dog is flipped here. Off the floor (Up held)
+       turn). The pet dog has its own rig (pet.js). Off the floor (Up held)
        she tucks into a little float pose. */
     var R = window.Game.momoko.rig('corridor', { vmax: 192 });
     var airT = Math.abs(this.vy) > 0.15 ? 1 : 0;
     this.air = (this.air || 0) + (airT - (this.air || 0)) * 0.2;
     R.update(this.x + this.w / 2, this.y + this.h, this.facing, { air: this.air > 0.02 ? this.air : 0 });
     drawMomokoSprite(c, sx, sy, cust, this.animFrame, { rig: R });
-    /* Crab pet trails at foot level, on the side opposite her facing. */
-    if (cust.crab && cust.crab !== 'none') {
-      c.save();
-      if (this.facing === -1) {
-        c.translate(sx + this.w / 2, 0);
-        c.scale(-1, 1);
-        c.translate(-(sx + this.w / 2), 0);
-      }
-      drawCrabPet(c, sx - 8, sy + 32, cust.crab, this.animTimer);
-      c.restore();
-    }
   };
 
   /* Floss-dance Momoko – arms swing rigid across the body while the hips
@@ -4699,7 +4626,6 @@
     spawnBurst: spawnBurst,
     drawMomokoSprite: drawMomokoSprite,
     drawMomokoFloss: drawMomokoFloss,
-    drawCrabPet: drawCrabPet,
     /* Hotel zoo entities */
     Animal: Animal,
     AnimalDoor: AnimalDoor,

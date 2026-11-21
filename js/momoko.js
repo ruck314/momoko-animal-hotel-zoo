@@ -2409,9 +2409,11 @@
        contact, a flight bounce, pumping arms) instead of blurring steps */
     var run = this.walk * smooth((spdN - 0.4) / 0.5) * (1 - climb);
     var duty = 0.5 - 0.22 * run;
-    var stride = this.walk * (1.1 + 1.7 * spdN) * (0.35 + 0.65 * Math.min(1, Math.abs(this.L))) * (1 + climb * 0.3);
+    var stride = this.walk * (1.1 + 1.7 * spdN) * (0.35 + 0.65 * Math.min(1, Math.abs(this.L))) * (1 + climb * 0.3) * (1 + 0.35 * run);
     var vu = spd / this.scale;
-    var cad = Math.min(1.6 + vu / 45, 4.4);
+    /* a full-speed run tops out near 3 strides a second: faster than
+       that the legs, arms and bounce flicker instead of reading as a run */
+    var cad = Math.min(1.6 + vu / 45, 4.4 - 1.3 * run);
     if (stride > 0.05) cad = Math.min(cad, vu * duty / (2 * stride));
     if (!moving) cad = 2.4;                    /* settling steps as the stride shrinks */
     if (this.walk > 0.02) this.ph = (this.ph + dt * cad * TAU) % TAU;
@@ -2491,7 +2493,7 @@
 
     /* walk bob, and how fast it changes (it kicks the hair) */
     var walkB = 0.5 + 0.5 * Math.cos(2 * this.ph - duty * TAU);   /* high at mid-stance */
-    var bob = this.walk * (0.55 + 0.6 * spdN + climb * 0.6) * (walkB + run * (1 - 2 * walkB)) + run * 0.5 * (1 - walkB);
+    var bob = this.walk * (0.55 + 0.6 * spdN * (1 - 0.35 * run) + climb * 0.6) * (walkB + run * (1 - 2 * walkB)) + run * 0.35 * (1 - walkB);
     var bv = (bob - this.prevBob) / dt;
     var bAcc = (bv - this.bobV) / dt;
     this.prevBob = bob; this.bobV = bv;
@@ -2596,17 +2598,23 @@
     var m = c.getTransform ? c.getTransform() : null;
     var skew = !m || Math.abs(m.b) > 1e-6 || Math.abs(m.c) > 1e-6 || Math.abs(Math.abs(m.a) - Math.abs(m.d)) > 1e-6;
     if (opts && opts.rig) {
-      /* Rigs repaint "on twos" (30 Hz while she moves, acts or her hair
-         is still swinging; 20 Hz standing idle or once the effects
-         watchdog has stepped down): the pose is still integrated every
+      /* Rigs repaint every frame while she walks, otherwise "on twos"
+         (30 Hz while she acts or her hair is still swinging; 20 Hz
+         standing idle or once the effects watchdog has stepped down):
+         the pose is still integrated every
          frame and her position moves at full rate, but the figure is
          only redrawn when the stamp ticks over. */
       var R = opts.rig;
       if (skew || !R.id) { paint(c, sx, sy, cust, R.pose); return; }
       var ua = Math.abs(m.a), rs = cacheSlot(ua, R.id);
       var busy = R.pose.walk > 0.05 || R.pose.act || R.pose.hop > 0 || Math.abs(R.hair.v) > 2;
-      var hz = (window.Game.FX && window.Game.FX.tier > 0) ? 20 : busy ? 30 : 20;
-      var rkey = custKey(cust) + '|' + Math.floor(R.time * hz) + '|' + R.pose.mir;
+      var low = window.Game.FX && window.Game.FX.tier > 0;
+      var hz = low ? 20 : busy ? 30 : 20;
+      /* Walking or running, her feet cover several pixels a frame, so a
+         pose held for two frames reads as a stutter: repaint every frame
+         (until the effects watchdog steps down). */
+      var stamp = (!low && R.pose.walk > 0.3) ? R.time : Math.floor(R.time * hz);
+      var rkey = custKey(cust) + '|' + stamp + '|' + R.pose.mir;
       if (rs.key !== rkey) { fill(rs, ua, cust, R.pose); rs.key = rkey; }
       blit(c, rs, m, sx, sy);
       return;
@@ -2667,6 +2675,16 @@
     renderCrop: renderCrop,
     drawItemIcon: drawItemIcon,
     options: OPT,
-    defaults: DEF
+    defaults: DEF,
+    /* Her cel shading for companions painted in the same style (the pet
+       dog): part(c, pathFn, '#hex', bandScale, extraFn, noInk) fills with
+       two cel bands and a hue-tinted outline; ink(u) sets the outline for
+       u device px per unit; ramp(hex) gives { c, m, d, l, ink }. */
+    kit: {
+      part: function (c, path, hex, s, extra, noInk) { part(c, path, ramp(hex, false), s, extra, noInk); },
+      ink: function (u) { LW = Math.max(0.9, Math.min(3.0, u * 0.3)) / u; return LW; },
+      ramp: function (hex) { return ramp(hex, false); },
+      gloss: gloss
+    }
   };
 })();

@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.24.0';
+  Game.VERSION = 'v0.25.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -2154,6 +2154,23 @@
   var heroLight = { dx: 0, dy: -1, light: '255,226,170', shade: '74,26,44', key: 0.16, dark: 0.3, rim: 0.8 };
   var HERO_SCALE = 1.4;
   function heroPaint(a) { player.draw(a, player.x, player.y); }
+  /* Her pet dog trots along the floor behind her on its own rig (it
+     follows, turns and sits by itself), drawn in the same light before
+     her so it passes behind when she turns round. */
+  var petRig = null, petVariant = null;
+  function petPaint(a) { Game.pet.draw(a, 16, 22, petVariant, petRig.P, 1); }
+  function drawPet(mid, floorY, lift) {
+    var v = Game.customization && Game.customization.crab;
+    if (!Game.pet || !Game.pet.coat(v)) return;
+    petVariant = v;
+    petRig = Game.pet.rig('corridor', { scale: HERO_SCALE, vmax: 192 });
+    petRig.update(mid, player.facing, { air: lift > 6 });
+    var px = petRig.x - camera.x;
+    if (px < -60 || px > W + 60) return;
+    Game.fx.shadow(ctx, px, floorY + 2, 10.5 * HERO_SCALE, 2.6 * HERO_SCALE, '24,8,26', 0.5);
+    Game.fx.lit(ctx, 'pet', Math.round(px - 16 * HERO_SCALE), Math.round(floorY - 22 * HERO_SCALE),
+                32, 24, HERO_SCALE, 4, petPaint, heroLight);
+  }
   function drawHero() {
     var wl = WING_LIGHT[(level && level.wing) || 'lobby'] || WING_LIGHT.lobby;
     var mid = player.x + player.w / 2;
@@ -2167,6 +2184,7 @@
     heroLight.dy = -1 / n;
     heroLight.light = wl.light;
     heroLight.shade = wl.shade;
+    drawPet(mid, floorY, lift);
     /* Drawn a size up from her 28x34 collision box, anchored at the feet,
        so she reads as the hero next to the guests; collisions are unchanged. */
     var A = Game.fx.lit(ctx, 'hero', Math.round(mid - camera.x - player.w * HERO_SCALE / 2),
@@ -4021,12 +4039,34 @@
 
     accumulator += delta;
     while (accumulator >= FIXED_DT) {
+      snapPrev();
       update();
       accumulator -= FIXED_DT;
     }
 
-    render();
+    renderBlended(accumulator / FIXED_DT);
     requestAnimationFrame(gameLoop);
+  }
+
+  /* The simulation ticks at a fixed 60 Hz, but displays don't: frames
+     that land between ticks (120 Hz iPads, timestamp jitter at 60 Hz)
+     would repeat or skip her position and judder the scroll. Render
+     her and the camera at the blend between the last two ticks instead,
+     then put the true values back. Jumps (stairs, elevator, a new
+     player object) are drawn as is. */
+  var prev = { p: null, px: 0, py: 0, cx: 0, cy: 0 };
+  function snapPrev() {
+    prev.p = player;
+    if (player) { prev.px = player.x; prev.py = player.y; }
+    prev.cx = camera.x; prev.cy = camera.y;
+  }
+  function blendTo(a, b, k) { return Math.abs(b - a) < 48 ? a + (b - a) * k : b; }
+  function renderBlended(k) {
+    if (!player || prev.p !== player || k <= 0) { render(); return; }
+    var px = player.x, py = player.y, cx = camera.x, cy = camera.y;
+    player.x = blendTo(prev.px, px, k); player.y = blendTo(prev.py, py, k);
+    camera.x = blendTo(prev.cx, cx, k); camera.y = blendTo(prev.cy, cy, k);
+    try { render(); } finally { player.x = px; player.y = py; camera.x = cx; camera.y = cy; }
   }
 
   /* Compute canvas dimensions to match the current viewport's aspect ratio.
