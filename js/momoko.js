@@ -1963,7 +1963,7 @@
   function newPose() {
     return {
       mir: 1, look: 1, walk: 0, ph: 0, spd: 0, bob: 0, lean: 0, sq: 0, hop: 0, air: 0,
-      stride: 0, duty: 0.5, run: 0,
+      stride: 0, duty: 0.5, run: 0, boost: 0,
       breath: 0, open: 1, gx: 0, gy: 0, tilt: 0, hip: 0,
       hair: 0, hairY: 0, skirt: 0, ear: 0, charm: 0, flut: 0,
       expr: 'open', act: null, actU: 0, actT: 0, t: 0, climb: 0,
@@ -2109,7 +2109,7 @@
     var nA1 = -0.3 + walk * look * 0.25, nA2 = 0.25, fA1 = 0.3 - walk * look * 0.25, fA2 = -0.25;
     var nH = 'rest', fH = 'rest';
     var sN = S > 0.01 ? feet[0] / S : 0;
-    var amp = walk * (0.45 + 0.35 * spd) * (0.4 + 0.6 * look) * (1 + run * 0.35);
+    var amp = walk * (0.45 + 0.35 * spd) * (0.4 + 0.6 * look) * (1 + run * 0.35 + Q.boost * 0.2);
     nA1 += -amp * sN; nA2 += amp * Math.max(0, -sN) * 0.6 + run * 0.55;
     fA1 += amp * sN; fA2 += amp * Math.max(0, sN) * 0.6 - run * 0.55;
     if (Q.air > 0) { var fl = Math.sin(t * 3.4) * 0.18; nA1 -= Q.air * (0.6 + fl); fA1 += Q.air * (0.6 + fl); }
@@ -2336,6 +2336,8 @@
     this.ear = new Spring(95, 5.5);
     this.charm = new Spring(38, 3.2);
     this.sqS = new Spring(260, 15);
+    this.puffs = [];                           /* turbo dust puffs, world px */
+    for (var i = 0; i < 6; i++) this.puffs.push({ x: 0, y: 0, age: -1, dir: 1, k: 1 });
     this.reset();
   }
   Rig.prototype.reset = function () {
@@ -2348,6 +2350,8 @@
     this.nextShift = 6; this.shiftT = -1; this.shiftDir = 1;
     this.act = null; this.actT = 0; this.actDur = 0;
     this.prevBob = 0; this.bobV = 0;
+    this.boost = 0; this.hc = 0; this.puffI = 0;
+    for (var i = 0; i < this.puffs.length; i++) this.puffs[i].age = -1;
     this.hair.x = this.hair.v = this.hairY.x = this.hairY.v = 0;
     this.skirt.x = this.skirt.v = this.ear.x = this.ear.v = 0;
     this.charm.x = this.charm.v = this.sqS.x = this.sqS.v = 0;
@@ -2365,7 +2369,8 @@
   };
   /* Feed her position (world px, feet), the direction she faces and, for
      cutscenes, extras: { air: 0..1, ride: true (carried, so vertical
-     motion is not walking), gaze: [x, y], climb: 0..1, expr, eyes }. */
+     motion is not walking), gaze: [x, y], climb: 0..1, expr, eyes,
+     boost: the turbo speed multiplier, 1..2 }. */
   Rig.prototype.update = function (x, y, facing, o) {
     var dt;
     if (o && o.dt) {
@@ -2403,21 +2408,37 @@
     if (moving && !this.moving) { this.sqS.v += 7; }               /* push-off dip */
     if (!moving && this.moving) { this.sqS.v += 5; this.idle = 0; } /* settle on stop */
     this.moving = moving;
+    /* turbo: past her top speed (the long-hold 2x) she stretches into a
+       longer, leaning run with streaming hair, not quicker steps */
+    var bw = moving && o && o.boost ? clamp(o.boost - 1, 0, 1) : 0;
+    this.boost += (bw - this.boost) * Math.min(1, dt * 6);
+    var tb = this.boost;
     /* gait: the stride and duty set how far one cycle carries her, and the
        cadence follows the ground she covers so planted feet stay put, up
        to a quick little-kid trot; faster than that she runs (shorter
        contact, a flight bounce, pumping arms) instead of blurring steps */
     var run = this.walk * smooth((spdN - 0.4) / 0.5) * (1 - climb);
     var duty = 0.5 - 0.22 * run;
-    var stride = this.walk * (1.1 + 1.7 * spdN) * (0.35 + 0.65 * Math.min(1, Math.abs(this.L))) * (1 + climb * 0.3) * (1 + 0.35 * run);
+    var stride = this.walk * (1.1 + 1.7 * spdN) * (0.35 + 0.65 * Math.min(1, Math.abs(this.L))) * (1 + climb * 0.3) * (1 + 0.35 * run) * (1 + 0.3 * tb);
     var vu = spd / this.scale;
     /* a full-speed run tops out near 3 strides a second: faster than
        that the legs, arms and bounce flicker instead of reading as a run */
-    var cad = Math.min(1.6 + vu / 45, 4.4 - 1.3 * run);
+    var cad = Math.min(1.6 + vu / 45, 4.4 - 1.3 * run + 0.25 * tb);
     if (stride > 0.05) cad = Math.min(cad, vu * duty / (2 * stride));
     if (!moving) cad = 2.4;                    /* settling steps as the stride shrinks */
     if (this.walk > 0.02) this.ph = (this.ph + dt * cad * TAU) % TAU;
     else this.ph += (Math.round(this.ph / Math.PI) * Math.PI - this.ph) * Math.min(1, dt * 8);
+    /* a soft dust puff from each footfall in turbo */
+    var hc = Math.floor(this.ph / Math.PI), pf;
+    for (var pi = 0; pi < this.puffs.length; pi++) if (this.puffs[pi].age >= 0) this.puffs[pi].age += dt;
+    if (hc !== this.hc) {
+      this.hc = hc;
+      if (tb > 0.08 && !(o && (o.air || o.ride))) {
+        pf = this.puffs[this.puffI]; this.puffI = (this.puffI + 1) % this.puffs.length;
+        pf.dir = this.vx >= 0 ? 1 : -1;
+        pf.x = x - pf.dir * 3 * this.scale; pf.y = y; pf.age = 0; pf.k = 0.5 + 0.5 * tb;
+      }
+    }
 
     /* head turn: a critically damped spring through the front view */
     var lt = facing * (this.walk > 0.15 ? 1 : 0.55);
@@ -2500,13 +2521,14 @@
 
     /* secondaries (world space; converted to her local frame below) */
     var vxN = this.vx / vm, axN = clamp(this.ax / vm, -12, 12);
-    this.hair.step(clamp(-vxN * 2.4, -3, 3), -axN * 2.2, dt);
+    var hl = 3 + 1.5 * tb;
+    this.hair.step(clamp(-vxN * 2.4, -hl, hl), -axN * 2.2, dt);
     this.hairY.step(0, -bAcc * 0.012 + clamp(this.ay / vm, -10, 10) * 1.6 + (hop > 0 ? -2 : 0), dt);
-    this.skirt.step(clamp(-vxN * 1.0, -1.4, 1.4), -axN * 1.1, dt);
+    this.skirt.step(clamp(-vxN * 1.0, -1.4 - 0.6 * tb, 1.4 + 0.6 * tb), -axN * 1.1, dt);
     this.ear.step(clamp(-vxN * 1.4, -2, 2), -axN * 1.4 - bAcc * 0.004, dt);
     this.charm.step(clamp(-vxN * 2.8, -3.5, 3.5), -axN * 2.6, dt);
     this.sqS.step(0, 0, dt);
-    this.hair.x = clamp(this.hair.x, -4.5, 4.5);
+    this.hair.x = clamp(this.hair.x, -4.5 - 1.5 * tb, 4.5 + 1.5 * tb);
     this.charm.x = clamp(this.charm.x, -5, 5);
 
     var mir = this.L < 0 ? -1 : 1;
@@ -2519,11 +2541,12 @@
     Q.stride = stride;
     Q.duty = duty;
     Q.run = run;
+    Q.boost = tb;
     Q.bob = bob + actBob;
     Q.hop = hop;
     Q.air = (o && o.air) || 0;
     Q.climb = climb;
-    Q.lean = this.walk * (0.035 + 0.05 * spdN) + clamp(this.ax * mir / vm * 0.012, -0.06, 0.07) + climb * 0.08 + actLean;
+    Q.lean = this.walk * (0.035 + 0.05 * spdN) + clamp(this.ax * mir / vm * 0.012, -0.06, 0.07) + climb * 0.08 + actLean + tb * 0.07;
     Q.sq = clamp(this.sqS.x * 0.18 + actSq, -1, 1.2);
     Q.breath = Math.sin(t * TAU / 3.2) * (1 - this.walk * 0.6);
     Q.open = open;
@@ -2536,7 +2559,7 @@
     Q.skirt = this.skirt.x * mir;
     Q.ear = this.ear.x * mir + Math.sin(t * 2.2) * 0.2;
     Q.charm = this.charm.x * mir + Math.sin(t * 1.6) * 0.3;
-    Q.flut = Math.sin(t * 5.3) * (0.3 + this.walk * 0.7 * spdN) + Math.sin(t * 2.1) * 0.3;
+    Q.flut = Math.sin(t * (5.3 + 3 * tb)) * (0.3 + this.walk * 0.7 * spdN + 0.4 * tb) + Math.sin(t * 2.1) * 0.3;
     Q.act = this.act;
     Q.actU = actU;
     Q.actT = this.actT;
@@ -2549,6 +2572,42 @@
   var rigs = {};
   function rig(id, o) {
     return rigs[id] || (rigs[id] = new Rig(id, o));
+  }
+
+  /* Turbo cue, drawn behind her (and the dog): the rig's footfall dust
+     puffs and a few soft speed streaks trailing her back, both fading in
+     with the boost. (x, y) are her feet now, (ox, oy) the camera, in the
+     same world px the rig is fed; s is her draw scale. */
+  function trail(c, R, ox, oy, x, y, s) {
+    var tb = R.boost, i, p;
+    c.save();
+    for (i = 0; i < R.puffs.length; i++) {
+      p = R.puffs[i];
+      if (p.age < 0 || p.age > 0.45) continue;
+      var u = p.age / 0.45, r = (1.8 + 3.6 * u) * s * p.k;
+      c.globalAlpha = 0.5 * (1 - u) * (1 - u);
+      c.fillStyle = '#fff4e4';
+      c.beginPath();
+      c.arc(p.x - ox - p.dir * u * 7 * s, p.y - oy - r * 0.7 - u * 2 * s, r, 0, TAU);
+      c.fill();
+    }
+    var hv = clamp(Math.abs(R.vx) / R.vmax, 0, 1);  /* streaks run with her, not up/down */
+    if (tb * hv > 0.02) {
+      var d = R.vx >= 0 ? 1 : -1, bx = x - ox - d * 15 * s;
+      c.globalAlpha = 0.55 * tb * hv;
+      c.strokeStyle = '#ffffff';
+      c.lineCap = 'round';
+      c.lineWidth = 1.3 * s;
+      c.beginPath();
+      for (i = 0; i < 3; i++) {
+        var len = (10 + 7 * (0.5 + 0.5 * Math.sin(R.time * 7 + i * 2.3))) * s * tb;
+        var sy = y - oy - (9 + i * 7) * s, sx = bx + d * (i === 1 ? -2 : 0) * s;
+        c.moveTo(sx, sy);
+        c.lineTo(sx - d * len, sy);
+      }
+      c.stroke();
+    }
+    c.restore();
   }
 
   /* ================================================================
@@ -2672,6 +2731,7 @@
     draw: draw,
     palette: paletteFor,
     rig: rig,
+    trail: trail,
     renderCrop: renderCrop,
     drawItemIcon: drawItemIcon,
     options: OPT,

@@ -42,6 +42,7 @@
     this.animFrame = 0;
     this.animTimer = 0;
     this.shootCooldown = 0;
+    this.turbo = { time: 0, dir: 0, boost: 1 };   /* see Game.input.turbo */
   }
 
   Momoko.SWIM_FORCE = 0.45;
@@ -51,9 +52,13 @@
   Momoko.SHOOT_CD = 12;
 
   Momoko.prototype.update = function (keys, level) {
+    /* Turbo: a long hold on Left/Right scales her push and top speed
+       (up to 2x); the float (Up/Down) keeps its own speed. */
+    var tb = Game.input.turbo(this.turbo, keys, false);
+
     /* Swimming */
-    if (keys.left) { this.vx -= Momoko.SWIM_FORCE; this.facing = -1; }
-    if (keys.right) { this.vx += Momoko.SWIM_FORCE; this.facing = 1; }
+    if (keys.left) { this.vx -= Momoko.SWIM_FORCE * tb; this.facing = -1; }
+    if (keys.right) { this.vx += Momoko.SWIM_FORCE * tb; this.facing = 1; }
     if (keys.up) this.vy -= Momoko.SWIM_FORCE;
     if (keys.down) this.vy += Momoko.SWIM_FORCE;
 
@@ -66,10 +71,13 @@
 
     /* Clamp velocity */
     var speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-    if (speed > Momoko.MAX_VEL) {
-      this.vx = (this.vx / speed) * Momoko.MAX_VEL;
-      this.vy = (this.vy / speed) * Momoko.MAX_VEL;
+    var maxV = Momoko.MAX_VEL * tb;
+    if (speed > maxV) {
+      this.vx = (this.vx / speed) * maxV;
+      this.vy = (this.vy / speed) * maxV;
     }
+    if (this.vy > Momoko.MAX_VEL) this.vy = Momoko.MAX_VEL;
+    if (this.vy < -Momoko.MAX_VEL) this.vy = -Momoko.MAX_VEL;
 
     /* Apply velocity */
     this.x += this.vx;
@@ -149,7 +157,7 @@
     var R = window.Game.momoko.rig('corridor', { vmax: 192 });
     var airT = Math.abs(this.vy) > 0.15 ? 1 : 0;
     this.air = (this.air || 0) + (airT - (this.air || 0)) * 0.2;
-    R.update(this.x + this.w / 2, this.y + this.h, this.facing, { air: this.air > 0.02 ? this.air : 0 });
+    R.update(this.x + this.w / 2, this.y + this.h, this.facing, { air: this.air > 0.02 ? this.air : 0, boost: this.turbo.boost });
     drawMomokoSprite(c, sx, sy, cust, this.animFrame, { rig: R });
   };
 

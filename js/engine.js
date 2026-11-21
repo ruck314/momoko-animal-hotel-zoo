@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.27.0';
+  Game.VERSION = 'v0.28.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -1555,8 +1555,11 @@
         /* Camera follow */
         var targetCamX = player.x - W / 2 + player.w / 2;
         var targetCamY = player.y - H / 2 + player.h / 2;
-        camera.x += (targetCamX - camera.x) * 0.08;
-        camera.y += (targetCamY - camera.y) * 0.08;
+        /* Follows faster in turbo so she trails the centre by the same
+           distance at 2x as at walking speed. */
+        var camK = 0.08 * player.turbo.boost;
+        camera.x += (targetCamX - camera.x) * camK;
+        camera.y += (targetCamY - camera.y) * camK;
         /* Clamp camera */
         if (camera.x < 0) camera.x = 0;
         if (camera.x > level.width - W) camera.x = level.width - W;
@@ -2186,6 +2189,8 @@
     heroLight.dy = -1 / n;
     heroLight.light = wl.light;
     heroLight.shade = wl.shade;
+    /* Turbo cue (dust puffs, speed streaks) behind the dog and her. */
+    Game.momoko.trail(ctx, Game.momoko.rig('corridor', { vmax: 192 }), camera.x, camera.y, mid, player.y + player.h, HERO_SCALE);
     drawPet(mid, floorY, lift);
     /* Drawn a size up from her 28x34 collision box, anchored at the feet,
        so she reads as the hero next to the guests; collisions are unchanged. */

@@ -279,6 +279,28 @@
     tapped.ledger = false;
   }
 
+  /* Turbo: holding a direction (arrows/WASD or the D-pad) for 5 s ramps
+     her top speed smoothly from 1x to 2x by 10 s. Letting go, or reversing
+     the main direction, restarts the timer; the returned boost then eases
+     back to 1x over ~0.25 s instead of snapping. `t` is the caller's state
+     ({ time, dir, boost }), ticked once per 60 Hz update while she walks.
+     twoD: up/down also keep it going (horizontal is the main direction,
+     vertical only when no horizontal arrow is held). */
+  function turbo(t, k, twoD) {
+    var h = (k.right ? 1 : 0) - (k.left ? 1 : 0);
+    var v = twoD ? (k.down ? 1 : 0) - (k.up ? 1 : 0) : 0;
+    var d = h || v * 2;
+    if (!d || d === -t.dir) t.time = 0;
+    t.dir = d;
+    if (d) t.time += 1 / 60;
+    var u = Math.max(0, Math.min(1, (t.time - 5) / 5));
+    var m = 1 + u * u * (3 - 2 * u);
+    var b = t.boost || 1;
+    t.boost = m >= b ? m : Math.max(m, 1 + (b - 1) * 0.85);
+    if (t.boost - m < 0.005) t.boost = m;
+    return t.boost;
+  }
+
   /* Call at end of frame to clear keyboard-only states (touch states reset via processTouches) */
   function postUpdate() {
     /* Reset keyboard-only flags for single-frame presses handled by justPressed */
@@ -464,6 +486,7 @@
     refreshLayout: function () { refreshLayout(); layoutButtons(); },
     keys: keys,
     justPressed: justPressed,
+    turbo: turbo,
     drawTouchStrip: drawTouchStrip,
     drawTouchButtons: drawTouchButtons,
     /* Legacy alias – calls the new strip + buttons painter. */

@@ -34,7 +34,7 @@
 
   function newPose() {
     return { ph: 0, gait: 0, bound: 0, bob: 0, pitch: 0, sit: 0, headUp: 0, tilt: 0,
-             ear: 0, wag: 0, open: 1, pant: 0, tongue: 0, sx: 1, t: 0 };
+             ear: 0, wag: 0, open: 1, pant: 0, tongue: 0, sx: 1, t: 0, reach: 1 };
   }
 
   /* ---- painting ---- */
@@ -60,7 +60,8 @@
     var g = P.gait, b = P.bound;
     var pt = P.ph + TROT[i], pb = P.ph + BOUND[i];
     var dxT = -Math.sin(pt) * 1.8, liftT = Math.max(0, Math.cos(pt)) * 1.25;
-    var dxB = -Math.sin(pb) * 3.0, liftB = Math.max(0, Math.cos(pb)) * 1.7;
+    var r = P.reach || 1;
+    var dxB = -Math.sin(pb) * 3.0 * r, liftB = Math.max(0, Math.cos(pb)) * 1.7 * (0.6 + 0.4 * r);
     return [(dxT + (dxB - dxT) * b) * g, (liftT + (liftB - liftT) * b) * g];
   }
 
@@ -223,7 +224,7 @@
     this.x = null; this.vx = 0; this.face = 1; this.turnFrom = 1; this.turnT = 1;
     this.ph = 0; this.gait = 0; this.bound = 0; this.sit = 0; this.idle = 0; this.t = 0; this.last = 0;
     this.earX = 0; this.earV = 0; this.prevBob = 0; this.wagPh = 0; this.excite = 0.5;
-    this.pant = 0; this.pantHold = 0; this.headUp = 0; this.ownerX = null;
+    this.pant = 0; this.pantHold = 0; this.headUp = 0; this.ownerX = null; this.ownerS = 0;
     this.nextBlink = 1.4; this.blinkT = -1; this.tiltT = -1; this.nextTilt = 3; this.tiltDir = 1;
   };
   /* Owner's feet x (world px), the way she faces (1 right, -1 left),
@@ -246,10 +247,14 @@
     }
     var ownerV = this.ownerX === null ? 0 : (ownerX - this.ownerX) / dt;
     this.ownerX = ownerX;
+    /* her turbo (up to 2x her top speed) raises its follow gain and speed
+       limit with her, so it keeps the same distance behind */
+    this.ownerS += (Math.min(Math.abs(ownerV), this.vmax * 2) - this.ownerS) * Math.min(1, dt * 4);
+    var keep = clamp(this.ownerS / this.vmax, 1, 2);
 
     /* follow: ease toward the spot behind her, with a little dead zone */
-    var dx = target - this.x, dead = 5;
-    var want = Math.abs(dx) < dead ? 0 : clamp((dx - (dx > 0 ? dead : -dead)) * 6, -this.vmax * 1.35, this.vmax * 1.35);
+    var dx = target - this.x, dead = 5, lim = this.vmax * 1.35 * keep;
+    var want = Math.abs(dx) < dead ? 0 : clamp((dx - (dx > 0 ? dead : -dead)) * 6 * keep, -lim, lim);
     this.vx += (want - this.vx) * Math.min(1, dt * 8);
     this.x += this.vx * dt;
     var spd = Math.abs(this.vx), moving = spd > 12;
@@ -268,7 +273,10 @@
     this.gait += (gw - this.gait) * Math.min(1, dt * (gw > this.gait ? 10 : 6));
     var bw = moving ? smooth((vu - 50) / 50) : 0;
     this.bound += (bw - this.bound) * Math.min(1, dt * 5);
-    var fT = Math.min(vu / 7.2, 4.4), fB = 2.6 + vu / 90;
+    /* past her walking top speed the bound reaches further rather than
+       quickening, so a turbo run reads as big leaps, not a scurry */
+    var vtop = this.vmax / this.scale, over = smooth((vu - vtop) / vtop);
+    var fT = Math.min(vu / 7.2, 4.4), fB = 2.6 + Math.min(vu, vtop) / 90 + Math.max(0, vu - vtop) / 300;
     var f = fT + (fB - fT) * this.bound;
     if (this.gait > 0.03) this.ph = (this.ph + f * TAU * dt) % TAU;
     else this.ph += (Math.round(this.ph / Math.PI) * Math.PI - this.ph) * Math.min(1, dt * 8);
@@ -290,7 +298,7 @@
 
     /* bob: two soft bumps per trot cycle, a flight arc in the bound */
     var bob = -0.3 * this.gait * (1 - this.bound) * Math.abs(Math.cos(this.ph))
-              - 1.3 * this.bound * Math.max(0, Math.sin(this.ph))
+              - 1.3 * (1 + 0.35 * over) * this.bound * Math.max(0, Math.sin(this.ph))
               - Math.sin(t * 2.6) * 0.1 * (1 - this.gait) * (1 - this.sit * 0.5);
     var bv = (bob - this.prevBob) / dt; this.prevBob = bob;
     /* ear spring: kicked by the bob and by turns */
@@ -321,7 +329,7 @@
     P.bob = bob; P.pitch = this.bound * 0.1 * Math.cos(this.ph); P.sit = this.sit;
     P.headUp = this.headUp; P.tilt = tilt; P.ear = this.earX + 0.08;
     P.wag = Math.sin(this.wagPh) * wagAmp; P.open = open;
-    P.pant = this.pant; P.tongue = Math.sin(t * 9);
+    P.pant = this.pant; P.tongue = Math.sin(t * 9); P.reach = 1 + 0.4 * over;
     return P;
   };
 

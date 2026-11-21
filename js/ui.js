@@ -6164,6 +6164,9 @@
     species: null,
     px: 200, py: 380, vx: 0, facing: 1,
     frame: 0, frameTimer: 0,
+    /* Long-hold turbo (Game.input.turbo) and the arrows last held, so
+       a 2x run glides out over ~0.25 s when they are released. */
+    turbo: { time: 0, dir: 0, boost: 1 }, gx: 0, gy: 0,
     /* The animal NPC inside the room (or the bed for the bedroom). */
     animal: null,
     bed: null,
@@ -6202,6 +6205,7 @@
     roomState.facing = 1;
     roomState.frame = 0;
     roomState.frameTimer = 0;
+    roomState.turbo.time = 0; roomState.turbo.dir = 0; roomState.turbo.boost = 1;
     roomState.interactCooldown = 30;
     if (Game.momoko) roomRig().reset();
     roomState.hasGreeted = false;
@@ -8937,9 +8941,10 @@
       var heroScale = 1.6;
       var hx = Math.round(roomState.px);
       var hy = Math.round(roomState.py);
-      roomRig().update(roomState.px, roomState.py, roomState.facing);
+      roomRig().update(roomState.px, roomState.py, roomState.facing, { boost: roomState.turbo.boost });
       var bob = roomRig().pose.bob * heroScale;
       Game.fx.shadow(c, hx, hy + 1, 20 - bob, 5, rig.cast, 0.6);
+      Game.momoko.trail(c, roomRig(), 0, 0, roomState.px, roomState.py, heroScale);
       Game.fx.lit(c, 'hero', hx - 14 * heroScale, hy - 34 * heroScale, 28, 34, heroScale, 10, roomHeroPaint, light);
     }
 
@@ -9027,12 +9032,22 @@
   }
 
   function updateAnimalRoom(keys, jp, species) {
-    /* Player walking — faster than corridor speed because rooms are short. */
-    var spd = 4.6;
+    /* Player walking — faster than corridor speed because rooms are short.
+       A long hold ramps it up to 2x (turbo); on release the extra speed
+       eases out along her last step while walking speed stops as before. */
+    var tb = Game.input.turbo(roomState.turbo, keys, true);
+    var spd = 4.6 * tb;
     if (keys.left)  { roomState.px -= spd; roomState.facing = -1; }
     if (keys.right) { roomState.px += spd; roomState.facing = 1; }
     if (keys.up)    roomState.py -= spd * 0.7;
     if (keys.down)  roomState.py += spd * 0.7;
+    if (keys.left || keys.right || keys.up || keys.down) {
+      roomState.gx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      roomState.gy = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+    } else if (tb > 1) {
+      roomState.px += roomState.gx * 4.6 * (tb - 1);
+      roomState.py += roomState.gy * 4.6 * 0.7 * (tb - 1);
+    }
 
     /* Bounds */
     if (roomState.px < ROOM_FLOOR_LEFT)  roomState.px = ROOM_FLOOR_LEFT;
