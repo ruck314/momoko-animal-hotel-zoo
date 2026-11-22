@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.28.0';
+  Game.VERSION = 'v0.29.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -81,9 +81,10 @@
   var prevState = null;
 
   /* ---- Customization defaults ----
-     Split across two concerns: tintable colors (hair/suit/skin/flipper) and
-     swappable variants (hairStyle/outfit/shoes/crab/food). Variants are
-     strings that the sprite painter branches on; 'none' means skip. */
+     Split across two concerns: tintable colors (hair/suit/skin/flipper/eyes)
+     and swappable variants (hairStyle/outfit/shoes/crab/food/hat/extra/
+     face/petWear). Variants are strings that the sprite painters branch
+     on; 'none' means skip. */
   Game.customization = {
     hair: '#e06088',
     suit: '#e06088',
@@ -96,6 +97,9 @@
     food: 'none',
     hat: 'none',
     extra: 'none',
+    face: 'none',
+    eyes: '#7c3452',
+    petWear: 'none',
   };
 
   /* Quest state – persisted in localStorage. */
@@ -2163,7 +2167,7 @@
      follows, turns and sits by itself), drawn in the same light before
      her so it passes behind when she turns round. */
   var petRig = null, petVariant = null;
-  function petPaint(a) { Game.pet.draw(a, 16, 22, petVariant, petRig.P, 1); }
+  function petPaint(a) { Game.pet.draw(a, 16, 22, petVariant, petRig.P, 1, Game.customization.petWear); }
   function drawPet(mid, floorY, lift) {
     var v = Game.customization && Game.customization.crab;
     if (!Game.pet || !Game.pet.coat(v)) return;
@@ -4001,19 +4005,20 @@
       var cs = localStorage.getItem(KEY('customization'));
       if (cs) {
         var parsed = JSON.parse(cs);
-        /* Older saves lack the newer fields (hat, extra) and newer saves
-           may hold values this build doesn't know: take only known keys
-           with string values, and fall back to the default for any
-           option the renderer doesn't offer. */
+        /* Older saves lack the newer fields (hat, extra, face, eyes,
+           petWear) and newer saves may hold values this build doesn't
+           know: take only known keys with string values, and fall back
+           to the default for any option the renderers don't offer. */
         var opts = (Game.momoko && Game.momoko.options) || {};
-        var crabs = ['none', 'red', 'blue', 'gold'];
+        var pet = Game.pet || {};
         for (var k in parsed) {
           if (!Object.prototype.hasOwnProperty.call(Game.customization, k)) continue;
           var v = parsed[k];
           if (typeof v !== 'string') continue;
           if (opts[k] && opts[k].indexOf(v) < 0) continue;
-          if (k === 'crab' && crabs.indexOf(v) < 0) continue;
-          if ((k === 'hair' || k === 'suit' || k === 'skin' || k === 'flipper') && !/^#[0-9a-f]{3,6}$/i.test(v)) continue;
+          if (k === 'crab' && (pet.variants || ['none']).indexOf(v) < 0) continue;
+          if (k === 'petWear' && (pet.wears || ['none']).indexOf(v) < 0) continue;
+          if ((k === 'hair' || k === 'suit' || k === 'skin' || k === 'flipper' || k === 'eyes') && !/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)) continue;
           Game.customization[k] = v;
         }
       }

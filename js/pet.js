@@ -23,13 +23,22 @@
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function smooth(u) { u = clamp(u, 0, 1); return u * u * (3 - 2 * u); }
 
-  /* Coats keep the save ids from the old crab pet: red/blue/gold. */
+  /* Coats keep the save ids from the old crab pet: red/blue/gold. Breed
+     traits: blaze (cream chest and paws), patch, fluff (ruff, plumed
+     tail), point (pricked ears), curl (tail curled over the back), mask
+     (pale face), poodle (pom-poms), beard (whiskery muzzle and brows). */
   var COATS = {
     red:  { body: '#a96a3b', ear: '#6b3f1f', cream: '#f5e0bf', nose: '#2c1a14', collar: '#e0405a', tag: '#ffd24a', blaze: true },
     blue: { body: '#f3efe8', ear: '#523c2f', cream: '#ffffff', nose: '#2c1a14', collar: '#3f8fe0', tag: '#ffd24a', patch: '#5c4434' },
-    gold: { body: '#efbd5c', ear: '#c88b39', cream: '#fbe8bf', nose: '#3a2418', collar: '#ff6fa8', tag: '#fff3b8', blaze: true, fluff: true }
+    gold: { body: '#efbd5c', ear: '#c88b39', cream: '#fbe8bf', nose: '#3a2418', collar: '#ff6fa8', tag: '#fff3b8', blaze: true, fluff: true },
+    shiba: { body: '#e8963c', ear: '#d07c2a', cream: '#fff6e6', nose: '#2c1a14', collar: '#d8344a', tag: '#ffd24a', blaze: true, point: true, curl: true, mask: true },
+    husky: { body: '#8792aa', ear: '#5c667e', cream: '#ffffff', nose: '#2c2430', collar: '#3fb8c8', tag: '#ffd24a', blaze: true, point: true, fluff: true, mask: true, eye: '#3f9ee8' },
+    poodle: { body: '#ffd9e6', ear: '#ffb8d0', cream: '#fff4f8', nose: '#5a3040', collar: '#a070e0', tag: '#ffd24a', poodle: true },
+    scottie: { body: '#454050', ear: '#2e2a38', cream: '#5a5466', nose: '#16121a', collar: '#e8344a', tag: '#ffd24a', point: true, beard: true }
   };
   var ALIAS = { brown: 'red', spotted: 'blue', golden: 'gold' };
+  var VARIANTS = ['none', 'red', 'blue', 'gold', 'shiba', 'husky', 'poodle', 'scottie'];
+  var WEARS = ['none', 'bow', 'bandana', 'bell', 'flowers', 'sweater', 'partyHat', 'crown'];
   function coatOf(v) { return COATS[ALIAS[v] || v] || null; }
 
   function newPose() {
@@ -70,7 +79,20 @@
     K.part(c, ellP(c, fx - 0.25, fy - 0.62, 1.5, 0.82, 0), paw, 0.4);
   }
 
-  function paint(c, coat, P, u) {
+  /* A fluffy pom: a ring of soft bumps. */
+  function pomP(c, x, y, r) {
+    return function () {
+      c.beginPath();
+      c.moveTo(x + r, y);
+      for (var k = 0; k < 8; k++) {
+        var a = (k + 0.5) * TAU / 8, b = (k + 1) * TAU / 8;
+        c.quadraticCurveTo(x + Math.cos(a) * r * 1.42, y + Math.sin(a) * r * 1.42, x + Math.cos(b) * r, y + Math.sin(b) * r);
+      }
+      c.closePath();
+    };
+  }
+
+  function paint(c, coat, P, u, wear) {
     if (!K) K = window.Game.momoko.kit;
     K.ink(u);
     var R = K.ramp(coat.body), far = R.m, earR = K.ramp(coat.ear);
@@ -87,14 +109,32 @@
     /* tail: up and wagging, lying on the floor when she sits */
     var tb = rot(9.3, -10.3);
     var ta = -1.05 + P.wag + sit * 0.85 - P.pitch;
-    var tl = coat.fluff ? 6 : 5.4;
+    var tl = coat.fluff ? 6 : coat.beard ? 4.2 : 5.4;
     var tmx = tb[0] + Math.cos(ta + 0.5) * tl * 0.55, tmy = tb[1] + Math.sin(ta + 0.5) * tl * 0.55;
     var tex = tb[0] + Math.cos(ta - 0.35) * tl, tey = tb[1] + Math.sin(ta - 0.35) * tl;
-    c.beginPath(); c.moveTo(tb[0], tb[1]); c.quadraticCurveTo(tmx, tmy, tex, tey);
-    c.strokeStyle = R.ink; c.lineWidth = (coat.fluff ? 3.1 : 2.4) + K.ink(u) * 2; c.stroke();
-    c.strokeStyle = R.c; c.lineWidth = coat.fluff ? 3.1 : 2.4; c.stroke();
-    c.beginPath(); c.moveTo(tmx, tmy); c.quadraticCurveTo(tmx + (tex - tmx) * 0.6, tmy + (tey - tmy) * 0.6, tex, tey);
-    c.strokeStyle = coat.fluff ? coat.cream : R.l; c.lineWidth = coat.fluff ? 1.6 : 0.9; c.globalAlpha = 0.8; c.stroke(); c.globalAlpha = 1;
+    if (coat.curl) {
+      /* curled over the back: a fat ring with a cream underside */
+      var cxr = tb[0] + 0.6 + P.wag * 1.6, cyr = tb[1] - 2.6 + sit * 2.2;
+      K.part(c, function () {
+        c.beginPath();
+        c.arc(cxr, cyr, 3.0, 0, TAU);
+        c.moveTo(cxr + 1.1, cyr + 0.2); c.arc(cxr, cyr + 0.2, 1.1, 0, TAU, true);
+      }, coat.body, 0.7, function () {
+        c.beginPath(); c.arc(cxr, cyr + 0.2, 2.0, Math.PI * 0.1, Math.PI * 1.1);
+        c.strokeStyle = coat.cream; c.lineWidth = 1.3; c.stroke();
+      });
+    } else if (coat.poodle) {
+      c.beginPath(); c.moveTo(tb[0], tb[1]); c.quadraticCurveTo(tmx, tmy, tex, tey);
+      c.strokeStyle = R.ink; c.lineWidth = 1.5 + K.ink(u) * 2; c.stroke();
+      c.strokeStyle = R.c; c.lineWidth = 1.5; c.stroke();
+      K.part(c, pomP(c, tex, tey, 1.9), coat.cream, 0.6);
+    } else {
+      c.beginPath(); c.moveTo(tb[0], tb[1]); c.quadraticCurveTo(tmx, tmy, tex, tey);
+      c.strokeStyle = R.ink; c.lineWidth = (coat.fluff ? 3.1 : 2.4) + K.ink(u) * 2; c.stroke();
+      c.strokeStyle = R.c; c.lineWidth = coat.fluff ? 3.1 : 2.4; c.stroke();
+      c.beginPath(); c.moveTo(tmx, tmy); c.quadraticCurveTo(tmx + (tex - tmx) * 0.6, tmy + (tey - tmy) * 0.6, tex, tey);
+      c.strokeStyle = coat.fluff ? coat.cream : R.l; c.lineWidth = coat.fluff ? 1.6 : 0.9; c.globalAlpha = 0.8; c.stroke(); c.globalAlpha = 1;
+    }
 
     /* far legs */
     var f1 = footOf(P, 1), f3 = footOf(P, 3);
@@ -125,6 +165,26 @@
       c.lineTo(-6.0, -7.6); c.lineTo(-4.8, -7.9); c.lineTo(-5.2, -6.0); c.lineTo(-3.8, -6.6); c.lineTo(-3.4, -5.0); c.lineTo(-2.2, -6.2);
       c.closePath(); c.fill();
     }
+    if (coat.poodle) K.part(c, pomP(c, -3.4, -8.6, 2.5), coat.cream, 0.7);
+    if (wear === 'sweater') {
+      /* striped knit jumper over her middle, ribbed at both ends */
+      K.part(c, function () {
+        c.beginPath();
+        c.moveTo(-2.6, -13.6);
+        c.quadraticCurveTo(2.4, -14.6, 6.6, -13.2);
+        c.quadraticCurveTo(7.6, -9.4, 6.4, -5.0);
+        c.quadraticCurveTo(2.2, -3.9, -2.4, -4.9);
+        c.quadraticCurveTo(-3.6, -9.2, -2.6, -13.6);
+        c.closePath();
+      }, '#ff7aa8', 0.9, function () {
+        c.fillStyle = '#fff4f8';
+        for (var k = 0; k < 3; k++) c.fillRect(-0.9 + k * 2.6, -15, 1.0, 12);
+        c.fillStyle = '#d8507e';
+        c.fillRect(-3.6, -15, 1.3, 12); c.fillRect(5.9, -15, 1.4, 12);
+        c.fillStyle = '#ffe27a';
+        c.beginPath(); c.ellipse(2.2, -9.2, 1.0, 1.0, 0, 0, TAU); c.fill();
+      });
+    }
     c.restore();
 
     /* near legs */
@@ -135,6 +195,10 @@
     drawLeg(c, hp2[0], hp2[1], h2x + (hp2[0] - h2x) * sit * 0.3, h2y, 1.2, coat.body, pawC);
     var sh0 = rot(HIP_X[0], -6.6);
     drawLeg(c, sh0[0], sh0[1], HIP_X[0] + f0[0], -f0[1], 1.1, coat.body, pawC);
+    if (coat.poodle) {
+      K.part(c, pomP(c, HIP_X[0] + f0[0], -f0[1] - 1.9, 1.25), coat.cream, 0.4);
+      K.part(c, pomP(c, h2x + (hp2[0] - h2x) * sit * 0.3, h2y - 1.9, 1.3), coat.cream, 0.4);
+    }
 
     /* head on the neck pivot */
     var nk = rot(-3.4, -10.6);
@@ -144,22 +208,50 @@
     c.translate(3.4, 10.6);
 
     /* far ear peeking over the crown */
-    K.part(c, ellP(c, -7.9, -17.6, 1.25, 2.1, -0.5 - P.ear * 0.5), earR.m, 0.4);
+    if (coat.point) {
+      K.part(c, function () {
+        c.beginPath();
+        c.moveTo(-9.6, -16.6); c.quadraticCurveTo(-9.9, -19.8, -8.6 - P.ear * 0.8, -21.4); c.quadraticCurveTo(-7.4, -19.4, -6.6, -17.4);
+        c.closePath();
+      }, earR.m, 0.4);
+    } else if (coat.poodle) {
+      K.part(c, pomP(c, -9.0, -15.2, 1.6), earR.m, 0.4);
+    } else {
+      K.part(c, ellP(c, -7.9, -17.6, 1.25, 2.1, -0.5 - P.ear * 0.5), earR.m, 0.4);
+    }
     /* skull, muzzle */
     K.part(c, ellP(c, -6.7, -13.6, 5.1, 4.8, 0), coat.body, 0.8, coat.patch ? function () {
       c.beginPath(); c.ellipse(-7.9, -14.7, 2.1, 1.9, 0.2, 0, TAU); c.fillStyle = coat.patch; c.fill();
+    } : coat.mask ? function () {
+      /* pale face: cheeks and brow spots */
+      c.fillStyle = coat.cream;
+      c.beginPath(); c.ellipse(-8.4, -11.4, 4.6, 2.9, 0.1, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(-9.0, -16.3, 0.85, 0.6, 0.3, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(-6.4, -16.7, 0.85, 0.6, -0.2, 0, TAU); c.fill();
     } : function () {
       c.beginPath(); c.ellipse(-8.6, -15.6, 1.4, 2.2, 0.3, 0, TAU); c.fillStyle = coat.cream; c.globalAlpha = 0.55; c.fill(); c.globalAlpha = 1;
     });
-    K.part(c, ellP(c, -10.3, -11.9, 3.0, 2.2, 0.08), coat.cream, 0.45);
+    if (coat.beard) {
+      K.part(c, function () {
+        c.beginPath();
+        c.moveTo(-13.2, -12.6);
+        c.quadraticCurveTo(-10.4, -14.6, -7.4, -12.6);
+        c.lineTo(-7.8, -9.6); c.lineTo(-8.8, -10.6); c.lineTo(-9.4, -8.8); c.lineTo(-10.4, -10.4); c.lineTo(-11.2, -8.8); c.lineTo(-12.0, -10.6); c.lineTo(-13.0, -9.6);
+        c.closePath();
+      }, coat.cream, 0.45);
+    } else {
+      K.part(c, ellP(c, -10.3, -11.9, 3.0, 2.2, 0.08), coat.cream, 0.45);
+    }
     /* mouth: a little smile, or open with a tongue while panting */
     if (P.pant > 0.05) {
       var po = P.pant;
       c.beginPath(); c.ellipse(-10.6, -10.4, 1.25, 0.95 * po, 0, 0, Math.PI); c.fillStyle = '#7a2a3a'; c.fill();
       c.beginPath(); c.ellipse(-10.3, -9.9 + P.tongue * 0.25 * po, 0.8, 1.15 * po, 0.1, 0, TAU); c.fillStyle = '#ff7f9a'; c.fill();
     }
-    c.beginPath(); c.moveTo(-12.0, -10.9); c.quadraticCurveTo(-11.2, -10.1, -10.4, -10.6); c.quadraticCurveTo(-9.8, -10.0, -9.0, -10.5);
-    c.strokeStyle = K.ramp(coat.cream).ink; c.lineWidth = K.ink(u) * 0.9; c.stroke();
+    if (!coat.beard) {
+      c.beginPath(); c.moveTo(-12.0, -10.9); c.quadraticCurveTo(-11.2, -10.1, -10.4, -10.6); c.quadraticCurveTo(-9.8, -10.0, -9.0, -10.5);
+      c.strokeStyle = K.ramp(coat.cream).ink; c.lineWidth = K.ink(u) * 0.9; c.stroke();
+    }
     /* nose */
     c.beginPath(); c.ellipse(-12.8, -12.8, 1.2, 0.95, 0, 0, TAU); c.fillStyle = coat.nose; c.fill();
     K.gloss(c, -13.1, -13.2, 0.45, 0.28, 0, 0.75);
@@ -169,48 +261,158 @@
     var op = P.open;
     if (op > 0.25) {
       c.beginPath(); c.ellipse(-8.2, -14.4, 1.0, 1.2 * op, 0, 0, TAU); c.fillStyle = '#2a1a14'; c.fill();
+      if (coat.eye) { c.beginPath(); c.ellipse(-8.2, -14.2, 0.7, 0.8 * op, 0, 0, TAU); c.fillStyle = coat.eye; c.fill(); }
       K.gloss(c, -8.5, -14.9 * (op > 0.6 ? 1 : 0.995), 0.4, 0.4 * op, 0, 0.95);
       K.gloss(c, -7.9, -13.9, 0.18, 0.18 * op, 0, 0.8);
     } else {
       c.beginPath(); c.arc(-8.2, -14.6, 0.95, 0.25, Math.PI - 0.25);
       c.strokeStyle = '#2a1a14'; c.lineWidth = K.ink(u) * 1.1; c.stroke();
     }
-    /* near ear: floppy, swinging on its spring */
+    if (coat.beard) {                                   /* bushy brow */
+      K.part(c, function () {
+        c.beginPath();
+        c.moveTo(-9.9, -15.4); c.quadraticCurveTo(-8.6, -17.0, -6.9, -16.0); c.lineTo(-7.3, -15.3); c.lineTo(-8.2, -15.9); c.lineTo(-8.9, -15.1);
+        c.closePath();
+      }, coat.cream, 0.3);
+    }
+    /* near ear: floppy and swinging on its spring, pricked, or a pom */
     c.save();
     c.translate(-4.4, -16.6); c.rotate(P.ear);
-    K.part(c, ellP(c, 0.9, 3.0, 1.8, 3.5, 0.3), coat.ear, 0.45, function () {
-      c.beginPath(); c.ellipse(0.4, 2.2, 0.8, 2.2, 0.3, 0, TAU); c.fillStyle = earR.l; c.globalAlpha = 0.35; c.fill(); c.globalAlpha = 1;
-    });
+    if (coat.point) {
+      c.rotate(-P.ear * 0.6);
+      K.part(c, function () {
+        c.beginPath();
+        c.moveTo(-2.2, 0.9); c.quadraticCurveTo(-2.3, -3.2, -0.2, -5.4); c.quadraticCurveTo(1.6, -2.6, 2.2, 0.4);
+        c.closePath();
+      }, coat.ear, 0.5, function () {
+        c.beginPath();
+        c.moveTo(-1.2, 0.5); c.quadraticCurveTo(-1.3, -2.2, -0.2, -3.7); c.quadraticCurveTo(0.9, -1.8, 1.2, 0.2);
+        c.closePath();
+        c.fillStyle = coat.beard ? earR.l : '#ffc0cc'; c.globalAlpha = coat.beard ? 0.4 : 0.9; c.fill(); c.globalAlpha = 1;
+      });
+    } else if (coat.poodle) {
+      K.part(c, pomP(c, 0.9, 3.2, 2.1), coat.ear, 0.5);
+    } else {
+      K.part(c, ellP(c, 0.9, 3.0, 1.8, 3.5, 0.3), coat.ear, 0.45, function () {
+        c.beginPath(); c.ellipse(0.4, 2.2, 0.8, 2.2, 0.3, 0, TAU); c.fillStyle = earR.l; c.globalAlpha = 0.35; c.fill(); c.globalAlpha = 1;
+      });
+    }
     c.restore();
-    /* collar and swinging tag */
-    c.beginPath(); c.ellipse(-4.3, -10.7, 2.7, 3.3, 0.35, 0.35, 2.75);
-    c.strokeStyle = K.ramp(coat.collar).ink; c.lineWidth = 1.35 + K.ink(u) * 2; c.stroke();
-    c.strokeStyle = coat.collar; c.lineWidth = 1.35; c.stroke();
+    if (coat.poodle) K.part(c, pomP(c, -6.4, -18.4, 2.3), coat.cream, 0.6);      /* topknot */
+    /* collar and what hangs from it */
     var tg = 0.35 - P.ear * 0.6;
     var tx = -5.6 + Math.sin(tg) * 1.2, ty = -8.0 + Math.cos(tg) * 1.0;
-    K.part(c, ellP(c, tx, ty, 0.95, 0.95, 0), coat.tag, 0.3);
+    if (wear === 'flowers') {
+      var fc = ['#ff8fb8', '#fff0a0', '#ffffff', '#c0a4ff', '#ff8fb8'];
+      for (var fi = 0; fi < 5; fi++) {
+        var fa = 0.5 + fi * 0.5, fpx = -4.3 + Math.cos(fa + 0.35) * 2.7 - Math.sin(fa) * 0.3, fpy = -10.7 + Math.sin(fa + 0.2) * 3.3;
+        K.part(c, pomP(c, fpx, fpy, 1.05), fc[fi], 0.3);
+        c.beginPath(); c.ellipse(fpx, fpy, 0.45, 0.45, 0, 0, TAU); c.fillStyle = '#ffb83a'; c.fill();
+      }
+    } else if (wear === 'bandana') {
+      K.part(c, function () {
+        c.beginPath();
+        c.moveTo(-7.4, -10.6); c.quadraticCurveTo(-4.6, -8.2, -1.7, -9.2);
+        c.quadraticCurveTo(-3.6, -6.6, -5.9 + Math.sin(tg) * 0.8, -4.6);
+        c.quadraticCurveTo(-7.0, -7.4, -7.4, -10.6);
+        c.closePath();
+      }, '#e8344a', 0.5, function () {
+        c.fillStyle = '#ffffff';
+        var d = [-5.6, -8.4, -4.2, -7.8, -5.8, -6.6, -6.6, -9.4, -3.0, -8.6];
+        for (var k = 0; k < d.length; k += 2) { c.beginPath(); c.ellipse(d[k], d[k + 1], 0.34, 0.34, 0, 0, TAU); c.fill(); }
+      });
+    } else {
+      c.beginPath(); c.ellipse(-4.3, -10.7, 2.7, 3.3, 0.35, 0.35, 2.75);
+      c.strokeStyle = K.ramp(coat.collar).ink; c.lineWidth = 1.35 + K.ink(u) * 2; c.stroke();
+      c.strokeStyle = coat.collar; c.lineWidth = 1.35; c.stroke();
+      c.beginPath(); c.ellipse(-4.3, -10.9, 2.7, 3.3, 0.35, 0.6, 1.5);
+      c.strokeStyle = K.ramp(coat.collar).l; c.lineWidth = 0.35; c.stroke();
+      if (wear === 'bow') {
+        /* big satin bow tie under her chin */
+        var BW = '#ff6fa8';
+        for (var bs = -1; bs <= 1; bs += 2) {
+          K.part(c, function () {
+            c.beginPath();
+            c.moveTo(tx, ty - 0.4);
+            c.bezierCurveTo(tx + bs * 1.2, ty - 3.2, tx + bs * 4.2, ty - 2.4, tx + bs * 3.6, ty - 0.2);
+            c.bezierCurveTo(tx + bs * 3.8, ty + 1.8, tx + bs * 1.2, ty + 1.4, tx, ty - 0.4);
+            c.closePath();
+          }, BW, 0.6, function () {
+            c.beginPath(); c.moveTo(tx + bs * 0.6, ty - 0.5); c.quadraticCurveTo(tx + bs * 1.9, ty - 0.9, tx + bs * 2.7, ty - 0.2);
+            c.strokeStyle = K.ramp(BW).d; c.lineWidth = 0.3; c.stroke();
+            K.gloss(c, tx + bs * 2.2, ty - 1.4, 0.7, 0.3, bs * 0.4, 0.6);
+          });
+        }
+        K.part(c, ellP(c, tx, ty - 0.4, 0.95, 1.05, 0), BW, 0.4);
+      } else if (wear === 'bell') {
+        K.part(c, ellP(c, tx, ty + 0.5, 1.75, 1.75, 0), '#ffd24a', 0.6, function () {
+          c.beginPath(); c.moveTo(tx - 1.7, ty + 0.7); c.lineTo(tx + 1.7, ty + 0.7); c.moveTo(tx, ty + 0.7); c.lineTo(tx, ty + 2.2);
+          c.strokeStyle = K.ramp('#ffd24a').ink; c.lineWidth = 0.3; c.stroke();
+          c.beginPath(); c.ellipse(tx, ty + 1.2, 0.36, 0.36, 0, 0, TAU); c.fillStyle = K.ramp('#ffd24a').ink; c.fill();
+          K.gloss(c, tx - 0.6, ty - 0.3, 0.5, 0.32, -0.4, 0.95);
+        });
+      } else {
+        K.part(c, ellP(c, tx, ty, 0.95, 0.95, 0), coat.tag, 0.3, function () { K.gloss(c, tx - 0.25, ty - 0.3, 0.3, 0.2, 0, 0.9); });
+      }
+    }
+    if (wear === 'partyHat') {
+      c.save();
+      c.translate(-6.0, -18.0 - (coat.poodle ? 1.4 : 0)); c.rotate(0.22);
+      K.part(c, function () {
+        c.beginPath();
+        c.moveTo(-2.4, 0.3); c.lineTo(0.2, -6.2); c.lineTo(2.5, 0.3); c.quadraticCurveTo(0, 1.1, -2.4, 0.3);
+        c.closePath();
+      }, '#6fc0ff', 0.6, function () {
+        c.fillStyle = '#ffe27a';
+        c.beginPath();
+        c.moveTo(-4, -0.9); c.lineTo(4, -2.9); c.lineTo(4, -1.9); c.lineTo(-4, 0.1); c.closePath();
+        c.moveTo(-4, -3.3); c.lineTo(4, -5.3); c.lineTo(4, -4.3); c.lineTo(-4, -2.3); c.closePath();
+        c.fill();
+      });
+      K.part(c, pomP(c, 0.2, -6.6, 0.95), '#ff7aa8', 0.3);
+      c.restore();
+    } else if (wear === 'crown') {
+      c.save();
+      c.translate(-6.2, -18.0 - (coat.poodle ? 1.6 : 0)); c.rotate(-0.12);
+      K.part(c, function () {
+        c.beginPath();
+        c.moveTo(-2.7, 0.5); c.lineTo(-3.2, -2.9); c.lineTo(-1.6, -1.4); c.lineTo(0, -4.0); c.lineTo(1.6, -1.4); c.lineTo(3.2, -2.9); c.lineTo(2.7, 0.5);
+        c.quadraticCurveTo(0, 1.3, -2.7, 0.5);
+        c.closePath();
+      }, '#ffd24a', 0.6, function () {
+        K.gloss(c, -1.9, -0.8, 0.3, 0.9, 0.15, 0.7);
+      });
+      c.beginPath(); c.ellipse(0, -0.3, 0.6, 0.55, 0, 0, TAU); c.fillStyle = '#e8344a'; c.fill();
+      K.gloss(c, -0.2, -0.5, 0.2, 0.14, 0, 0.9);
+      c.fillStyle = '#fff4fa';
+      c.beginPath(); c.ellipse(-3.2, -3.1, 0.42, 0.42, 0, 0, TAU); c.ellipse(0, -4.2, 0.42, 0.42, 0, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(3.2, -3.1, 0.42, 0.42, 0, 0, TAU); c.fill();
+      c.restore();
+    }
     c.restore();
 
     c.restore();
   }
 
-  /* Draw a pose at (x, y) = point between the feet, `scale` px per unit. */
-  function drawPose(c, x, y, variant, P, scale) {
+  /* Draw a pose at (x, y) = point between the feet, `scale` px per unit;
+     wear is what the dog has on (one of WEARS). */
+  function drawPose(c, x, y, variant, P, scale, wear) {
     var coat = coatOf(variant);
     if (!coat) return;
+    if (WEARS.indexOf(wear) < 0) wear = 'none';
     var m = c.getTransform ? c.getTransform() : null;
     var u = (m ? Math.sqrt(m.a * m.a + m.b * m.b) : 1) * (scale || 1);
     c.save();
     c.translate(x, y);
     c.scale(-(P.sx || 1) * (scale || 1), scale || 1);
-    paint(c, coat, P, u);
+    paint(c, coat, P, u, wear);
     c.restore();
   }
 
   /* Still pose for icons: standing, tail up, facing right. */
   var ICON = newPose();
   ICON.wag = 0.2; ICON.ear = 0.08; ICON.sx = 1; ICON.headUp = 0.08;
-  function drawIcon(c, x, y, variant, scale) { drawPose(c, x, y, variant, ICON, scale); }
+  function drawIcon(c, x, y, variant, scale, wear) { drawPose(c, x, y, variant, ICON, scale, wear); }
 
   /* ---- rig ---- */
   function Rig(o) {
@@ -341,6 +543,8 @@
     drawIcon: drawIcon,
     rig: rig,
     Rig: Rig,
-    coat: coatOf
+    coat: coatOf,
+    variants: VARIANTS,
+    wears: WEARS
   };
 })();

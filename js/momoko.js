@@ -7,9 +7,10 @@
    scale her up from the feet.
 
    How she is built, back to front:
-     backpack -> long hair / tails / braids / ponytail -> nape ->
-     far arm (when turned) -> legs, socks and shoes -> outfit ->
-     bag, badge, scarf -> near arm and held item -> neck -> face ->
+     cape -> sun-hat brim -> long hair / tails / braids / ponytail ->
+     nape -> backpack, wings -> far arm (when turned) -> legs, socks and
+     shoes -> outfit -> apron, bag, badge, necklace, scarf -> near arm
+     and held item -> cape collar -> neck -> face and face paint ->
      glasses -> fringe -> hood -> hats and bows -> balloon.
 
    Every surface is a flat fill with two hard cel bands on the side away
@@ -38,17 +39,24 @@
   /* ---- options (the customize screen lists these; anything else in a
      save falls back to the default) ---- */
   var OPT = {
-    hairStyle: ['twinTails', 'longBraids', 'buns', 'ponytail', 'bob', 'longHair'],
+    hairStyle: ['twinTails', 'longBraids', 'buns', 'ponytail', 'bob', 'longHair',
+                'sideTail', 'lowTails', 'curls', 'wavy', 'hime', 'pixie'],
     outfit: ['frillyDress', 'sailorDress', 'starDress', 'bellhop', 'overalls', 'kimono',
-             'frillyBikini', 'sailorSwimsuit', 'onePiece', 'catPjs', 'bearPjs', 'frogPjs', 'penguinPjs'],
-    shoes: ['maryJane', 'sneaker', 'flipper', 'slipper', 'highBoot'],
-    hat: ['none', 'hotelCap', 'bigBow', 'hairClips', 'flowerCrown', 'catEars', 'tiara'],
-    extra: ['none', 'glasses', 'heartGlasses', 'nameBadge', 'satchel', 'backpack', 'scarf'],
+             'maid', 'princess', 'tutu', 'zookeeper',
+             'frillyBikini', 'sailorSwimsuit', 'onePiece', 'catPjs', 'bearPjs', 'frogPjs', 'penguinPjs',
+             'dinoPjs', 'foxPjs', 'lionPjs', 'sharkPjs'],
+    shoes: ['maryJane', 'sneaker', 'flipper', 'slipper', 'highBoot', 'ballet', 'sandal', 'roller', 'paw'],
+    hat: ['none', 'hotelCap', 'bigBow', 'hairClips', 'flowerCrown', 'catEars', 'tiara',
+          'crown', 'beret', 'strawHat', 'chefHat', 'partyHat', 'safariHat'],
+    extra: ['none', 'glasses', 'heartGlasses', 'nameBadge', 'satchel', 'backpack', 'scarf',
+            'starShades', 'necklace', 'apron', 'wings', 'cape'],
+    face: ['none', 'heartEyes', 'sparkleEyes', 'freckles', 'heartCheeks', 'starSticker', 'whiskers', 'bandage'],
     food: ['none', 'iceCream', 'onigiri', 'donut', 'crepe', 'taiyaki', 'parfait', 'macaron', 'strawberry',
-           'lollipop', 'dango', 'cupcake', 'balloon', 'teddy']
+           'lollipop', 'dango', 'cupcake', 'balloon', 'teddy',
+           'roomKey', 'deskBell', 'suitcase', 'bouquet', 'starWand', 'pinwheel']
   };
-  var DEF = { hairStyle: 'twinTails', outfit: 'frillyDress', shoes: 'maryJane', hat: 'none', extra: 'none', food: 'none',
-              hair: '#e06088', suit: '#e06088', skin: '#ffddbb', flipper: '#ff99cc' };
+  var DEF = { hairStyle: 'twinTails', outfit: 'frillyDress', shoes: 'maryJane', hat: 'none', extra: 'none', face: 'none',
+              food: 'none', hair: '#e06088', suit: '#e06088', skin: '#ffddbb', flipper: '#ff99cc', eyes: '#7c3452' };
   function pick(field, v) { return OPT[field].indexOf(v) >= 0 ? v : DEF[field]; }
   var HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
   function col(field, v) { return (typeof v === 'string' && HEX.test(v)) ? v : DEF[field]; }
@@ -120,7 +128,8 @@
     var suit = col('suit', cust && cust.suit);
     var skin = col('skin', cust && cust.skin);
     var shoe = col('flipper', cust && cust.flipper);
-    var k = hair + suit + skin + shoe;
+    var eyes = col('eyes', cust && cust.eyes);
+    var k = hair + suit + skin + shoe + eyes;
     var p = palCache[k];
     if (p) return p;
     p = palCache[k] = {
@@ -131,7 +140,10 @@
       white: ramp('#fff6f8', false),
       sash: ramp(mix(suit, '#ffffff', 0.55), false),
       gloss: mix(add(hair, 70), '#ffffff', 0.45),
-      blush: 'rgba(255,110,140,0.34)'
+      blush: 'rgba(255,110,140,0.34)',
+      /* iris: dark at the lid, the picked colour, a bright bounce below */
+      iris: eyes === DEF.eyes ? { d: '#3a1428', c: eyes, l: '#e08aa4' }
+          : { d: mix(eyes, '#160610', 0.6), c: eyes, l: mix(add(eyes, 80), '#ffffff', 0.3) }
     };
     p.white = { c: p.white.c, m: p.white.m, d: p.white.d, l: p.white.l, ink: mix(p.suit.ink, '#8a6a7a', 0.35) };
     p.hair = { c: p.hair.c, m: p.hair.m, d: p.hair.d, l: p.hair.l, ink: p.hair.ink,
@@ -403,6 +415,156 @@
     });
   }
 
+  /* Long loose waves: the same fall as long hair with scalloped sides
+     and a curled hem. */
+  function drawWavy(c, P, sw, w) {
+    var H = P.hair, i;
+    function side(m) {         /* m = 1 down the left edge, -1 back up the right */
+      var X = function (x) { return m > 0 ? x : 28 - x; };
+      var pts = [4.2, 10.0, 1.9, 13.2, 3.5, 16.4, 1.3, 19.6, 3.1, 22.8, 0.9, 26.0, 2.6, 29.6];
+      var k, t;
+      if (m > 0) {
+        for (k = 2; k < pts.length; k += 4) {
+          t = (pts[k + 1] - 10) / 20;
+          c.quadraticCurveTo(X(pts[k]) + sw * t, pts[k + 1], X(pts[k + 2]) + sw * (t + 0.08), pts[k + 3]);
+        }
+      } else {
+        for (k = pts.length - 4; k >= 2; k -= 4) {
+          t = (pts[k + 1] - 10) / 20;
+          c.quadraticCurveTo(X(pts[k]) + sw * t, pts[k + 1], X(pts[k - 2]) + sw * (t - 0.08), pts[k - 1]);
+        }
+      }
+    }
+    part(c, function () {
+      c.beginPath();
+      c.moveTo(4.2, 10.0);
+      side(1);
+      /* curled hem: five soft scallops */
+      for (i = 0; i < 5; i++) {
+        var x0 = 2.6 + i * 4.56 + sw, fl = (i % 2 ? -1 : 1) * w * 0.25;
+        c.quadraticCurveTo(x0 + 2.28 + fl, 32.6 - (i === 2 ? 0.4 : 0), x0 + 4.56, 29.6 + (i === 4 ? 0 : 0.5));
+      }
+      side(-1);
+      c.bezierCurveTo(23.8, 0.6, 4.2, 0.6, 4.2, 10.0);
+      c.closePath();
+    }, H, 1.4, function () {
+      c.beginPath();
+      for (i = 0; i < 2; i++) {
+        var q = i ? -1 : 1, bx = i ? 28 : 0;
+        c.moveTo(bx + q * 5.4, 12);
+        c.bezierCurveTo(bx + q * 3.4, 15, bx + q * 6.4 + sw * 0.3, 18, bx + q * 4.2 + sw * 0.5, 21.4);
+        c.bezierCurveTo(bx + q * 2.6 + sw * 0.6, 24, bx + q * 5.6 + sw * 0.8, 26.6, bx + q * 4.4 + sw, 29.4);
+      }
+      stroke(c, H.d, 0.5);
+      c.beginPath();
+      c.moveTo(3.0, 13.2); c.quadraticCurveTo(2.6, 14.6, 3.6, 16.0);
+      c.moveTo(2.4, 19.6); c.quadraticCurveTo(2.0, 21.0, 3.2, 22.4);
+      c.moveTo(2.0 + sw * 0.6, 26.0); c.quadraticCurveTo(1.6 + sw * 0.7, 27.4, 2.6 + sw * 0.8, 28.6);
+      stroke(c, P.gloss, 0.85, 0.65);
+    });
+  }
+
+  /* Low pigtail, left side: a short fluffy bunch tied at the jaw. */
+  function drawLowTail(c, P, sw, w) {
+    var H = P.hair;
+    part(c, function () {
+      c.beginPath();
+      c.moveTo(5.4, 13.4);
+      c.bezierCurveTo(2.2, 13.8, -0.4 + sw * 0.3, 17.4, 0.0 + sw * 0.6, 21.2);
+      c.bezierCurveTo(0.1 + sw * 0.8, 23.4, 0.6 + sw * 0.9 + w * 0.3, 25.0, 1.5 + sw + w * 0.35, 26.8);
+      c.quadraticCurveTo(2.3 + sw * 0.85, 25.0, 3.0 + sw * 0.8, 24.0);
+      c.quadraticCurveTo(3.6 + sw * 0.9, 26.0, 4.7 + sw - w * 0.3, 27.6);
+      c.quadraticCurveTo(5.3 + sw * 0.7, 25.0, 5.7 + sw * 0.6, 23.4);
+      c.quadraticCurveTo(6.5 + sw * 0.55, 24.6, 7.5 + sw * 0.6 + w * 0.2, 25.2);
+      c.bezierCurveTo(7.7 + sw * 0.3, 21.0, 8.0, 17.0, 7.2, 13.6);
+      c.closePath();
+    }, H, 1.2, function () {
+      c.beginPath();
+      c.moveTo(4.4, 15.0); c.bezierCurveTo(2.4, 18.0, 2.4 + sw * 0.4, 21.4, 3.0 + sw * 0.8, 24.0);
+      c.moveTo(6.0, 15.0); c.bezierCurveTo(5.2, 18.4, 5.2 + sw * 0.4, 21.0, 5.7 + sw * 0.6, 23.4);
+      stroke(c, H.d, 0.5);
+      c.beginPath();
+      c.moveTo(2.6, 15.6); c.bezierCurveTo(1.0, 17.2, 0.8 + sw * 0.2, 19.2, 1.0 + sw * 0.4, 21.0);
+      stroke(c, P.gloss, 0.9, 0.7);
+    });
+  }
+  /* The tie on a low pigtail: two glossy bobbles. */
+  function drawBobbles(c, R, x, y) {
+    for (var i = 0; i < 2; i++) {
+      var bx = x + (i ? 1.15 : -0.5), by = y + (i ? 0.55 : -0.3);
+      part(c, function () { ell(c, bx, by, 0.95, 0.95, 0); }, R, 0.4, function () {
+        gloss(c, bx - 0.3, by - 0.35, 0.32, 0.22, -0.5, 0.9);
+      });
+    }
+  }
+
+  /* Ringlet, left side: a drill curl winding down from the crown to a
+     point, scalloped where each turn overlaps the next. */
+  function drawRinglet(c, P, sw, w) {
+    var H = P.hair, N = 4, L = 17.5, Y0 = 6.4, i;
+    function cx(t) { return 3.5 - 0.5 * t + sw * t * t * 1.4 + w * t * 0.25; }
+    function r(t) { return 3.9 * (1 - 0.8 * t); }
+    function y(t) { return Y0 + L * t; }
+    part(c, function () {
+      c.beginPath();
+      c.moveTo(cx(0) - 1.6, Y0 - 1.2);
+      for (i = 0; i < N; i++) {
+        var tm = (i + 0.5) / N, t1 = (i + 1) / N;
+        c.quadraticCurveTo(cx(tm) - r(tm) * 1.35, y(tm) - 0.4, cx(t1) - r(t1) * 0.7, y(t1));
+      }
+      c.quadraticCurveTo(cx(1) - 0.4 + w * 0.3, y(1) + 2.0, cx(1) + 0.5 + w * 0.4, y(1) + 3.2);
+      c.quadraticCurveTo(cx(1) + 0.9, y(1) + 1.0, cx(1 - 0.5 / N) + r(1 - 0.5 / N) * 0.7, y(1 - 0.5 / N));
+      for (i = N - 1; i >= 1; i--) {
+        var ta = i / N, tb = (i - 0.5) / N;
+        c.quadraticCurveTo(cx(ta) + r(ta) * 1.35, y(ta) - 0.4, cx(tb) + r(tb) * 0.7, y(tb));
+      }
+      c.quadraticCurveTo(cx(0) + r(0) * 1.1, Y0 + 0.4, cx(0) + 2.6, Y0 - 1.4);
+      c.closePath();
+    }, H, 1.3, function () {
+      c.beginPath();
+      for (i = 0; i < N; i++) {
+        var t1 = (i + 1) / N, tv = (i + 0.5) / N;
+        c.moveTo(cx(t1) - r(t1) * 0.7, y(t1));
+        c.quadraticCurveTo(cx(t1) + r(t1) * 0.2, y(t1) - 0.3, cx(tv) + r(tv) * 0.7, y(tv));
+      }
+      stroke(c, H.d, 0.55, 0.9);
+      c.beginPath();
+      for (i = 0; i < N; i++) {
+        var tg = (i + 0.3) / N;
+        c.moveTo(cx(tg) - r(tg) * 0.75, y(tg) + 0.3);
+        c.quadraticCurveTo(cx(tg) - r(tg) * 0.5, y(tg) - 1.1, cx(tg) + r(tg) * 0.1, y(tg) - 1.3);
+      }
+      stroke(c, P.gloss, 0.8, 0.75);
+    });
+  }
+
+  /* Pixie crop: a short nape whose ends flick out below the ears. */
+  function pixiePath(c, s) {
+    c.beginPath();
+    c.moveTo(4.4, 11.0);
+    c.bezierCurveTo(4.0, 1.2, 24.0, 1.2, 23.6, 11.0);
+    c.bezierCurveTo(23.9, 13.6, 24.8 + s, 15.2, 26.3 + s, 15.6);
+    c.quadraticCurveTo(24.6 + s * 0.6, 17.4, 22.9, 16.6);
+    c.quadraticCurveTo(23.4 + s * 0.4, 18.4, 22.6 + s * 0.4, 19.6);
+    c.quadraticCurveTo(21.6, 19.2, 20.8, 18.2);
+    c.lineTo(7.2, 18.2);
+    c.quadraticCurveTo(6.4, 19.2, 5.4 + s * 0.4, 19.6);
+    c.quadraticCurveTo(4.6 + s * 0.4, 18.4, 5.1, 16.6);
+    c.quadraticCurveTo(3.4 + s * 0.6, 17.4, 1.7 + s, 15.6);
+    c.bezierCurveTo(3.2 + s, 15.2, 4.1, 13.6, 4.4, 11.0);
+    c.closePath();
+  }
+
+  /* Hime cut: a blunt, straight side lock to the jaw (left side). */
+  function himeLockPath(c, s) {
+    c.beginPath();
+    c.moveTo(4.5, 10.4);
+    c.bezierCurveTo(3.8, 13.2, 3.7 + s * 0.5, 16.8, 3.9 + s, 20.2);
+    c.lineTo(7.9 + s * 0.8, 20.2);
+    c.bezierCurveTo(7.3 + s * 0.3, 16.4, 7.3, 12.6, 7.9, 9.6);
+    c.closePath();
+  }
+
   /* Bob: a fuller nape that ends at the jaw with an inward curl. */
   function bobPath(c, s) {
     c.beginPath();
@@ -559,10 +721,11 @@
     c.closePath();
   }
 
-  var IRIS_D = '#3a1428', IRIS = '#7c3452', IRIS_L = '#e08aa4', LASH = '#2a0e1e';
+  var LASH = '#2a0e1e';
   /* x,y eye centre; side -1 left / 1 right; sq squeezes the far eye in a
-     turn; open 0..1 is the lid (blink); gx/gy point the iris. */
-  function drawEye(c, x, y, side, mode, sq, open, gx, gy) {
+     turn; open 0..1 is the lid (blink); gx/gy point the iris; I is the
+     iris ramp from the palette. */
+  function drawEye(c, I, x, y, side, mode, sq, open, gx, gy, glint) {
     if (mode === 'happy' || mode === 'sleep') {
       c.beginPath();
       if (mode === 'happy') c.arc(x, y + 1.2, 2.1 * sq, Math.PI * 1.12, Math.PI * 1.88);
@@ -597,9 +760,9 @@
     if (open < 1) { c.beginPath(); c.rect(x - rx - 1, top, rx * 2 + 2, ry * 3); c.clip(); }
     var ix = x + side * 0.15 + gx * 0.75 * sq, iy = y + 0.35 + gy * 0.6;
     var g = c.createLinearGradient(0, iy - ry, 0, iy + ry);
-    g.addColorStop(0, IRIS_D);
-    g.addColorStop(0.5, IRIS);
-    g.addColorStop(1, IRIS_L);
+    g.addColorStop(0, I.d);
+    g.addColorStop(0.5, I.c);
+    g.addColorStop(1, I.l);
     var ir = wide ? 0.78 : 0.84;
     ell(c, ix, iy, rx * ir, ry * 0.88 * (wide ? 0.92 : 1), 0);
     c.fillStyle = g;
@@ -617,7 +780,16 @@
     c.fill();
     /* catchlights: Momoko's signature star, plus a small bounce */
     c.fillStyle = '#ffffff';
-    fillStar(c, x - side * 0.65 + gx * 0.3, y - 0.9 + gy * 0.2, 1.25);
+    var hx = x - side * 0.65 + gx * 0.3, hy = y - 0.9 + gy * 0.2;
+    if (glint === 'heartEyes') {
+      heartPath(c, hx, hy + 0.1, 1.2); c.fill();
+    } else if (glint === 'sparkleEyes') {
+      sparklePath(c, hx, hy, 1.7); c.fill();
+      sparklePath(c, x + side * 1.0 + gx * 0.3, y - 1.9, 0.7); c.fill();
+      ell(c, x - side * 1.1 + gx * 0.3, y + 1.9, 0.3, 0.3, 0); c.fill();
+    } else {
+      fillStar(c, hx, hy, 1.25);
+    }
     ell(c, x + side * 0.85 + gx * 0.3, y + 1.5, 0.5, 0.42, 0);
     c.fill();
     c.restore();
@@ -645,6 +817,85 @@
     stroke(c, 'rgba(90,30,50,0.55)', 0.42);
   }
 
+  /* Face extras, painted on the skin inside the face clip, in the strip
+     of cheek under her eyes: b1 / b2 are the cheek centres (near, far),
+     far squeezes the far cheek with the head turn, mx is the nose line. */
+  function sparklePath(c, x, y, r) {
+    c.beginPath();
+    c.moveTo(x, y - r);
+    c.quadraticCurveTo(x + r * 0.16, y - r * 0.16, x + r, y);
+    c.quadraticCurveTo(x + r * 0.16, y + r * 0.16, x, y + r);
+    c.quadraticCurveTo(x - r * 0.16, y + r * 0.16, x - r, y);
+    c.quadraticCurveTo(x - r * 0.16, y - r * 0.16, x, y - r);
+    c.closePath();
+  }
+  function drawFacePaint(c, S, kind, b1, b2, far, mx) {
+    var i, x1 = b1 + 1.9, x2 = b2 - 2.2 * far, cy = 17.35;
+    if (kind === 'freckles') {
+      c.fillStyle = mix(S.ink, '#b0603a', 0.5);
+      c.globalAlpha = 0.8;
+      var fk = [-1.0, 0.0, 0.25, -0.2, -0.45, 0.21, 0.6, 0.05, 0.25, 0.1, 0.5, 0.2];
+      for (i = 0; i < fk.length; i += 3) {
+        ell(c, x1 + fk[i], cy + fk[i + 1], fk[i + 2], fk[i + 2] * 0.9, 0); c.fill();
+        ell(c, x2 - fk[i] * far, cy + fk[i + 1], fk[i + 2] * far, fk[i + 2] * 0.9, 0); c.fill();
+      }
+      ell(c, mx - 0.75, 15.5, 0.19, 0.18, 0); c.fill();
+      ell(c, mx + 0.85, 15.7, 0.19, 0.18, 0); c.fill();
+      c.globalAlpha = 1;
+    } else if (kind === 'heartCheeks') {
+      /* blush drawn as two rosy hearts */
+      for (i = 0; i < 2; i++) {
+        c.save();
+        c.translate(i ? x2 : x1, cy); c.scale(i ? far : 1, 1); c.rotate(i ? 0.2 : -0.2);
+        heartPath(c, 0, 0.05, 0.98); c.fillStyle = '#ff6f96'; c.fill();
+        stroke(c, '#d8456e', 0.18, 0.8);
+        gloss(c, -0.38, -0.38, 0.26, 0.16, -0.5, 0.9);
+        c.restore();
+      }
+    } else if (kind === 'starSticker') {
+      /* a puffy gold star sticker on the near cheek, a pink one on the far */
+      for (i = 0; i < 2; i++) {
+        c.save();
+        c.translate(i ? x2 : x1 - 0.1, cy); c.scale(i ? far * 0.82 : 1, i ? 0.82 : 1); c.rotate(i ? 0.3 : -0.25);
+        starPath(c, 0, 0, 1.32, 0.52); c.fillStyle = '#ffffff'; c.fill();
+        starPath(c, 0, 0, 1.04, 0.52); c.fillStyle = i ? '#ff8fc0' : '#ffc82e'; c.fill();
+        stroke(c, i ? '#d8508a' : '#c8862a', 0.16);
+        gloss(c, -0.28, -0.34, 0.24, 0.14, -0.4, 0.95);
+        c.restore();
+      }
+    } else if (kind === 'whiskers') {
+      /* kitty face paint: three whiskers a side and a pink nose tip */
+      c.beginPath();
+      for (i = -1; i <= 1; i++) {
+        c.moveTo(x1 + 0.9, cy - 0.1 + i * 0.42); c.lineTo(x1 - 1.9, cy - 0.3 + i * 0.95);
+        c.moveTo(x2 - 0.9 * far, cy - 0.1 + i * 0.42); c.lineTo(x2 + 1.9 * far, cy - 0.3 + i * 0.95);
+      }
+      stroke(c, '#4a2030', 0.34, 0.9);
+      c.beginPath();
+      c.moveTo(mx - 0.8, 15.25); c.quadraticCurveTo(mx, 15.0, mx + 0.8, 15.25); c.quadraticCurveTo(mx, 16.45, mx - 0.8, 15.25);
+      c.closePath();
+      c.fillStyle = '#ff6f96'; c.fill();
+      stroke(c, '#a8324e', 0.22);
+      gloss(c, mx - 0.2, 15.38, 0.24, 0.12, 0, 0.85);
+    } else if (kind === 'bandage') {
+      /* a sticking plaster stuck slantwise on the near cheek */
+      var T = ramp('#f4cfa6', true);
+      c.save();
+      c.translate(x1 - 0.1, cy); c.rotate(-0.42);
+      c.beginPath();
+      c.moveTo(-1.25, -0.6); c.lineTo(1.25, -0.6); c.quadraticCurveTo(1.85, 0, 1.25, 0.6);
+      c.lineTo(-1.25, 0.6); c.quadraticCurveTo(-1.85, 0, -1.25, -0.6); c.closePath();
+      c.fillStyle = T.c; c.fill();
+      c.save(); c.clip(); c.fillStyle = T.m; c.fillRect(-2, 0.25, 4, 0.5); c.restore();
+      stroke(c, T.ink, LW * 0.8, 0.9);
+      c.fillStyle = '#fff6e6'; c.fillRect(-0.55, -0.6, 1.1, 1.2);
+      c.fillStyle = T.ink; c.globalAlpha = 0.5;
+      for (i = -1; i <= 1; i += 2) { ell(c, i * 1.1, 0, 0.12, 0.12, 0); c.fill(); }
+      c.globalAlpha = 1;
+      c.restore();
+    }
+  }
+
   /* expr: 'open' | 'happy' | 'sleep' | 'grin' | 'wide' | 'smile' */
   function drawFace(c, P, Z) {
     var S = P.skin, fx = Z.fx, expr = Z.expr;
@@ -663,23 +914,26 @@
         c.fill();
         c.globalAlpha = 1;
       }
-      ell(c, 8.4 + fx * 1.1, 16.1, 2.4, 1.4, 0);
-      c.fillStyle = P.blush;
-      c.fill();
-      ell(c, 19.6 + fx * 0.8, 16.1, 2.4 * (1 - 0.2 * Z.look), 1.4, 0);
-      c.fill();
-      c.beginPath();
-      var b1 = 8.4 + fx * 1.1, b2 = 19.6 + fx * 0.8;
-      c.moveTo(b1 - 0.8, 16.6); c.lineTo(b1 - 0.2, 15.6);
-      c.moveTo(b1 + 0.2, 16.6); c.lineTo(b1 + 0.8, 15.6);
-      c.moveTo(b2 - 0.8, 16.6); c.lineTo(b2 - 0.2, 15.6);
-      c.moveTo(b2 + 0.2, 16.6); c.lineTo(b2 + 0.8, 15.6);
-      stroke(c, '#e0607e', 0.28, 0.5);
+      var b1 = 8.4 + fx * 1.1, b2 = 19.6 + fx * 0.8, far = 1 - 0.2 * Z.look, fc = Z.face;
+      if (fc !== 'heartCheeks') {
+        ell(c, b1, 16.1, 2.4, 1.4, 0);
+        c.fillStyle = P.blush;
+        c.fill();
+        ell(c, b2, 16.1, 2.4 * far, 1.4, 0);
+        c.fill();
+        c.beginPath();
+        c.moveTo(b1 - 0.8, 16.6); c.lineTo(b1 - 0.2, 15.6);
+        c.moveTo(b1 + 0.2, 16.6); c.lineTo(b1 + 0.8, 15.6);
+        c.moveTo(b2 - 0.8, 16.6); c.lineTo(b2 - 0.2, 15.6);
+        c.moveTo(b2 + 0.2, 16.6); c.lineTo(b2 + 0.8, 15.6);
+        stroke(c, '#e0607e', 0.28, 0.5);
+      }
+      if (fc !== 'none') drawFacePaint(c, S, fc, b1, b2, far, 14 + fx * 1.05);
     });
     var eyeMode = expr === 'happy' || expr === 'grin' ? 'happy' : expr === 'sleep' ? 'sleep' : expr === 'wide' ? 'wide' : 'open';
     var sqN = 1 + 0.06 * Z.look, sqF = 1 - 0.16 * Z.look;
-    drawEye(c, Z.ex1, Z.ey, -1, eyeMode, sqN, Z.open, Z.gx, Z.gy);
-    drawEye(c, Z.ex2, Z.ey, 1, eyeMode, sqF, Z.open, Z.gx, Z.gy);
+    drawEye(c, P.iris, Z.ex1, Z.ey, -1, eyeMode, sqN, Z.open, Z.gx, Z.gy, Z.face);
+    drawEye(c, P.iris, Z.ex2, Z.ey, 1, eyeMode, sqF, Z.open, Z.gx, Z.gy, Z.face);
     if (eyeMode === 'open' || eyeMode === 'wide') {
       var lift = eyeMode === 'wide' ? 0.7 : 0;
       drawBrow(c, Z.ex1, Z.ey - 4.6, -1, lift, sqN);
@@ -900,6 +1154,14 @@
           c.fillStyle = R.d;
           c.fillRect(bk - 0.2, 1.0, 1.4, 0.7);
         }
+        if (style === 'flipper') {
+          c.beginPath();
+          c.moveTo(-1.6, -2.0); c.lineTo(1.6, -2.0);
+          c.moveTo(-1.6, -1.1); c.quadraticCurveTo(0.4, -1.3, 1.7, -0.7);
+          stroke(c, R.d, 0.26, 0.8);
+          c.fillStyle = '#fff4a8';
+          fillStar(c, 0.45, -1.55, 0.5);
+        }
         gloss(c, -0.8, -tall * 0.5, 0.3, tall * 0.3, 0, 0.6, R.l);
         gloss(c, fr - 1.0, -0.1, 0.7, 0.3, -0.2, 0.7, R.l);
       });
@@ -942,6 +1204,132 @@
       c.fill();
       c.fillStyle = INK;
       ell(c, fr - 1.4, -0.4, 0.2, 0.24, 0); c.fill();
+    } else if (style === 'ballet') {
+      /* satin slipper, cut low, with ribbons crossed up the ankle */
+      for (var rb2 = 0; rb2 < 2; rb2++) {
+        c.beginPath();
+        c.moveTo(-0.72, -0.5); c.lineTo(0.72, -1.7);
+        c.moveTo(0.72, -0.5); c.lineTo(-0.72, -1.7);
+        c.moveTo(-0.8, -2.25); c.lineTo(0.8, -2.25);
+        stroke(c, rb2 ? R.c : R.ink, rb2 ? 0.36 : 0.36 + LW);
+      }
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(bk + 0.1, 1.5);
+        c.quadraticCurveTo(bk - 0.4, 0.0, -0.9, -0.5);
+        c.quadraticCurveTo(0.2, 0.5, 1.2, 0.1);
+        c.quadraticCurveTo(fr * 0.75, -0.2, fr + 0.15, 0.75);
+        c.quadraticCurveTo(fr + 0.2, 1.5, fr - 0.6, 1.5);
+        c.closePath();
+      }, R, 0.7, function () {
+        gloss(c, fr * 0.55, 0.45, 0.9, 0.26, -0.1, 0.85, R.l);
+        c.fillStyle = R.d;
+        c.fillRect(-4, 1.15, 9, 0.5);
+      });
+      drawBow(c, R, fr * 0.4, 0.3, 0.3, false);
+    } else if (style === 'sandal') {
+      /* bare foot on a cork sole, two straps and a flower */
+      var SK = P.skin, cork = ramp('#d8a868', false);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(bk + 0.2, 0.9);
+        c.quadraticCurveTo(bk - 0.1, -0.7, -0.4, -0.9);
+        c.quadraticCurveTo(fr * 0.6, -0.9, fr, 0.3);
+        c.quadraticCurveTo(fr + 0.1, 0.9, fr - 0.5, 0.95);
+        c.closePath();
+      }, SK, 0.5, function () {
+        c.beginPath();
+        c.moveTo(fr - 0.75, 0.25); c.lineTo(fr - 0.6, 0.85);
+        c.moveTo(fr - 1.2, 0.2); c.lineTo(fr - 1.1, 0.85);
+        stroke(c, SK.ink, LW * 0.6, 0.5);
+      });
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(bk - 0.1, 0.85); c.lineTo(fr + 0.25, 0.85);
+        c.quadraticCurveTo(fr + 0.4, 1.6, fr - 0.3, 1.6);
+        c.lineTo(bk, 1.6);
+        c.quadraticCurveTo(bk - 0.4, 1.3, bk - 0.1, 0.85);
+        c.closePath();
+      }, cork, 0.3);
+      c.beginPath();
+      c.moveTo(fr * 0.38, -0.8); c.quadraticCurveTo(fr * 0.5, 0.1, fr * 0.42, 0.9);
+      c.moveTo(-1.3, -0.75); c.quadraticCurveTo(0, -1.25, 1.1, -0.7);
+      stroke(c, R.ink, 0.62 + LW);
+      c.beginPath();
+      c.moveTo(fr * 0.38, -0.8); c.quadraticCurveTo(fr * 0.5, 0.1, fr * 0.42, 0.9);
+      c.moveTo(-1.3, -0.75); c.quadraticCurveTo(0, -1.25, 1.1, -0.7);
+      stroke(c, R.c, 0.62);
+      c.fillStyle = R.l;
+      sakura(c, fr * 0.44, -0.05, 0.7);
+      ell(c, fr * 0.44, -0.05, 0.22, 0.22, 0); c.fillStyle = '#ffd24a'; c.fill();
+    } else if (style === 'roller') {
+      /* roller skate: laced high-top on a plate with two wheels */
+      var WH = ramp('#ffd24a', false), lift = -1.15;
+      for (var wi = 0; wi < 2; wi++) {
+        var wx = wi ? fr - 0.75 : bk + 0.7;
+        part(c, function () { ell(c, wx, 0.75, 0.82, 0.82, 0); }, WH, 0.4, function () {
+          ell(c, wx, 0.75, 0.3, 0.3, 0); c.fillStyle = '#ffffff'; c.fill();
+        });
+      }
+      c.fillStyle = '#b8bcd0';
+      c.fillRect(bk + 0.1, lift + 1.45, fr - bk - 0.2, 0.42);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-1.5, lift - 3.0);
+        c.lineTo(1.45, lift - 3.0);
+        c.lineTo(1.5, lift - 0.7);
+        c.quadraticCurveTo(fr + 0.25, lift - 0.6, fr + 0.15, lift + 0.6);
+        c.quadraticCurveTo(fr + 0.1, lift + 1.5, fr - 0.7, lift + 1.5);
+        c.lineTo(bk, lift + 1.5);
+        c.quadraticCurveTo(bk - 0.35, lift - 0.6, -1.5, lift - 1.2);
+        c.closePath();
+      }, R, 0.8, function () {
+        c.fillStyle = '#ffffff';
+        ell(c, fr - 0.35, lift + 0.75, 1.0, 0.85, 0); c.fill();
+        c.fillRect(-4, lift + 1.0, 9, 0.6);
+        c.beginPath();
+        c.moveTo(0.3, lift - 2.5); c.lineTo(1.4, lift - 2.0);
+        c.moveTo(0.3, lift - 1.7); c.lineTo(1.4, lift - 1.2);
+        c.moveTo(0.5, lift - 0.9); c.lineTo(1.7, lift - 0.4);
+        stroke(c, '#ffffff', 0.34);
+        c.fillStyle = WH.c;
+        fillStar(c, -0.55, lift - 1.3, 0.62);
+        gloss(c, -1.0, lift - 2.3, 0.22, 0.6, 0, 0.5, R.l);
+      });
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-1.75, lift - 3.4); c.quadraticCurveTo(0, lift - 3.85, 1.7, lift - 3.4);
+        c.lineTo(1.6, lift - 2.6); c.quadraticCurveTo(0, lift - 3.0, -1.65, lift - 2.6);
+        c.closePath();
+      }, ramp('#ffffff', false), 0.3);
+    } else if (style === 'paw') {
+      /* plush paw slipper: round toes, pink beans, a fluffy cuff */
+      var PW = ramp(mix(R.c, '#ffffff', 0.45), false);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(bk - 0.3, 1.5);
+        c.bezierCurveTo(bk - 1.0, -1.0, -0.2, -1.5, 0.9, -1.2);
+        c.quadraticCurveTo(fr * 0.5, -1.9, fr * 0.72, -0.9);
+        c.quadraticCurveTo(fr + 0.2, -1.2, fr + 0.45, -0.1);
+        c.quadraticCurveTo(fr + 0.9, 0.9, fr + 0.2, 1.5);
+        c.closePath();
+      }, PW, 0.8, function () {
+        c.fillStyle = '#ff9fbf';
+        ell(c, fr - 0.15, 0.55, 0.4, 0.34, 0.2); c.fill();
+        ell(c, fr - 0.85, -0.3, 0.36, 0.32, 0); c.fill();
+        ell(c, fr - 1.8, -0.75, 0.34, 0.3, -0.2); c.fill();
+        ell(c, fr - 1.4, 0.55, 0.62, 0.5, 0); c.fill();
+        c.fillStyle = PW.d;
+        c.fillRect(-4, 1.1, 9, 0.5);
+        gloss(c, -0.7, -0.7, 0.6, 0.25, -0.3, 0.6, PW.l);
+      });
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-1.9, -1.1);
+        c.quadraticCurveTo(-1.5, -2.1, -0.7, -1.7); c.quadraticCurveTo(0, -2.3, 0.7, -1.7); c.quadraticCurveTo(1.5, -2.1, 1.9, -1.1);
+        c.quadraticCurveTo(1.3, -0.5, 0.6, -0.8); c.quadraticCurveTo(0, -0.4, -0.6, -0.8); c.quadraticCurveTo(-1.3, -0.5, -1.9, -1.1);
+        c.closePath();
+      }, ramp('#ffffff', false), 0.3);
     } else if (style === 'sneaker') {
       part(c, function () {
         c.beginPath();
@@ -1046,8 +1434,48 @@
       });
       return;
     }
+    if (outfit === 'tutu') { drawTutu(c, P, sw, flare, R); return; }
+    if (outfit === 'zookeeper') { drawShorts(c, sw, R); return; }
+    if (outfit === 'princess') {
+      /* floor-length gown: a pale underskirt showing through a parted overskirt */
+      h = 31.0; hl -= 1.3; hr += 1.3;
+      var U = P.sash;
+      part(c, function () { skirtPath(c, sw, flare + 1.3, h); }, U, 1.2, function () {
+        c.fillStyle = U.m;
+        c.fillRect(0, h - 2.4, 28, 0.5);
+        c.fillStyle = '#ffffff';
+        c.globalAlpha = 0.85;
+        for (var d = 0; d < 3; d++) {
+          sparklePath(c, 12.4 + d * 1.6 + sw * 0.6, 26.6 + (d % 2) * 1.5, 0.5); c.fill();
+        }
+        c.globalAlpha = 1;
+      });
+      for (var pn = 0; pn < 2; pn++) {
+        var q = pn ? -1 : 1, ox = pn ? 28 : 0;
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(ox + q * 9.3, 24.2);
+          c.bezierCurveTo(ox + q * 7.6, 25.8, ox + q * (hl + 0.6) + (pn ? 2 * sw : 0), h - 2.2, ox + q * hl + (pn ? 2 * sw : 0), h);
+          c.quadraticCurveTo(ox + q * (hl + 2.6) + (pn ? 2 * sw : 0), h + 1.1, ox + q * (hl + 5.6) + (pn ? 2 * sw : 0), h + 0.4);
+          c.bezierCurveTo(ox + q * 11.6 + sw * 0.7, h - 3.0, ox + q * 12.4, 27.0, ox + q * 13.2, 24.4);
+          c.closePath();
+        }, R, 1.2, function () {
+          c.fillStyle = R.m;
+          c.beginPath();
+          c.moveTo(ox + q * 10.6, 24.6); c.lineTo(ox + q * 6.4 + sw, h + 1); c.lineTo(ox + q * 8.2 + sw, h + 1); c.closePath();
+          c.fill();
+          c.fillStyle = GOLD.c;
+          for (var e = 0; e < 3; e++) { fillStar(c, ox + q * (5.2 + e * 1.9) + sw, h - 1.0 - (e % 2) * 0.5, 0.45); }
+        });
+        c.beginPath();
+        c.moveTo(ox + q * 13.2, 24.4);
+        c.bezierCurveTo(ox + q * 12.4, 27.0, ox + q * 11.6 + sw * 0.7, h - 3.0, ox + q * (hl + 5.6) + (pn ? 2 * sw : 0), h + 0.4);
+        stroke(c, GOLD.c, 0.5);
+      }
+      return;
+    }
     if (outfit === 'bellhop') h = 28.2;
-    if (outfit === 'frillyDress' || outfit === 'sailorDress') {
+    if (outfit === 'frillyDress' || outfit === 'sailorDress' || outfit === 'maid') {
       /* petticoat lace peeking under the skirt */
       c.beginPath();
       c.moveTo(hl + 0.4, h - 0.4);
@@ -1117,9 +1545,82 @@
       c.moveTo(4.6 - flare + sw, h);
       c.quadraticCurveTo(14 + sw, h + 1.2, 23.4 + flare + sw, h);
       stroke(c, '#fff4c0', 0.6);
+    } else if (outfit === 'maid') {
+      drawApronSkirt(c, P, sw * 0.6, h);
     }
   }
 
+  /* Ballet tutu: leotard briefs, then two stiff layers of tulle that
+     stand out from the waist and bounce with her skirt spring. */
+  function drawTutu(c, P, sw, flare, R) {
+    part(c, function () {
+      c.beginPath();
+      c.moveTo(9.3, 24.4); c.lineTo(18.7, 24.4);
+      c.quadraticCurveTo(19.0, 27.6, 14, 29.4);
+      c.quadraticCurveTo(9.0, 27.6, 9.3, 24.4);
+      c.closePath();
+    }, R, 0.8);
+    var layers = [ramp(mix(R.c, '#ffffff', 0.62), false), ramp(mix(R.c, '#ffffff', 0.25), false)];
+    for (var k = 0; k < 2; k++) {
+      var T = layers[k], ex = (k ? 0 : 1.2) + flare * 1.6, dy = k ? 0 : 0.9, lift = flare * 0.5;
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(9.4, 24.2);
+        c.quadraticCurveTo(4.4 - ex + sw, 24.4 - lift, 2.2 - ex + sw, 26.4 + dy - lift);
+        for (var i = 1; i <= 12; i++) {
+          var x = 2.2 - ex + sw + (23.6 + 2 * ex) * (i / 12);
+          var arc = Math.sin(Math.PI * (i - 0.5) / 12) * 1.5;
+          c.lineTo(x - (23.6 + 2 * ex) / 24, 27.5 + dy + arc - lift * Math.abs(i - 6.5) / 6);
+          c.lineTo(x, 26.6 + dy + Math.sin(Math.PI * i / 12) * 1.5 - lift * Math.abs(i - 6) / 6);
+        }
+        c.quadraticCurveTo(23.6 + ex + sw, 24.4 - lift, 18.6, 24.2);
+        c.closePath();
+      }, T, 0.9, function () {
+        c.beginPath();
+        for (var i = 1; i < 12; i++) {
+          var x = 2.2 - ex + sw + (23.6 + 2 * ex) * (i / 12);
+          c.moveTo(14 + (x - 14) * 0.45, 24.8); c.lineTo(x, 27.0 + dy + Math.sin(Math.PI * i / 12) * 1.3);
+        }
+        stroke(c, T.m, 0.25, 0.8);
+        if (k) {
+          c.fillStyle = '#ffffff';
+          sparklePath(c, 7.0 + sw, 26.2, 0.55); c.fill();
+          sparklePath(c, 12.2 + sw, 27.3, 0.45); c.fill();
+          sparklePath(c, 17.8 + sw, 26.8, 0.55); c.fill();
+          sparklePath(c, 22.0 + sw, 26.0, 0.4); c.fill();
+        }
+      });
+    }
+  }
+
+  /* Zoo-keeper shorts with turned-up cuffs. */
+  function drawShorts(c, sw, R) {
+    var k = sw * 0.25;
+    part(c, function () {
+      c.beginPath();
+      c.moveTo(9.2, 24.2); c.lineTo(18.8, 24.2);
+      c.quadraticCurveTo(20.0, 26.4, 19.9 + k, 28.9);
+      c.lineTo(14.7 + k, 29.2); c.lineTo(14, 27.4); c.lineTo(13.3 + k, 29.2);
+      c.lineTo(8.1 + k, 28.9);
+      c.quadraticCurveTo(8.0, 26.4, 9.2, 24.2);
+      c.closePath();
+    }, R, 1.0, function () {
+      c.fillStyle = R.l;
+      c.globalAlpha = 0.7;
+      c.fillRect(7, 28.1, 14, 1.2);
+      c.globalAlpha = 1;
+      c.beginPath();
+      c.moveTo(7, 28.1); c.lineTo(21, 28.1);
+      c.moveTo(14, 25.4); c.lineTo(14, 27.4);
+      stroke(c, R.d, 0.3, 0.9);
+      c.beginPath();
+      c.moveTo(9.6, 25.4); c.quadraticCurveTo(10.6, 26.6, 11.8, 26.6);
+      c.moveTo(18.4, 25.4); c.quadraticCurveTo(17.4, 26.6, 16.2, 26.6);
+      stroke(c, R.d, 0.28, 0.8);
+    });
+  }
+
+  var KHAKI = ramp('#f2e4c0', false), LEATHER = ramp('#9a5f34', false);
   function bodicePath(c) {
     c.beginPath();
     c.moveTo(9.0, 20.6);
@@ -1132,7 +1633,7 @@
 
   function drawBodice(c, P, outfit, R, tx) {
     var white = P.white;
-    var top = outfit === 'overalls' ? white : R;
+    var top = outfit === 'overalls' ? white : outfit === 'zookeeper' ? KHAKI : R;
     part(c, function () { bodicePath(c); }, top, 0.9, function () {
       ell(c, 14 + tx, 20.0, 3.4, 1.2, 0);
       c.fillStyle = top.d;
@@ -1230,6 +1731,114 @@
         c.quadraticCurveTo(16.0 + tx, 20.0, 14 + tx, 20.6);
         c.closePath();
       }, white, 0.3);
+    } else if (outfit === 'maid') {
+      /* apron bib with ruffled shoulder straps, a round collar and a ribbon */
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(11.4 + tx, 21.6); c.lineTo(16.6 + tx, 21.6); c.lineTo(17.4, 24.4); c.lineTo(10.6, 24.4);
+        c.closePath();
+      }, white, 0.5, function () {
+        c.beginPath();
+        c.moveTo(11.9 + tx, 22.1); c.lineTo(16.1 + tx, 22.1);
+        stroke(c, white.m, 0.25);
+      });
+      for (var ms = 0; ms < 2; ms++) {
+        var mq = ms ? -1 : 1, mo = ms ? 28 : 0;
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(mo + mq * (11.6 + mq * tx), 21.8);
+          c.quadraticCurveTo(mo + mq * 9.4, 20.0, mo + mq * 8.6, 20.6);
+          c.quadraticCurveTo(mo + mq * 8.0, 21.6, mo + mq * 8.8, 22.2);
+          c.quadraticCurveTo(mo + mq * 9.4, 21.4, mo + mq * 10.2, 22.4);
+          c.quadraticCurveTo(mo + mq * 10.8, 21.8, mo + mq * (11.4 + mq * tx), 22.8);
+          c.closePath();
+        }, white, 0.3);
+      }
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(14 + tx, 20.5);
+        c.quadraticCurveTo(12.0 + tx, 19.9, 11.2 + tx, 20.7);
+        c.quadraticCurveTo(12.2 + tx, 21.7, 14 + tx, 21.1);
+        c.quadraticCurveTo(15.8 + tx, 21.7, 16.8 + tx, 20.7);
+        c.quadraticCurveTo(16.0 + tx, 19.9, 14 + tx, 20.5);
+        c.closePath();
+      }, white, 0.3);
+      drawBow(c, ramp('#e0405a', false), 14 + tx, 21.3, 0.42, false);
+    } else if (outfit === 'princess') {
+      /* sweetheart neckline, laced stomacher and a heart jewel */
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(12.2 + tx, 21.0); c.lineTo(15.8 + tx, 21.0); c.lineTo(15.0 + tx, 24.2); c.lineTo(13.0 + tx, 24.2);
+        c.closePath();
+      }, P.sash, 0.3, function () {
+        c.beginPath();
+        c.moveTo(12.6 + tx, 22.0); c.lineTo(15.2 + tx, 22.8);
+        c.moveTo(15.4 + tx, 22.0); c.lineTo(12.8 + tx, 22.8);
+        c.moveTo(12.9 + tx, 23.0); c.lineTo(15.0 + tx, 23.7);
+        c.moveTo(15.1 + tx, 23.0); c.lineTo(13.0 + tx, 23.7);
+        stroke(c, GOLD.c, 0.24);
+      });
+      c.beginPath();
+      c.moveTo(9.4, 20.9);
+      c.quadraticCurveTo(11.8 + tx, 20.3, 14 + tx, 21.5);
+      c.quadraticCurveTo(16.2 + tx, 20.3, 18.6, 20.9);
+      stroke(c, GOLD.ink, 0.75);
+      c.beginPath();
+      c.moveTo(9.4, 20.9);
+      c.quadraticCurveTo(11.8 + tx, 20.3, 14 + tx, 21.5);
+      c.quadraticCurveTo(16.2 + tx, 20.3, 18.6, 20.9);
+      stroke(c, GOLD.c, 0.45);
+      part(c, function () { heartPath(c, 14 + tx, 21.7, 0.8); }, ramp('#ff5a9a', false), 0.3, function () {
+        gloss(c, 13.7 + tx, 21.4, 0.24, 0.16, -0.4, 0.95);
+      });
+    } else if (outfit === 'tutu') {
+      /* leotard: scoop neck piped in white, a satin bow, a few sequins */
+      c.beginPath();
+      c.moveTo(10.2, 20.6); c.quadraticCurveTo(14 + tx, 23.0, 17.8, 20.6);
+      c.lineTo(17.0, 20.4); c.quadraticCurveTo(14 + tx, 22.2, 11.0, 20.4);
+      c.closePath();
+      c.fillStyle = P.skin.c; c.fill();
+      c.beginPath();
+      c.moveTo(10.2, 20.6); c.quadraticCurveTo(14 + tx, 23.0, 17.8, 20.6);
+      stroke(c, white.c, 0.42);
+      drawBow(c, P.sash, 14 + tx, 22.4, 0.4, false);
+      c.fillStyle = '#ffffff';
+      sparklePath(c, 11.4, 23.2, 0.42); c.fill();
+      sparklePath(c, 16.8, 23.4, 0.36); c.fill();
+    } else if (outfit === 'zookeeper') {
+      /* camp shirt: collar, button placket, a chest pocket with a paw
+         patch, and a neckerchief in her colour */
+      c.beginPath();
+      c.moveTo(14 + tx, 21.2); c.lineTo(14 + tx * 0.9, 24.2);
+      stroke(c, KHAKI.d, 0.3);
+      c.fillStyle = LEATHER.c;
+      ell(c, 14 + tx, 22.6, 0.26, 0.26, 0); c.fill();
+      ell(c, 14 + tx, 23.6, 0.26, 0.26, 0); c.fill();
+      part(c, function () { c.beginPath(); c.rect(15.3 + tx * 0.5, 22.0, 2.4, 1.9); }, KHAKI, 0.3, function () {
+        c.fillStyle = KHAKI.m;
+        c.fillRect(15.3 + tx * 0.5, 22.0, 2.4, 0.55);
+        c.fillStyle = '#c8823a';
+        ell(c, 16.5 + tx * 0.5, 23.3, 0.42, 0.34, 0); c.fill();
+        ell(c, 16.0 + tx * 0.5, 22.85, 0.17, 0.17, 0); c.fill();
+        ell(c, 16.5 + tx * 0.5, 22.72, 0.17, 0.17, 0); c.fill();
+        ell(c, 17.0 + tx * 0.5, 22.85, 0.17, 0.17, 0); c.fill();
+      });
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(10.4 + tx, 20.3); c.quadraticCurveTo(14 + tx, 19.5, 17.6 + tx, 20.3);
+        c.lineTo(15.2 + tx, 21.8); c.lineTo(14 + tx, 21.2); c.lineTo(12.8 + tx, 21.8);
+        c.closePath();
+      }, R, 0.4, function () {
+        c.fillStyle = '#ffffff';
+        ell(c, 11.9 + tx, 20.7, 0.22, 0.22, 0); c.fill();
+        ell(c, 16.1 + tx, 20.7, 0.22, 0.22, 0); c.fill();
+        ell(c, 14 + tx, 20.3, 0.22, 0.22, 0); c.fill();
+      });
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(13.4 + tx, 21.2); c.lineTo(14.6 + tx, 21.2); c.lineTo(15.0 + tx, 23.0); c.lineTo(14 + tx, 22.5); c.lineTo(13.0 + tx, 23.0);
+        c.closePath();
+      }, R, 0.3);
     } else if (outfit === 'kimono') {
       /* crossed collar: white under-collar, left over right */
       part(c, function () {
@@ -1265,7 +1874,8 @@
       }, obi, 0.5);
       c.restore();
     } else if (outfit !== 'overalls') {
-      var sashR = outfit === 'starDress' || outfit === 'bellhop' ? GOLD : outfit === 'sailorDress' ? white : P.sash;
+      var sashR = outfit === 'starDress' || outfit === 'bellhop' || outfit === 'princess' ? GOLD
+                : outfit === 'sailorDress' || outfit === 'maid' ? white : outfit === 'zookeeper' ? LEATHER : P.sash;
       part(c, function () {
         c.beginPath();
         c.moveTo(9.1, 24.0); c.lineTo(18.9, 24.0); c.lineTo(18.8, 25.2); c.lineTo(9.2, 25.2);
@@ -1274,6 +1884,15 @@
       if (outfit === 'bellhop') {
         ell(c, 14 + tx, 24.6, 0.7, 0.5, 0);
         c.fillStyle = GOLD.d; c.fill();
+      } else if (outfit === 'zookeeper') {
+        part(c, function () { c.beginPath(); c.rect(13.1 + tx, 23.85, 1.8, 1.5); }, GOLD, 0.3, function () {
+          c.fillStyle = LEATHER.d;
+          c.fillRect(13.6 + tx, 24.3, 0.8, 0.6);
+        });
+      } else if (outfit === 'princess') {
+        part(c, function () { ell(c, 14 + tx, 24.6, 0.95, 0.8, 0); }, ramp('#7ad0ff', false), 0.3, function () {
+          gloss(c, 13.7 + tx, 24.35, 0.3, 0.18, -0.4, 0.95);
+        });
       }
     }
   }
@@ -1302,8 +1921,15 @@
     catPjs: { body: '#c9c2d4', hood: '#c9c2d4', limbs: null, belly: '#fbf6ff', ears: 'cat', tail: 'cat', mark: 'paw', inner: '#ffb0c8' },
     bearPjs: { body: '#b07a4e', hood: '#b07a4e', limbs: null, belly: '#f0d2a8', ears: 'bear', tail: 'bear', mark: 'honey', inner: '#e8b888' },
     frogPjs: { body: '#7ccc58', hood: '#7ccc58', limbs: null, belly: '#e8f8b8', ears: 'frog', tail: 'none', mark: 'none' },
-    penguinPjs: { body: '#2c2c44', hood: '#2c2c44', limbs: null, belly: '#ffffff', ears: 'penguin', tail: 'none', mark: 'bowtie' }
+    penguinPjs: { body: '#2c2c44', hood: '#2c2c44', limbs: null, belly: '#ffffff', ears: 'penguin', tail: 'none', mark: 'bowtie' },
+    dinoPjs: { body: '#56b884', hood: '#56b884', limbs: null, belly: '#ffeeb0', ears: 'dino', tail: 'dino', mark: 'none', inner: '#ff9a4a' },
+    foxPjs: { body: '#ee8a3e', hood: '#ee8a3e', limbs: null, belly: '#fff6e8', ears: 'fox', tail: 'fox', mark: 'none', inner: '#fff0dc' },
+    lionPjs: { body: '#f4c45c', hood: '#f4c45c', limbs: null, belly: '#fff2cc', ears: 'lion', tail: 'lion', mark: 'none', inner: '#c8702a' },
+    sharkPjs: { body: '#6f9ed6', hood: '#6f9ed6', limbs: null, belly: '#ffffff', ears: 'shark', tail: 'shark', mark: 'none' }
   };
+  /* Hoods whose crown is taken (horn, crest, spikes, fin): a hat perches
+     to one side on these, on the crown on the others. */
+  PJ.onePiece.crest = PJ.penguinPjs.crest = PJ.dinoPjs.crest = PJ.sharkPjs.crest = true;
   function pjBody(outfit, P) { return PJ[outfit].body ? ramp(PJ[outfit].body, false) : P.suit; }
   function pjLimb(outfit, P) { return PJ[outfit].limbs ? ramp(PJ[outfit].limbs, false) : pjBody(outfit, P); }
   function pjHood(outfit, P) { return PJ[outfit].hood ? ramp(PJ[outfit].hood, false) : ramp(mix(P.suit.c, '#fff4ee', 0.55), false); }
@@ -1339,6 +1965,76 @@
     } else if (T === 'puff' || T === 'bear') {
       var pr = T === 'puff' ? ramp('#fffaf4', false) : R;
       part(c, function () { ell(c, 7.9 + sw * 0.15, 27.0, 1.8, 1.7, 0); }, pr, 0.6);
+    } else if (T === 'fox') {
+      /* big brush with a cream tip */
+      var tipx = 1.2 + sw * 1.1 + w * 0.3;
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(9.0, 27.2);
+        c.bezierCurveTo(5.4 + sw * 0.3, 29.4, 0.6 + sw * 0.7, 27.6, tipx - 0.8, 21.4);
+        c.quadraticCurveTo(tipx - 0.2, 19.2, tipx + 0.9, 18.6);
+        c.bezierCurveTo(tipx + 3.4, 20.4, 5.4 + sw * 0.4, 23.8, 9.0, 24.8);
+        c.closePath();
+      }, R, 0.9, function () {
+        c.beginPath();
+        c.moveTo(tipx - 2, 22.6);
+        c.quadraticCurveTo(tipx - 0.2, 23.6, tipx + 0.6, 22.4);
+        c.quadraticCurveTo(tipx + 1.6, 23.4, tipx + 3.4, 21.8);
+        c.lineTo(tipx + 3, 17); c.lineTo(tipx - 3, 17);
+        c.closePath();
+        c.fillStyle = '#fff6e8'; c.fill();
+        c.beginPath();
+        c.moveTo(6.6, 25.2); c.quadraticCurveTo(4.6 + sw * 0.4, 25.8, 3.2 + sw * 0.7, 24.6);
+        stroke(c, R.d, 0.35, 0.7);
+      });
+    } else if (T === 'dino') {
+      /* stout tail with two back plates */
+      var I = ramp(PJ[outfit].inner, false);
+      for (var sp = 0; sp < 2; sp++) {
+        var spx = 6.6 - sp * 2.4 + sw * (0.3 + sp * 0.3), spy = 24.5 + sp * 0.9;
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(spx - 1.0, spy + 0.6); c.lineTo(spx - 0.2, spy - 1.5); c.lineTo(spx + 1.0, spy + 0.3);
+          c.closePath();
+        }, I, 0.3);
+      }
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(9.2, 24.6);
+        c.bezierCurveTo(6.4 + sw * 0.3, 24.4, 3.6 + sw * 0.7, 25.6, 1.0 + sw * 1.1 + w * 0.3, 28.6);
+        c.bezierCurveTo(4.2 + sw * 0.7, 28.8, 6.8 + sw * 0.3, 28.6, 9.2, 27.6);
+        c.closePath();
+      }, R, 0.8);
+    } else if (T === 'lion') {
+      /* a whip of a tail ending in a tuft */
+      var lx = 3.0 + sw * 1.0 + w * 0.3, ly = 22.6;
+      c.beginPath();
+      c.moveTo(9.0, 27.0); c.bezierCurveTo(5.4, 28.4, 3.4 + sw * 0.5, 26.6, lx, ly);
+      stroke(c, R.ink, 1.0 + LW * 2);
+      c.beginPath();
+      c.moveTo(9.0, 27.0); c.bezierCurveTo(5.4, 28.4, 3.4 + sw * 0.5, 26.6, lx, ly);
+      stroke(c, R.c, 1.0);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(lx - 1.3, ly + 0.6);
+        c.quadraticCurveTo(lx - 1.7, ly - 1.6, lx - 0.3, ly - 2.9);
+        c.quadraticCurveTo(lx + 0.1, ly - 1.9, lx + 1.0, ly - 2.3);
+        c.quadraticCurveTo(lx + 1.7, ly - 0.6, lx + 0.9, ly + 0.8);
+        c.closePath();
+      }, ramp(PJ[outfit].inner, false), 0.5);
+    } else if (T === 'shark') {
+      /* tail fin: two swept lobes */
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(9.0, 25.6);
+        c.quadraticCurveTo(6.0 + sw * 0.3, 25.4, 4.6 + sw * 0.6, 25.8);
+        c.quadraticCurveTo(2.6 + sw * 0.9, 23.6, 1.6 + sw * 1.1 + w * 0.3, 21.0);
+        c.quadraticCurveTo(4.6 + sw * 0.8, 22.6, 5.2 + sw * 0.6, 25.0);
+        c.quadraticCurveTo(5.0 + sw * 0.6, 26.2, 5.2 + sw * 0.6, 27.0);
+        c.quadraticCurveTo(4.2 + sw * 0.8, 28.6, 2.6 + sw * 1.0 - w * 0.2, 29.6);
+        c.quadraticCurveTo(5.6 + sw * 0.6, 29.6, 9.0, 27.6);
+        c.closePath();
+      }, R, 0.7);
     }
   }
 
@@ -1452,6 +2148,85 @@
         });
       }
     }
+    else if (D.ears === 'fox') {
+      var tipR = ramp('#5a3020', false);
+      for (e = 0; e < 2; e++) {
+        c.save();
+        c.translate(e ? 20.8 : 7.2, 2.4);
+        c.scale(e ? -1 : 1, 1);
+        c.rotate(-0.28 + ear * 0.09 * (e ? -1 : 1));
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(-2.8, 1.4); c.quadraticCurveTo(-2.9, -4.4, -0.7, -7.4); c.quadraticCurveTo(1.6, -3.6, 3.0, 0.8);
+          c.closePath();
+        }, R, 0.8, function () {
+          c.beginPath();
+          c.moveTo(-1.7, 0.8); c.quadraticCurveTo(-1.8, -3.2, -0.7, -5.2); c.quadraticCurveTo(0.8, -2.6, 1.7, 0.4);
+          c.closePath();
+          c.fillStyle = inner; c.fill();
+          c.beginPath();
+          c.moveTo(-3, -4.6); c.lineTo(3, -5.6); c.lineTo(3, -9); c.lineTo(-3, -9);
+          c.closePath();
+          c.fillStyle = tipR.c; c.fill();
+        });
+        c.restore();
+      }
+    } else if (D.ears === 'lion') {
+      /* mane: a ring of tufts round the hood, then two small round ears */
+      var M = ramp(inner, false);
+      part(c, function () {
+        c.beginPath();
+        for (var k = 0; k < 13; k++) {
+          var a = Math.PI * (0.84 + k * 1.32 / 13), a2 = Math.PI * (0.84 + (k + 0.5) * 1.32 / 13), a3 = Math.PI * (0.84 + (k + 1) * 1.32 / 13);
+          var rr = 14.0 + (k % 2 ? 0.7 : 0) + Math.abs(ear) * 0.15;
+          if (k === 0) c.moveTo(14 + Math.cos(a) * 10.4, 9.8 + Math.sin(a) * 10.2);
+          c.quadraticCurveTo(14 + Math.cos(a2 - 0.07) * rr, 9.8 + Math.sin(a2 - 0.07) * (rr - 0.3),
+                             14 + Math.cos(a3) * 10.4, 9.8 + Math.sin(a3) * 10.2);
+        }
+        c.arc(14, 9.8, 9.0, Math.PI * 2.16, Math.PI * 0.84, true);
+        c.closePath();
+      }, M, 1.0, function () {
+        c.beginPath();
+        for (var k = 1; k < 13; k++) {
+          var a = Math.PI * (0.84 + k * 1.32 / 13);
+          c.moveTo(14 + Math.cos(a) * 10.2, 9.8 + Math.sin(a) * 10.0);
+          c.lineTo(14 + Math.cos(a) * 11.4, 9.8 + Math.sin(a) * 11.2);
+        }
+        stroke(c, M.d, 0.4, 0.8);
+      });
+      for (e = 0; e < 2; e++) {
+        var lx = (e ? 21.0 : 7.0) + ear * 0.15, ly = 1.6;
+        part(c, function () { ell(c, lx, ly, 2.3, 2.2, 0); }, R, 0.7, function () {
+          ell(c, lx + (e ? -0.2 : 0.2), ly + 0.4, 1.15, 1.1, 0); c.fillStyle = M.c; c.fill();
+        });
+      }
+    } else if (D.ears === 'dino') {
+      /* a row of back plates over the crown */
+      var SPK = ramp(inner, false);
+      for (e = 0; e < 4; e++) {
+        var sx0 = 9.4 + e * 3.0, sy0 = 0.6 + Math.abs(e - 1.5) * 0.75;
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(sx0 - 1.5, sy0 + 0.8);
+          c.quadraticCurveTo(sx0 - 0.6, sy0 - 1.6, sx0 + 0.3 + ear * 0.15, sy0 - 3.4);
+          c.quadraticCurveTo(sx0 + 1.2, sy0 - 1.4, sx0 + 1.6, sy0 + 0.8);
+          c.closePath();
+        }, SPK, 0.5, function () { gloss(c, sx0 - 0.2, sy0 - 1.4, 0.3, 0.8, 0.2, 0.5, SPK.l); });
+      }
+    } else if (D.ears === 'shark') {
+      /* dorsal fin, swept back */
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(11.4, 0.4);
+        c.quadraticCurveTo(12.6, -3.6, 16.6 + ear * 0.25, -6.0);
+        c.quadraticCurveTo(15.8, -2.4, 17.2, 0.4);
+        c.closePath();
+      }, R, 0.7, function () {
+        c.beginPath();
+        c.moveTo(13.2, -1.0); c.quadraticCurveTo(14.4, -2.8, 15.6, -4.2);
+        stroke(c, R.l, 0.4, 0.6);
+      });
+    }
     part(c, function () {
       c.beginPath();
       c.moveTo(3.4, 16.4);
@@ -1505,6 +2280,35 @@
         c.closePath();
       }, R, 0.4);
     }
+    if (D.ears === 'dino' || D.ears === 'shark') {
+      /* a face on the hood: teeth along the brim, eyes up on the crown */
+      c.beginPath();
+      for (e = 0; e < 7; e++) {
+        var tu = (e + 0.5) / 7, ta = Math.PI * (1.2 + 0.6 * tu);
+        var tx0 = 14 + Math.cos(ta) * 8.0, ty0 = 11.4 + Math.sin(ta) * 7.5;
+        var tn = D.ears === 'shark' ? 1.5 : 1.15;
+        c.moveTo(tx0 - 0.7, ty0 - 0.25);
+        c.lineTo(tx0 + (14 - tx0) * 0.06, ty0 + tn);
+        c.lineTo(tx0 + 0.7, ty0 - 0.25);
+        c.closePath();
+      }
+      c.fillStyle = '#ffffff'; c.fill();
+      stroke(c, R.ink, LW * 0.7, 0.8);
+      for (e = 0; e < 2; e++) {
+        var ex0 = e ? 19.6 : 8.4;
+        ell(c, ex0, 2.6, 1.05, 1.15, 0); c.fillStyle = '#ffffff'; c.fill(); stroke(c, R.ink, LW * 0.6, 0.8);
+        ell(c, ex0 + 0.2, 2.8, 0.55, 0.65, 0); c.fillStyle = INK; c.fill();
+        ell(c, ex0, 2.5, 0.2, 0.2, 0); c.fillStyle = '#ffffff'; c.fill();
+      }
+      if (D.ears === 'shark') {
+        c.beginPath();
+        for (e = 0; e < 3; e++) { c.moveTo(4.6 + e * 0.5, 9.0 + e * 1.3); c.lineTo(6.0 + e * 0.4, 8.6 + e * 1.3); }
+        stroke(c, R.d, 0.4, 0.9);
+      } else {
+        ell(c, 12.9, 1.2, 0.3, 0.2, 0.3); c.fillStyle = R.d; c.fill();
+        ell(c, 15.1, 1.2, 0.3, 0.2, -0.3); c.fill();
+      }
+    }
     if (D.horn) {
       part(c, function () {
         c.beginPath();
@@ -1531,318 +2335,1154 @@
   /* ================================================================
      ACCESSORIES
      ================================================================ */
-  var CAP_RED = ramp('#c8283c', false);
-  function drawHat(c, P, hat, hood, Z) {
-    var y0 = hood ? -1.4 : 0, fx = Z.fx, tw = Z.charm;
-    if (hat === 'hotelCap') {
-      c.save();
-      c.translate(15.4 + fx * 0.4, 3.3 + y0 * 0.6);
-      c.rotate(0.16);
-      part(c, function () {
-        c.beginPath();
-        c.moveTo(-3.6, 1.4);
-        c.lineTo(-3.2, -2.6);
-        c.quadraticCurveTo(0, -3.6, 3.2, -2.6);
-        c.lineTo(3.6, 1.4);
-        c.quadraticCurveTo(0, 2.4, -3.6, 1.4);
-        c.closePath();
-      }, CAP_RED, 0.8, function () {
-        c.fillStyle = GOLD.c;
-        c.fillRect(-4, -0.1, 8, 0.9);
-        c.fillStyle = GOLD.l;
-        c.fillRect(-4, -0.1, 8, 0.25);
-        gloss(c, -1.6, -2.0, 1.2, 0.4, -0.1, 0.5, CAP_RED.l);
-      });
-      part(c, function () { ell(c, 0, -2.8, 3.2, 0.9, 0); }, ramp('#d8384c', false), 0.5);
-      ell(c, 0, -3.5, 0.6, 0.5, 0);
-      c.fillStyle = GOLD.c; c.fill(); stroke(c, GOLD.ink, 0.2);
-      c.restore();
-    } else if (hat === 'bigBow') {
-      drawBow(c, P.suit, 14 + fx * 0.5, 1.2 + y0, 1.25, false, tw * 0.6);
-    } else if (hat === 'hairClips') {
-      c.save();
-      c.translate(fx * 0.6, y0 * 0.5);
-      for (var i = 0; i < 2; i++) {
-        var cx = 18.8 + i * 1.5, cy = 6.8 + i * 1.9;
-        c.beginPath();
-        c.moveTo(cx - 1.6, cy + 0.9); c.lineTo(cx + 1.4, cy - 0.8);
-        stroke(c, GOLD.ink, 0.75);
-        c.beginPath();
-        c.moveTo(cx - 1.6, cy + 0.9); c.lineTo(cx + 1.4, cy - 0.8);
-        stroke(c, GOLD.c, 0.45);
-        c.save();
-        c.translate(cx + 0.2, cy);
-        c.rotate(0.2);
-        part(c, function () { starPath(c, 0, 0, 1.25, 0.48); }, i ? ramp('#7ad0ff', false) : ramp('#ff7aa8', false), 0.4, function () {
-          gloss(c, -0.3, -0.4, 0.3, 0.2, 0, 0.8);
-        });
-        c.restore();
-      }
-      c.restore();
-    } else if (hat === 'flowerCrown') {
-      var fl = ['#ff8fb8', '#fff0a0', '#b8a0ff', '#ffffff', '#ff8fb8', '#9ad8ff', '#fff0a0'];
-      c.save();
-      c.translate(fx * 0.4, y0);
-      for (i = 0; i < 7; i++) {
-        var a = Math.PI * (1.08 + i * 0.14);
-        var px = 14 + Math.cos(a) * 9.2, py = 9.4 + Math.sin(a) * 6.8;
-        if (i % 2 === 0) {
-          c.save(); c.translate(px, py); c.rotate(a + Math.PI / 2);
-          ell(c, 0.9, 0.4, 1.0, 0.45, 0.5);
-          c.fillStyle = '#6cbc58'; c.fill();
-          stroke(c, '#2e6a2a', LW * 0.6);
-          c.restore();
-        }
-      }
-      for (i = 0; i < 7; i++) {
-        a = Math.PI * (1.12 + i * 0.127);
-        px = 14 + Math.cos(a) * 9.0; py = 9.4 + Math.sin(a) * 6.6;
-        var FR = ramp(fl[i], false);
-        part(c, function () {
-          c.beginPath();
-          for (var k = 0; k < 5; k++) {
-            var b = k * TAU / 5 + i;
-            c.moveTo(px + Math.cos(b) * 0.85 + 0.62, py + Math.sin(b) * 0.85);
-            c.arc(px + Math.cos(b) * 0.85, py + Math.sin(b) * 0.85, 0.62, 0, TAU);
-          }
-        }, FR, 0.4);
-        ell(c, px, py, 0.4, 0.4, 0);
-        c.fillStyle = '#ffc93a'; c.fill();
-      }
-      c.restore();
-    } else if (hat === 'catEars') {
-      if (hood) return;
-      var band = ramp(mix(P.hair.c, '#2a1a2a', 0.45), false);
+  var CAP_RED = ramp('#c8283c', false), STRAW = ramp('#f2d48c', false), PITH = ramp('#e0c890', false),
+      TOQUE = ramp('#fff8f4', false);
+  /* A gold-set jewel: round or heart, with a facet and a hot spot. */
+  function gem(c, x, y, r, hex, heart) {
+    var G = ramp(hex, false);
+    part(c, function () { if (heart) heartPath(c, x, y, r); else ell(c, x, y, r, r * 0.92, 0); }, G, 0.3, function () {
       c.beginPath();
-      c.arc(14 + fx * 0.4, 11.2, 9.0, Math.PI * 1.1, Math.PI * 1.9);
-      stroke(c, band.ink, 1.3);
-      c.beginPath();
-      c.arc(14 + fx * 0.4, 11.2, 9.0, Math.PI * 1.1, Math.PI * 1.9);
-      stroke(c, band.c, 0.8);
-      for (i = 0; i < 2; i++) {
-        c.save();
-        c.translate(i ? 20.0 + fx * 0.3 : 8.0 + fx * 0.5, 3.4);
-        c.scale(i ? -1 : 1, 1);
-        c.rotate(-0.25 + Z.ear * 0.12 * (i ? -1 : 1));
-        part(c, function () {
-          c.beginPath();
-          c.moveTo(-2.2, 0.8); c.quadraticCurveTo(-2.2, -3.2, -0.4, -4.4); c.quadraticCurveTo(1.0, -2.2, 2.4, 0.4);
-          c.closePath();
-        }, band, 0.6, function () {
-          c.beginPath();
-          c.moveTo(-1.4, 0.4); c.quadraticCurveTo(-1.4, -2.4, -0.5, -3.1); c.quadraticCurveTo(0.6, -1.6, 1.4, 0.1);
-          c.closePath();
-          c.fillStyle = '#ffa8c4';
-          c.fill();
-        });
-        c.restore();
-      }
-    } else if (hat === 'tiara') {
-      c.save();
-      c.translate(14 + fx * 0.5, 3.6 + y0);
-      part(c, function () {
-        c.beginPath();
-        c.moveTo(-5.2, 1.4);
-        c.lineTo(-4.4, -0.6); c.lineTo(-2.8, 0.4); c.lineTo(-1.4, -1.6); c.lineTo(0, -3.2);
-        c.lineTo(1.4, -1.6); c.lineTo(2.8, 0.4); c.lineTo(4.4, -0.6); c.lineTo(5.2, 1.4);
-        c.quadraticCurveTo(0, 0.2, -5.2, 1.4);
-        c.closePath();
-      }, SILVER, 0.5, function () {
-        gloss(c, -2, -0.4, 1.2, 0.3, 0, 0.8);
-      });
-      part(c, function () { heartPath(c, 0, -0.9, 0.9); }, ramp('#ff5a9a', false), 0.4, function () {
-        gloss(c, -0.35, -1.2, 0.25, 0.18, 0, 0.9);
-      });
-      ell(c, -3.4, 0.2, 0.35, 0.35, 0); c.fillStyle = '#8fd8ff'; c.fill();
-      ell(c, 3.4, 0.2, 0.35, 0.35, 0); c.fill();
-      c.restore();
-    }
+      c.moveTo(x - r, y + r * 0.1); c.lineTo(x, y + r * 0.2); c.lineTo(x + r, y - r * 0.2);
+      stroke(c, G.l, r * 0.22, 0.7);
+      gloss(c, x - r * 0.35, y - r * 0.4, r * 0.3, r * 0.2, -0.4, 0.95);
+    });
+  }
+  /* Where a hat sits. Bare-headed, the origin is the top of her skull.
+     Over a onesie hood a hat is worn a size down, on the crown of the
+     hood, or perched to one side when the hood has a horn, crest or fin. */
+  function hatFrame(c, hood, Z) {
+    if (!hood) { c.translate(14 + Z.fx * 0.5, 3.4); return; }
+    if (hood.crest) { c.translate(19.7 + Z.fx * 0.3, 1.1); c.rotate(0.5); c.scale(0.72, 0.72); }
+    else { c.translate(14 + Z.fx * 0.3, -0.5); c.scale(0.8, 0.8); }
+  }
+  /* Bands, garlands and ears follow the curve of the head, or of the hood. */
+  function bandFrame(c, hood, Z) {
+    c.translate(Z.fx * 0.4, 0);
+    if (hood) { c.translate(14, 11.2); c.scale(1.15, 1.17); c.translate(-14, -11.2); }
   }
 
-  function drawGlasses(c, Z, kind) {
-    var y = Z.ey + 0.2;
-    if (kind === 'heartGlasses') {
-      for (var i = 0; i < 2; i++) {
-        var x = i ? Z.ex2 : Z.ex1, s = i ? (1 - 0.16 * Z.look) : 1;
-        c.save();
-        c.translate(x, y);
-        c.scale(s, 1);
-        heartPath(c, 0, 0.1, 2.9);
-        c.fillStyle = 'rgba(255,60,130,0.55)';
-        c.fill();
-        stroke(c, '#c81e5e', 0.6);
-        gloss(c, -1.2, -1.2, 0.8, 0.4, -0.4, 0.75);
-        c.restore();
-      }
-      c.beginPath();
-      c.moveTo(Z.ex1 + 2.4, y - 0.6); c.quadraticCurveTo((Z.ex1 + Z.ex2) / 2, y - 1.4, Z.ex2 - 2.4 * (1 - 0.16 * Z.look), y - 0.6);
-      stroke(c, '#c81e5e', 0.5);
-      return;
-    }
-    for (i = 0; i < 2; i++) {
-      x = i ? Z.ex2 : Z.ex1; s = i ? (1 - 0.16 * Z.look) : 1;
-      ell(c, x, y, 3.05 * s, 3.1, 0);
-      c.fillStyle = 'rgba(200,230,255,0.16)';
-      c.fill();
-      stroke(c, '#6a3a3a', 0.55);
-      c.save();
-      ell(c, x, y, 3.05 * s, 3.1, 0);
-      c.clip();
-      c.beginPath();
-      c.moveTo(x - 2.2 * s, y - 0.4); c.lineTo(x - 0.6 * s, y - 2.4);
-      stroke(c, '#ffffff', 0.45, 0.6);
-      c.restore();
-    }
-    c.beginPath();
-    c.moveTo(Z.ex1 + 3.0, y - 0.4); c.quadraticCurveTo((Z.ex1 + Z.ex2) / 2, y - 1.2, Z.ex2 - 3.0 * (1 - 0.16 * Z.look), y - 0.4);
-    stroke(c, '#6a3a3a', 0.5);
-  }
-
-  function drawBadge(c, tx) {
+  /* The part of a hat that shows behind her head (the sun hat is worn
+     pushed back, so its brim frames her like a halo). */
+  function drawHatBack(c, P, hat, hood, Z) {
+    if (hat !== 'strawHat') return;
     c.save();
-    c.translate(16.6 + tx, 22.4);
-    part(c, function () { ell(c, 0, 0, 1.55, 1.05, 0); }, GOLD, 0.4, function () {
-      c.fillStyle = '#fff8e4';
-      ell(c, 0, 0.05, 1.05, 0.62, 0); c.fill();
-      c.fillStyle = '#c8283c';
-      c.fillRect(-0.7, -0.08, 1.4, 0.26);
-      gloss(c, -0.7, -0.6, 0.45, 0.18, 0, 0.8);
+    c.translate(14 + Z.fx * 0.3, hood ? 0.6 : 3.4);
+    if (hood) c.scale(1.12, 1.12);
+    part(c, function () { ell(c, 0, 0.4, 13.2, 5.9, -0.03); }, STRAW, 1.2, function () {
+      ell(c, 0.4, 2.6, 10.6, 5.0, 0);
+      c.fillStyle = STRAW.d; c.globalAlpha = 0.4; c.fill(); c.globalAlpha = 1;
+      c.beginPath();
+      c.ellipse(0, 0.4, 11.4, 4.9, -0.03, 0, TAU);
+      c.moveTo(9.6, 0.4); c.ellipse(0, 0.4, 9.6, 3.9, -0.03, 0, TAU);
+      stroke(c, STRAW.m, 0.3, 0.8);
+      c.beginPath();
+      for (var i = 0; i < 16; i++) {
+        var a = Math.PI + (i + 0.5) * Math.PI / 16;
+        c.moveTo(Math.cos(a) * 7.4, 0.4 + Math.sin(a) * 3.0); c.lineTo(Math.cos(a) * 13.0, 0.4 + Math.sin(a) * 5.7);
+      }
+      stroke(c, STRAW.m, 0.22, 0.6);
+      c.beginPath();
+      c.ellipse(0, 0.4, 12.6, 5.5, -0.03, Math.PI * 1.1, Math.PI * 1.5);
+      stroke(c, STRAW.l, 0.45, 0.8);
+    });
+    part(c, function () {
+      c.beginPath();
+      c.moveTo(-7.5, 0.8);
+      c.bezierCurveTo(-7.8, -5.6, -4.3, -7.6, 0, -7.6);
+      c.bezierCurveTo(4.3, -7.6, 7.8, -5.6, 7.5, 0.8);
+      c.closePath();
+    }, STRAW, 1.1, function () {
+      c.beginPath();
+      for (var i = 0; i < 4; i++) { c.moveTo(-7, -5.4 + i * 1.2); c.quadraticCurveTo(0, -7.0 + i * 1.2, 7, -5.4 + i * 1.2); }
+      stroke(c, STRAW.m, 0.24, 0.8);
+      gloss(c, -2.8, -5.2, 1.6, 0.6, -0.3, 0.45, STRAW.l);
+    });
+    part(c, function () {
+      c.beginPath();
+      c.moveTo(-7.62, -1.9); c.quadraticCurveTo(0, -3.3, 7.62, -1.9);
+      c.lineTo(7.52, 0.8); c.quadraticCurveTo(0, -0.7, -7.52, 0.8);
+      c.closePath();
+    }, P.suit, 0.5, function () {
+      c.beginPath();
+      c.moveTo(-7.6, -1.2); c.quadraticCurveTo(0, -2.6, 7.6, -1.2);
+      stroke(c, P.suit.l, 0.3, 0.7);
     });
     c.restore();
   }
 
+  function drawHat(c, P, hat, hood, Z) {
+    var fx = Z.fx, tw = Z.charm, i;
+    c.save();
+    if (hat === 'hotelCap') {
+      /* bellhop pillbox worn at a tilt: gold braid, a top button and a
+         tassel that swings */
+      hatFrame(c, hood, Z);
+      c.translate(1.9, 0.3);
+      c.rotate(0.17);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-4.7, 0.6);
+        c.lineTo(-4.4, -4.0);
+        c.quadraticCurveTo(0, -5.1, 4.4, -4.0);
+        c.lineTo(4.7, 0.6);
+        c.quadraticCurveTo(0, 2.0, -4.7, 0.6);
+        c.closePath();
+      }, CAP_RED, 1.0, function () {
+        c.beginPath();
+        c.moveTo(-4.8, -0.35); c.quadraticCurveTo(0, 1.05, 4.8, -0.35);
+        stroke(c, GOLD.d, 1.25);
+        c.beginPath();
+        c.moveTo(-4.8, -0.45); c.quadraticCurveTo(0, 0.95, 4.8, -0.45);
+        stroke(c, GOLD.c, 0.95);
+        c.beginPath();
+        c.moveTo(-4.8, -0.75); c.quadraticCurveTo(0, 0.65, 4.8, -0.75);
+        stroke(c, GOLD.l, 0.28);
+        c.beginPath();
+        c.moveTo(-4.6, -2.3); c.quadraticCurveTo(0, -1.0, 4.6, -2.3);
+        stroke(c, GOLD.c, 0.3);
+        gloss(c, -2.6, -2.5, 0.6, 1.5, 0.05, 0.4, CAP_RED.l);
+      });
+      part(c, function () { ell(c, 0, -4.3, 4.4, 1.15, 0); }, ramp('#de4054', false), 0.5, function () {
+        ell(c, 0, -4.3, 3.2, 0.72, 0);
+        stroke(c, GOLD.c, 0.26);
+      });
+      c.beginPath();
+      c.moveTo(0.5, -4.5); c.quadraticCurveTo(4.6, -4.9, 5.4 + tw * 0.35, -1.9);
+      stroke(c, GOLD.ink, 0.5);
+      c.beginPath();
+      c.moveTo(0.5, -4.5); c.quadraticCurveTo(4.6, -4.9, 5.4 + tw * 0.35, -1.9);
+      stroke(c, GOLD.c, 0.26);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(5.0 + tw * 0.35, -2.0); c.lineTo(5.8 + tw * 0.35, -2.0);
+        c.lineTo(6.3 + tw * 0.55, 0.2); c.lineTo(4.7 + tw * 0.55, 0.2);
+        c.closePath();
+      }, GOLD, 0.3, function () {
+        c.beginPath();
+        c.moveTo(5.2 + tw * 0.5, -1.2); c.lineTo(5.1 + tw * 0.55, 0.2);
+        c.moveTo(5.7 + tw * 0.5, -1.2); c.lineTo(5.9 + tw * 0.55, 0.2);
+        stroke(c, GOLD.d, 0.2);
+      });
+      part(c, function () { ell(c, 0, -4.55, 0.9, 0.62, 0); }, GOLD, 0.3, function () {
+        gloss(c, -0.25, -4.75, 0.3, 0.16, 0, 0.95);
+      });
+    } else if (hat === 'bigBow') {
+      /* a great satin bow across the crown, spotted, with swinging tails */
+      hatFrame(c, hood, Z);
+      c.translate(0, -0.6);
+      var B = P.suit;
+      for (i = -1; i <= 1; i += 2) {
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(i * 0.2, 0.6);
+          c.quadraticCurveTo(i * 2.4 + tw * 0.4, 2.2, i * 4.0 + tw * 0.9, 5.2);
+          c.lineTo(i * 2.9 + tw * 0.8, 4.5); c.lineTo(i * 2.2 + tw * 0.8, 5.6);
+          c.quadraticCurveTo(i * 1.4 + tw * 0.3, 3.0, i * -0.4, 1.0);
+          c.closePath();
+        }, B, 0.7);
+      }
+      for (i = -1; i <= 1; i += 2) {
+        c.save();
+        c.scale(i, 1);
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(0, 0);
+          c.bezierCurveTo(1.6, -4.8, 7.6, -4.6, 7.0, 0.2);
+          c.bezierCurveTo(6.6, 3.4, 2.0, 2.4, 0, 0);
+          c.closePath();
+        }, B, 1.0, function () {
+          c.fillStyle = B.m;
+          c.beginPath();
+          c.moveTo(0, 0); c.quadraticCurveTo(2.6, -1.6, 4.4, -1.4); c.quadraticCurveTo(2.8, 0.2, 4.0, 1.4); c.quadraticCurveTo(1.6, 1.2, 0, 0);
+          c.fill();
+          c.fillStyle = '#ffffff';
+          c.globalAlpha = 0.85;
+          ell(c, 5.2, -2.0, 0.5, 0.5, 0); c.fill();
+          ell(c, 5.9, 0.4, 0.45, 0.45, 0); c.fill();
+          ell(c, 3.4, -3.0, 0.42, 0.42, 0); c.fill();
+          ell(c, 4.4, 1.9, 0.38, 0.38, 0); c.fill();
+          c.globalAlpha = 1;
+          c.beginPath();
+          c.moveTo(1.6, -2.6); c.quadraticCurveTo(3.8, -4.0, 5.8, -3.2);
+          stroke(c, B.l, 0.6, 0.7);
+        });
+        c.restore();
+      }
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-1.2, -1.5); c.quadraticCurveTo(0, -1.9, 1.2, -1.5);
+        c.quadraticCurveTo(1.7, 0, 1.2, 1.6); c.quadraticCurveTo(0, 2.0, -1.2, 1.6);
+        c.quadraticCurveTo(-1.7, 0, -1.2, -1.5);
+        c.closePath();
+      }, B, 0.6, function () {
+        c.beginPath();
+        c.moveTo(-0.5, -1.4); c.quadraticCurveTo(-0.8, 0, -0.5, 1.5);
+        c.moveTo(0.5, -1.4); c.quadraticCurveTo(0.8, 0, 0.5, 1.5);
+        stroke(c, B.d, 0.25, 0.7);
+        gloss(c, -0.1, -0.7, 0.4, 0.3, 0, 0.5, B.l);
+      });
+    } else if (hat === 'hairClips') {
+      /* two enamel clips in her fringe: a star and a heart on gold pins */
+      c.translate(fx * 0.6, 0);
+      for (i = 0; i < 2; i++) {
+        c.save();
+        c.translate(19.0 + i * 1.9, 6.4 + i * 2.7);
+        c.rotate(-0.5);
+        c.beginPath();
+        c.moveTo(-2.4, 0); c.lineTo(2.2, 0);
+        stroke(c, GOLD.ink, 0.95);
+        c.beginPath();
+        c.moveTo(-2.4, 0); c.lineTo(2.2, 0);
+        stroke(c, GOLD.c, 0.55);
+        c.beginPath();
+        c.moveTo(-2.2, -0.12); c.lineTo(1.0, -0.12);
+        stroke(c, GOLD.l, 0.18);
+        c.rotate(0.7);
+        if (i) gem(c, 0.4, 0, 1.25, '#6fc0ff', true);
+        else part(c, function () { starPath(c, 0.4, 0, 1.75, 0.5); }, ramp('#ff7aa8', false), 0.4, function () {
+          gloss(c, 0, -0.5, 0.4, 0.24, -0.3, 0.9);
+        });
+        c.restore();
+      }
+    } else if (hat === 'flowerCrown') {
+      /* garland: a twisted vine, leaves, six blooms and a trailing ribbon */
+      bandFrame(c, hood, Z);
+      var fl = ['#ff8fb8', '#fff0a0', '#ffffff', '#c0a4ff', '#ff8fb8', '#9ad8ff'];
+      var LEAF = ramp('#6cbc58', false);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(5.0, 9.2);
+        c.quadraticCurveTo(3.4 + tw * 0.4, 11.4, 2.6 + tw * 0.8, 14.2);
+        c.lineTo(3.8 + tw * 0.7, 13.6); c.lineTo(4.4 + tw * 0.7, 14.6);
+        c.quadraticCurveTo(4.8 + tw * 0.3, 11.6, 6.0, 9.6);
+        c.closePath();
+      }, P.suit, 0.5);
+      c.beginPath();
+      c.ellipse(14, 10.6, 9.5, 7.5, 0, Math.PI * 1.06, Math.PI * 1.94);
+      stroke(c, LEAF.ink, 0.95);
+      c.beginPath();
+      c.ellipse(14, 10.6, 9.5, 7.5, 0, Math.PI * 1.06, Math.PI * 1.94);
+      stroke(c, LEAF.c, 0.55);
+      for (i = 0; i < 7; i++) {
+        var la = Math.PI * (1.07 + i * 0.143);
+        c.save();
+        c.translate(14 + Math.cos(la) * 9.6, 10.6 + Math.sin(la) * 7.6);
+        c.rotate(la + Math.PI / 2 + (i % 2 ? 0.7 : -0.7));
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(0, 0); c.quadraticCurveTo(1.0, -1.1, 2.4, -0.3); c.quadraticCurveTo(1.2, 0.8, 0, 0);
+          c.closePath();
+        }, LEAF, 0.3, function () {
+          c.beginPath(); c.moveTo(0.2, 0); c.lineTo(2.0, -0.2);
+          stroke(c, LEAF.d, 0.18);
+        });
+        c.restore();
+      }
+      for (i = 0; i < 6; i++) {
+        var a = Math.PI * (1.135 + i * 0.146), big = i % 2 === 0;
+        var px = 14 + Math.cos(a) * 9.5, py = 10.5 + Math.sin(a) * 7.5, pr = big ? 1.0 : 0.78;
+        var FR = ramp(fl[i], false);
+        part(c, function () {
+          c.beginPath();
+          for (var k = 0; k < 5; k++) {
+            var b = k * TAU / 5 + i * 0.7;
+            c.moveTo(px + Math.cos(b) * pr * 1.1 + pr, py + Math.sin(b) * pr * 1.1);
+            c.arc(px + Math.cos(b) * pr * 1.1, py + Math.sin(b) * pr * 1.1, pr, 0, TAU);
+          }
+        }, FR, 0.5, function () {
+          c.beginPath();
+          for (var k = 0; k < 5; k++) {
+            var b = k * TAU / 5 + i * 0.7;
+            c.moveTo(px + Math.cos(b) * pr * 0.5, py + Math.sin(b) * pr * 0.5);
+            c.lineTo(px + Math.cos(b) * pr * 1.5, py + Math.sin(b) * pr * 1.5);
+          }
+          stroke(c, FR.m, 0.2, 0.9);
+        });
+        ell(c, px, py, pr * 0.62, pr * 0.62, 0);
+        c.fillStyle = i === 1 ? '#ff9a3a' : '#ffc93a'; c.fill();
+        stroke(c, '#b8741a', 0.16);
+        gloss(c, px - pr * 0.2, py - pr * 0.25, pr * 0.22, pr * 0.16, 0, 0.9);
+      }
+    } else if (hat === 'catEars') {
+      /* plush cat-ear band in her hair colour, with a belled ribbon */
+      if (hood && hood.ears === 'cat') { c.restore(); return; }
+      bandFrame(c, hood, Z);
+      var band = ramp(mix(P.hair.c, '#2a1a2a', 0.45), false);
+      c.beginPath();
+      c.arc(14, 11.2, 9.0, Math.PI * 1.1, Math.PI * 1.9);
+      stroke(c, band.ink, 1.3);
+      c.beginPath();
+      c.arc(14, 11.2, 9.0, Math.PI * 1.1, Math.PI * 1.9);
+      stroke(c, band.c, 0.8);
+      for (i = 0; i < 2; i++) {
+        c.save();
+        c.translate(i ? 20.2 : 7.8, 3.6);
+        c.scale(i ? -1 : 1, 1);
+        c.rotate(-0.25 + Z.ear * 0.12 * (i ? -1 : 1));
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(-2.9, 1.1); c.quadraticCurveTo(-3.1, -4.2, -0.6, -6.0); c.quadraticCurveTo(1.6, -3.0, 3.1, 0.5);
+          c.closePath();
+        }, band, 0.8, function () {
+          c.beginPath();
+          c.moveTo(-1.9, 0.7); c.quadraticCurveTo(-2.0, -3.0, -0.7, -4.4); c.quadraticCurveTo(0.8, -2.2, 1.9, 0.2);
+          c.closePath();
+          c.fillStyle = '#ffa8c4';
+          c.fill();
+          c.beginPath();
+          c.moveTo(-1.2, 0.4); c.quadraticCurveTo(-1.2, -1.8, -0.6, -2.8); c.quadraticCurveTo(0.3, -1.4, 1.0, 0.1);
+          c.closePath();
+          c.fillStyle = '#ffd0de';
+          c.fill();
+          c.beginPath();
+          c.moveTo(-1.6, 0.6); c.lineTo(-1.2, -0.7);
+          c.moveTo(-0.7, 0.5); c.lineTo(-0.5, -1.0);
+          c.moveTo(0.3, 0.4); c.lineTo(0.2, -0.9);
+          c.moveTo(1.2, 0.2); c.lineTo(0.8, -0.8);
+          stroke(c, '#ffffff', 0.3, 0.9);
+        });
+        c.restore();
+      }
+      drawBow(c, P.suit, 7.0, 6.0, 0.62, false, tw * 0.4);
+      part(c, function () { ell(c, 7.0, 7.5, 0.95, 0.95, 0); }, GOLD, 0.3, function () {
+        c.beginPath(); c.moveTo(6.3, 7.6); c.lineTo(7.7, 7.6); c.moveTo(7.0, 7.6); c.lineTo(7.0, 8.4);
+        stroke(c, GOLD.ink, 0.2);
+        gloss(c, 6.7, 7.1, 0.3, 0.2, -0.4, 0.95);
+      });
+    } else if (hat === 'tiara') {
+      /* silver filigree tiara: pearls on five points, a heart jewel */
+      hatFrame(c, hood, Z);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-6.7, 2.5);
+        c.lineTo(-6.3, 0.2); c.quadraticCurveTo(-5.3, 1.5, -4.4, 0.8);
+        c.lineTo(-3.5, -2.2); c.quadraticCurveTo(-2.6, 0.1, -1.7, -0.7);
+        c.lineTo(0, -4.8);
+        c.lineTo(1.7, -0.7); c.quadraticCurveTo(2.6, 0.1, 3.5, -2.2);
+        c.lineTo(4.4, 0.8); c.quadraticCurveTo(5.3, 1.5, 6.3, 0.2);
+        c.lineTo(6.7, 2.5);
+        c.quadraticCurveTo(0, 0.5, -6.7, 2.5);
+        c.closePath();
+      }, SILVER, 0.7, function () {
+        c.beginPath();
+        c.moveTo(-6.6, 1.6); c.quadraticCurveTo(0, -0.4, 6.6, 1.6);
+        stroke(c, SILVER.d, 0.3);
+        c.beginPath();
+        c.moveTo(-3.5, -1.2); c.quadraticCurveTo(-2.6, 0.6, -1.2, 0.2);
+        c.moveTo(3.5, -1.2); c.quadraticCurveTo(2.6, 0.6, 1.2, 0.2);
+        stroke(c, SILVER.d, 0.22, 0.8);
+        c.beginPath();
+        c.moveTo(-5.8, 1.2); c.quadraticCurveTo(-3, 0.3, -0.6, 0.1);
+        stroke(c, '#ffffff', 0.4, 0.9);
+      });
+      var pe = [-6.3, 0.0, -3.5, -2.5, 0, -5.1, 3.5, -2.5, 6.3, 0.0];
+      for (i = 0; i < pe.length; i += 2) {
+        part(c, function () { ell(c, pe[i], pe[i + 1], 0.62, 0.62, 0); }, ramp('#fff4fa', false), 0.2, function () {
+          gloss(c, pe[i] - 0.18, pe[i + 1] - 0.2, 0.2, 0.14, 0, 1);
+        });
+      }
+      gem(c, 0, -1.5, 1.3, '#ff5a9a', true);
+      gem(c, -3.5, 0.3, 0.55, '#7ad0ff');
+      gem(c, 3.5, 0.3, 0.55, '#7ad0ff');
+      c.fillStyle = '#ffffff';
+      sparklePath(c, 2.2, -3.8, 0.9); c.fill();
+    } else if (hat === 'crown') {
+      /* little royal crown: velvet cap, jewelled band, pearl-tipped points */
+      hatFrame(c, hood, Z);
+      c.translate(-0.3, 0.1);
+      c.rotate(-0.1);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-3.9, -1.4); c.quadraticCurveTo(0, -8.6, 3.9, -1.4);
+        c.closePath();
+      }, ramp('#b8283c', false), 0.8);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-4.3, 1.0);
+        c.lineTo(-5.1, -4.0); c.lineTo(-3.7, -2.2); c.lineTo(-2.6, -5.4); c.lineTo(-1.3, -2.5);
+        c.lineTo(0, -6.5);
+        c.lineTo(1.3, -2.5); c.lineTo(2.6, -5.4); c.lineTo(3.7, -2.2); c.lineTo(5.1, -4.0);
+        c.lineTo(4.3, 1.0);
+        c.quadraticCurveTo(0, 2.3, -4.3, 1.0);
+        c.closePath();
+      }, GOLD, 0.9, function () {
+        c.beginPath();
+        c.moveTo(-4.7, -1.5); c.quadraticCurveTo(0, -0.2, 4.7, -1.5);
+        stroke(c, GOLD.d, 0.3);
+        c.beginPath();
+        c.moveTo(-4.4, 0.3); c.quadraticCurveTo(0, 1.6, 4.4, 0.3);
+        stroke(c, GOLD.l, 0.3, 0.9);
+        gloss(c, -3.2, -1.0, 0.4, 1.4, 0.15, 0.6, '#fff6c8');
+      });
+      gem(c, 0, -0.1, 0.8, '#e8344a');
+      gem(c, -2.5, -0.45, 0.55, '#58b8ff');
+      gem(c, 2.5, -0.45, 0.55, '#58b8ff');
+      var tp = [-5.1, -4.2, -2.6, -5.7, 0, -6.9, 2.6, -5.7, 5.1, -4.2];
+      for (i = 0; i < tp.length; i += 2) {
+        part(c, function () { ell(c, tp[i], tp[i + 1], 0.62, 0.62, 0); }, i === 4 ? ramp('#fff4fa', false) : GOLD, 0.2, function () {
+          gloss(c, tp[i] - 0.18, tp[i + 1] - 0.2, 0.2, 0.14, 0, 1);
+        });
+      }
+      c.fillStyle = '#ffffff';
+      sparklePath(c, 3.6, -6.4, 0.9); c.fill();
+    } else if (hat === 'beret') {
+      /* soft wool beret slouched to one side, with a stalk and a star pin */
+      hatFrame(c, hood, Z);
+      c.translate(0.4, 0.3);
+      var W = P.suit;
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-7.5, 2.9);
+        c.bezierCurveTo(-10.4, -0.4, -7.2, -5.9, -0.8, -6.1);
+        c.bezierCurveTo(5.4, -6.4, 11.8, -4.0, 11.0, 0.6);
+        c.bezierCurveTo(10.6, 2.9, 8.4, 3.4, 7.3, 2.5);
+        c.quadraticCurveTo(0, -1.0, -7.5, 2.9);
+        c.closePath();
+      }, W, 1.3, function () {
+        c.beginPath();
+        c.moveTo(-7.5, 2.9); c.quadraticCurveTo(0, -1.0, 7.3, 2.5);
+        stroke(c, W.d, 1.5, 0.85);
+        c.beginPath();
+        c.moveTo(0.4, -5.6); c.quadraticCurveTo(-3.6, -4.0, -6.4, -0.4);
+        c.moveTo(1.0, -5.6); c.quadraticCurveTo(5.4, -4.6, 8.8, -1.0);
+        c.moveTo(0.7, -5.6); c.quadraticCurveTo(1.0, -3.4, 0.6, -1.4);
+        stroke(c, W.m, 0.35, 0.8);
+        gloss(c, -3.6, -3.9, 2.2, 0.8, -0.5, 0.4, W.l);
+      });
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(0.2, -5.9); c.quadraticCurveTo(0.3, -7.6, 1.2, -7.7); c.quadraticCurveTo(1.3, -6.6, 1.3, -5.9);
+        c.closePath();
+      }, W, 0.3);
+      part(c, function () { starPath(c, -5.0, 0.4, 1.2, 0.5); }, GOLD, 0.3, function () {
+        gloss(c, -5.3, 0.0, 0.3, 0.2, 0, 0.95);
+      });
+    } else if (hat === 'strawHat') {
+      /* the brim and crown are painted behind her head; in front, a daisy
+         tucked in the ribbon and the ribbon's tails */
+      c.translate(14 + fx * 0.3, hood ? 0.6 : 3.4);
+      if (hood) c.scale(1.12, 1.12);
+      for (i = 0; i < 2; i++) {
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(7.0, -1.0);
+          c.quadraticCurveTo(8.8 + tw * 0.3, 0.2 + i * 1.0, 10.2 + tw * 0.7, 2.6 + i * 2.2);
+          c.lineTo(8.8 + tw * 0.6, 2.6 + i * 2.0); c.lineTo(8.6 + tw * 0.6, 3.8 + i * 2.0);
+          c.quadraticCurveTo(7.8 + tw * 0.2, 1.4 + i * 0.8, 6.8, 0.4);
+          c.closePath();
+        }, P.suit, 0.5);
+      }
+      var DA = ramp('#ffffff', false);
+      part(c, function () {
+        c.beginPath();
+        for (var k = 0; k < 7; k++) {
+          var b = k * TAU / 7;
+          c.moveTo(6.4 + Math.cos(b) * 1.25 + 0.75, -1.2 + Math.sin(b) * 1.25);
+          c.arc(6.4 + Math.cos(b) * 1.25, -1.2 + Math.sin(b) * 1.25, 0.75, 0, TAU);
+        }
+      }, DA, 0.4);
+      part(c, function () { ell(c, 6.4, -1.2, 0.85, 0.85, 0); }, ramp('#ffc93a', false), 0.3, function () {
+        gloss(c, 6.15, -1.45, 0.26, 0.18, 0, 0.9);
+      });
+    } else if (hat === 'chefHat') {
+      /* tall pleated toque for the hotel kitchen */
+      hatFrame(c, hood, Z);
+      c.translate(0.3, 0.2);
+      c.rotate(-0.07);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-5.2, -1.2);
+        c.bezierCurveTo(-8.8, -2.2, -8.6, -7.6, -4.6, -7.4);
+        c.bezierCurveTo(-4.0, -10.6, 1.0, -11.0, 2.2, -8.4);
+        c.bezierCurveTo(5.8, -10.0, 9.2, -5.8, 5.4, -1.2);
+        c.closePath();
+      }, TOQUE, 1.2, function () {
+        c.beginPath();
+        c.moveTo(-3.4, -1.4); c.quadraticCurveTo(-4.4, -4.4, -4.2, -7.0);
+        c.moveTo(-1.2, -1.6); c.quadraticCurveTo(-1.4, -5.6, -0.6, -8.4);
+        c.moveTo(1.2, -1.6); c.quadraticCurveTo(1.8, -5.0, 2.2, -8.0);
+        c.moveTo(3.4, -1.4); c.quadraticCurveTo(4.8, -3.8, 5.2, -6.2);
+        stroke(c, TOQUE.d, 0.3, 0.75);
+        gloss(c, -5.0, -5.2, 1.4, 1.0, -0.4, 0.9);
+        gloss(c, -1.4, -8.4, 1.6, 0.8, -0.2, 0.9);
+      });
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-5.2, 1.6);
+        c.lineTo(-5.5, -2.0); c.quadraticCurveTo(0, -3.1, 5.5, -2.0); c.lineTo(5.2, 1.6);
+        c.quadraticCurveTo(0, 0.3, -5.2, 1.6);
+        c.closePath();
+      }, TOQUE, 0.8, function () {
+        c.beginPath();
+        for (var k = -2; k <= 2; k++) { c.moveTo(k * 1.9, -2.4 + Math.abs(k) * 0.2); c.lineTo(k * 1.8, 0.8 + Math.abs(k) * 0.3); }
+        stroke(c, TOQUE.m, 0.26, 0.9);
+        c.beginPath();
+        c.moveTo(-5.2, 1.0); c.quadraticCurveTo(0, -0.3, 5.2, 1.0);
+        stroke(c, TOQUE.d, 0.5, 0.5);
+      });
+    } else if (hat === 'partyHat') {
+      /* spotted party cone with a ruffle and a pom-pom */
+      hatFrame(c, hood, Z);
+      c.translate(0.8, 0.5);
+      c.rotate(0.15);
+      var C1 = P.suit;
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-4.0, 0.4); c.lineTo(0.3, -9.8); c.lineTo(4.2, 0.4);
+        c.quadraticCurveTo(0, 1.9, -4.0, 0.4);
+        c.closePath();
+      }, C1, 1.0, function () {
+        c.fillStyle = '#ffe27a';
+        c.beginPath();
+        c.moveTo(-6, -1.4); c.lineTo(6, -4.4); c.lineTo(6, -2.9); c.lineTo(-6, 0.1); c.closePath();
+        c.moveTo(-6, -5.0); c.lineTo(6, -8.0); c.lineTo(6, -6.5); c.lineTo(-6, -3.5); c.closePath();
+        c.fill();
+        c.fillStyle = '#ffffff';
+        ell(c, -1.4, -0.9, 0.5, 0.5, 0); c.fill();
+        ell(c, 1.6, -1.4, 0.5, 0.5, 0); c.fill();
+        ell(c, 0.2, -4.4, 0.45, 0.45, 0); c.fill();
+        ell(c, 0.3, -7.6, 0.3, 0.3, 0); c.fill();
+        gloss(c, -1.3, -4.0, 0.4, 2.6, 0.38, 0.35);
+      });
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-4.5, 0.2);
+        for (var k = 0; k < 6; k++) c.arc(-3.75 + k * 1.52, 1.0 + Math.sin(Math.PI * (k + 0.5) / 6) * 0.9, 0.76, Math.PI, 0, true);
+        c.quadraticCurveTo(0, 1.0, -4.5, 0.2);
+        c.closePath();
+      }, ramp('#ffffff', false), 0.3);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(1.9, -10.4);
+        for (var k = 0; k < 9; k++) {
+          var b = (k + 0.5) * TAU / 9, b1 = (k + 1) * TAU / 9;
+          c.quadraticCurveTo(0.3 + Math.cos(b) * 2.5, -10.4 + Math.sin(b) * 2.5, 0.3 + Math.cos(b1) * 1.6, -10.4 + Math.sin(b1) * 1.6);
+        }
+        c.closePath();
+      }, ramp('#ffe27a', false), 0.6, function () { gloss(c, -0.3, -11.0, 0.6, 0.4, -0.4, 0.85); });
+    } else if (hat === 'safariHat') {
+      /* zoo-keeper pith helmet: sloping brim, leather band, a paw badge */
+      hatFrame(c, hood, Z);
+      c.translate(0, 0.5);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-7.0, -0.6);
+        c.quadraticCurveTo(-10.8, 0.6, -10.4, 2.7);
+        c.quadraticCurveTo(0, 5.6, 10.4, 2.7);
+        c.quadraticCurveTo(10.8, 0.6, 7.0, -0.6);
+        c.closePath();
+      }, PITH, 0.9, function () {
+        c.beginPath();
+        c.moveTo(-10.4, 2.7); c.quadraticCurveTo(0, 5.6, 10.4, 2.7);
+        stroke(c, PITH.d, 1.3, 0.7);
+      });
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-7.3, 0.3);
+        c.bezierCurveTo(-7.5, -6.3, -3.8, -7.2, 0, -7.2);
+        c.bezierCurveTo(3.8, -7.2, 7.5, -6.3, 7.3, 0.3);
+        c.quadraticCurveTo(0, 2.3, -7.3, 0.3);
+        c.closePath();
+      }, PITH, 1.2, function () {
+        c.beginPath();
+        c.moveTo(0, -7.2); c.lineTo(0, 1.4);
+        c.moveTo(-3.4, -6.6); c.quadraticCurveTo(-4.6, -3.0, -4.2, 1.0);
+        c.moveTo(3.4, -6.6); c.quadraticCurveTo(4.6, -3.0, 4.2, 1.0);
+        stroke(c, PITH.m, 0.3, 0.9);
+        c.beginPath();
+        c.moveTo(-7.4, -0.5); c.quadraticCurveTo(0, 1.5, 7.4, -0.5);
+        stroke(c, LEATHER.ink, 1.45);
+        c.beginPath();
+        c.moveTo(-7.4, -0.5); c.quadraticCurveTo(0, 1.5, 7.4, -0.5);
+        stroke(c, LEATHER.c, 1.05);
+        gloss(c, -3.6, -4.6, 1.5, 0.9, -0.5, 0.5, PITH.l);
+      });
+      part(c, function () { ell(c, 0, -7.2, 1.0, 0.5, 0); }, PITH, 0.3);
+      part(c, function () { ell(c, 0, 0.3, 1.5, 1.35, 0); }, GOLD, 0.3, function () {
+        c.fillStyle = LEATHER.d;
+        ell(c, 0, 0.65, 0.6, 0.48, 0); c.fill();
+        ell(c, -0.7, 0.0, 0.24, 0.26, 0); c.fill();
+        ell(c, 0, -0.25, 0.24, 0.26, 0); c.fill();
+        ell(c, 0.7, 0.0, 0.24, 0.26, 0); c.fill();
+      });
+    }
+    c.restore();
+  }
+
+  /* Eyewear sits on her eyes and squeezes the far lens with the head turn. */
+  function drawGlasses(c, Z, kind) {
+    var y = Z.ey + 0.2, i, x, s;
+    var x1 = Z.ex1, x2 = Z.ex2, fs = 1 - 0.16 * Z.look;
+    function bridge(dx, dy, ink, col) {
+      c.beginPath();
+      c.moveTo(x1 + dx, y + dy); c.quadraticCurveTo((x1 + x2) / 2, y + dy - 0.9, x2 - dx * fs, y + dy);
+      stroke(c, ink, 0.8);
+      c.beginPath();
+      c.moveTo(x1 + dx, y + dy); c.quadraticCurveTo((x1 + x2) / 2, y + dy - 0.9, x2 - dx * fs, y + dy);
+      stroke(c, col, 0.42);
+    }
+    if (kind === 'heartGlasses') {
+      /* rose-tinted hearts in glossy pink frames */
+      bridge(2.5, -0.9, '#a01248', '#ff5a9a');
+      for (i = 0; i < 2; i++) {
+        c.save();
+        c.translate(i ? x2 : x1, y);
+        c.scale(i ? fs : 1, 1);
+        heartPath(c, 0, 0.1, 3.0);
+        var hg = c.createLinearGradient(0, -3, 0, 3.2);
+        hg.addColorStop(0, 'rgba(255,70,140,0.72)');
+        hg.addColorStop(1, 'rgba(255,150,190,0.3)');
+        c.fillStyle = hg;
+        c.fill();
+        stroke(c, '#a01248', 0.95);
+        heartPath(c, 0, 0.1, 3.0);
+        stroke(c, '#ff5a9a', 0.5);
+        c.beginPath();
+        c.moveTo(-2.3, -1.2); c.quadraticCurveTo(-1.8, -2.5, -0.7, -2.2);
+        stroke(c, '#ffd0e2', 0.3);
+        gloss(c, -1.2, -1.0, 0.75, 0.36, -0.5, 0.8);
+        c.fillStyle = '#ffffff';
+        sparklePath(c, 1.5, 0.6, 0.55); c.fill();
+        c.restore();
+      }
+      return;
+    }
+    if (kind === 'starShades') {
+      /* star-shaped sunglasses: sunny frames, smoky violet lenses */
+      bridge(2.2, -0.4, GOLD.ink, GOLD.c);
+      for (i = 0; i < 2; i++) {
+        c.save();
+        c.translate(i ? x2 : x1, y + 0.2);
+        c.scale(i ? fs : 1, 1);
+        c.rotate(i ? 0.12 : -0.12);
+        starPath(c, 0, 0, 3.9, 0.56);
+        c.fillStyle = GOLD.ink; c.fill();
+        starPath(c, 0, 0, 3.6, 0.57);
+        c.fillStyle = GOLD.c; c.fill();
+        starPath(c, -0.1, -0.15, 3.3, 0.58);
+        stroke(c, GOLD.l, 0.22, 0.9);
+        starPath(c, 0, 0, 2.95, 0.6);
+        var sg = c.createLinearGradient(0, -2.6, 0, 2.6);
+        sg.addColorStop(0, '#2a1048');
+        sg.addColorStop(1, '#8a4aa8');
+        c.fillStyle = sg;
+        c.fill();
+        c.save();
+        c.clip();
+        c.beginPath();
+        c.moveTo(-2.4, 0.2); c.lineTo(0.2, -2.4);
+        stroke(c, '#ffffff', 0.5, 0.75);
+        c.beginPath();
+        c.moveTo(-1.4, 1.0); c.lineTo(1.0, -1.4);
+        stroke(c, '#ffffff', 0.25, 0.6);
+        c.restore();
+        c.restore();
+      }
+      return;
+    }
+    /* round wire glasses in gold, with a pale lens and two glints */
+    bridge(3.0, -0.4, GOLD.ink, GOLD.c);
+    for (i = 0; i < 2; i++) {
+      x = i ? x2 : x1; s = i ? fs : 1;
+      ell(c, x, y, 3.1 * s, 3.15, 0);
+      c.fillStyle = 'rgba(210,236,255,0.2)';
+      c.fill();
+      stroke(c, GOLD.ink, 0.9);
+      ell(c, x, y, 3.1 * s, 3.15, 0);
+      stroke(c, GOLD.c, 0.5);
+      c.beginPath();
+      c.ellipse(x, y, 3.1 * s, 3.15, 0, Math.PI * 1.05, Math.PI * 1.55);
+      stroke(c, GOLD.l, 0.24);
+      c.save();
+      ell(c, x, y, 2.8 * s, 2.85, 0);
+      c.clip();
+      c.beginPath();
+      c.moveTo(x - 2.4 * s, y - 0.2); c.lineTo(x - 0.4 * s, y - 2.6);
+      stroke(c, '#ffffff', 0.5, 0.7);
+      c.beginPath();
+      c.moveTo(x - 1.6 * s, y + 0.7); c.lineTo(x + 0.2 * s, y - 1.6);
+      stroke(c, '#ffffff', 0.22, 0.6);
+      c.restore();
+    }
+    /* temple arms running back into her hair */
+    c.beginPath();
+    c.moveTo(x1 - 3.0, y - 0.6); c.lineTo(x1 - 4.4, y - 1.0);
+    c.moveTo(x2 + 3.0 * fs, y - 0.6); c.lineTo(x2 + 4.2 * fs, y - 1.0);
+    stroke(c, GOLD.ink, 0.5);
+  }
+
+  /* Hotel name badge: a gold-rimmed plate with a heart and two lines of
+     "writing", pinned to her chest. */
+  function drawBadge(c, tx) {
+    c.save();
+    c.translate(16.9 + tx, 22.5);
+    c.rotate(-0.08);
+    part(c, function () {
+      c.beginPath();
+      c.moveTo(-1.5, -1.2); c.lineTo(1.5, -1.2); c.quadraticCurveTo(2.1, -1.2, 2.1, -0.6);
+      c.lineTo(2.1, 0.6); c.quadraticCurveTo(2.1, 1.2, 1.5, 1.2); c.lineTo(-1.5, 1.2);
+      c.quadraticCurveTo(-2.1, 1.2, -2.1, 0.6); c.lineTo(-2.1, -0.6); c.quadraticCurveTo(-2.1, -1.2, -1.5, -1.2);
+      c.closePath();
+    }, GOLD, 0.4, function () {
+      c.fillStyle = '#fff8e8';
+      c.fillRect(-1.7, -0.82, 3.4, 1.64);
+      c.fillStyle = '#e8344a';
+      heartPath(c, -0.95, 0.02, 0.55); c.fill();
+      c.fillStyle = '#8a5a48';
+      c.fillRect(-0.15, -0.45, 1.6, 0.26);
+      c.fillRect(-0.15, 0.15, 1.1, 0.26);
+      gloss(c, -1.2, -1.0, 0.7, 0.14, 0, 0.9);
+    });
+    c.restore();
+  }
+
+  /* String of gold beads with a heart pendant that swings a little. */
+  function drawNecklace(c, Z) {
+    var tx = Z.tx, sw = Z.charm * 0.12, i, t, it, n = 9;
+    var ax = 10.3, ay = 20.3, bx = 14 + tx, by = 23.5, ex = 17.7, ey = 20.3;
+    c.beginPath();
+    for (i = 0; i < n; i++) {
+      t = (i + 0.5) / n; it = 1 - t;
+      var px = it * it * ax + 2 * it * t * bx + t * t * ex, py = it * it * ay + 2 * it * t * by + t * t * ey;
+      c.moveTo(px + 0.46, py); c.arc(px, py, 0.46, 0, TAU);
+    }
+    c.fillStyle = GOLD.c; c.fill();
+    stroke(c, GOLD.ink, LW * 0.8);
+    c.beginPath();
+    for (i = 0; i < n; i++) {
+      t = (i + 0.5) / n; it = 1 - t;
+      var gx = it * it * ax + 2 * it * t * bx + t * t * ex - 0.14, gy = it * it * ay + 2 * it * t * by + t * t * ey - 0.14;
+      c.moveTo(gx + 0.15, gy); c.arc(gx, gy, 0.15, 0, TAU);
+    }
+    c.fillStyle = '#fff6c8'; c.fill();
+    c.save();
+    c.translate(14 + tx, 21.95);
+    c.rotate(-sw);
+    part(c, function () { ell(c, 0, 0.3, 0.42, 0.42, 0); }, GOLD, 0.2);
+    gem(c, 0, 1.45, 1.0, '#ff5a9a', true);
+    c.restore();
+  }
+
+  /* Frilled half apron with a heart pocket (the maid dress wears one,
+     and it is an extra over any outfit). */
+  function drawApronSkirt(c, P, ax, h) {
+    var W = P.white;
+    part(c, function () {
+      c.beginPath();
+      c.moveTo(10.2, 24.8);
+      c.quadraticCurveTo(8.6 + ax, 26.6, 8.2 + ax, h - 1.0);
+      for (var a = 0; a < 6; a++) c.arc(9.17 + a * 1.93 + ax, h - 1.0, 0.97, Math.PI, 0, true);
+      c.quadraticCurveTo(19.4 + ax, 26.6, 17.8, 24.8);
+      c.closePath();
+    }, W, 0.8, function () {
+      c.beginPath();
+      c.moveTo(8.4 + ax, h - 1.5); c.lineTo(19.6 + ax, h - 1.5);
+      stroke(c, W.m, 0.3);
+      c.beginPath();
+      c.moveTo(12.6 + ax, 25.4); c.lineTo(12.3 + ax, h - 1.6);
+      c.moveTo(15.4 + ax, 25.4); c.lineTo(15.7 + ax, h - 1.6);
+      stroke(c, W.m, 0.25, 0.7);
+      c.fillStyle = '#ff6f8e';
+      heartPath(c, 14 + ax, 26.9, 0.7);
+      c.fill();
+    });
+  }
+  function drawApron(c, P, Z, sw) {
+    var W = P.white, tx = Z.tx;
+    drawApronSkirt(c, P, sw * 0.6, HEM);
+    part(c, function () {
+      c.beginPath();
+      c.moveTo(11.6 + tx, 21.8); c.lineTo(16.4 + tx, 21.8); c.lineTo(17.2, 24.2); c.lineTo(10.8, 24.2);
+      c.closePath();
+    }, W, 0.5, function () {
+      c.beginPath();
+      c.moveTo(12.0 + tx, 22.3); c.lineTo(16.0 + tx, 22.3);
+      stroke(c, W.m, 0.25);
+    });
+    c.beginPath();
+    c.moveTo(11.8 + tx, 21.9); c.lineTo(10.2, 20.5);
+    c.moveTo(16.2 + tx, 21.9); c.lineTo(17.8, 20.5);
+    stroke(c, W.ink, 0.95);
+    c.beginPath();
+    c.moveTo(11.8 + tx, 21.9); c.lineTo(10.2, 20.5);
+    c.moveTo(16.2 + tx, 21.9); c.lineTo(17.8, 20.5);
+    stroke(c, W.c, 0.6);
+    part(c, function () {
+      c.beginPath();
+      c.moveTo(9.0, 24.0); c.lineTo(19.0, 24.0); c.lineTo(18.9, 25.2); c.lineTo(9.1, 25.2);
+      c.closePath();
+    }, W, 0.3);
+    /* the bow tied at her back peeks out at the hip */
+    drawBow(c, W, 8.4, 24.8, 0.62, false, Z.charm * 0.4);
+  }
+
+  /* Knitted scarf: ribbed, striped and fringed. */
   function drawScarf(c, P, part2, Z) {
-    var R = ramp(mix(P.suit.c, '#ff6060', 0.35), false), sw = Z.charm, tx = Z.tx;
+    var R = ramp(mix(P.suit.c, '#ff6060', 0.35), false), sw = Z.charm, tx = Z.tx, i;
     if (part2 === 'back') {
       /* the loose end flying out behind her */
       part(c, function () {
         c.beginPath();
         c.moveTo(9.4, 19.6);
-        c.bezierCurveTo(6.6 + sw * 0.3, 19.8, 4.4 + sw * 0.8, 21.6, 2.6 + sw * 1.2, 24.4 + Math.abs(sw) * 0.2);
-        c.lineTo(4.4 + sw * 1.1, 25.0);
-        c.bezierCurveTo(5.6 + sw * 0.7, 22.6, 7.6 + sw * 0.3, 21.6, 10.0, 21.6);
+        c.bezierCurveTo(6.6 + sw * 0.3, 19.8, 4.4 + sw * 0.8, 21.6, 2.4 + sw * 1.2, 24.6 + Math.abs(sw) * 0.2);
+        c.lineTo(4.8 + sw * 1.1, 25.6);
+        c.bezierCurveTo(5.8 + sw * 0.7, 22.8, 7.6 + sw * 0.3, 21.8, 10.0, 21.8);
         c.closePath();
       }, R, 0.6, function () {
-        c.fillStyle = R.d;
-        c.fillRect(0, 23.6, 6, 0.5);
+        c.beginPath();
+        c.moveTo(2.2 + sw * 1.2, 23.4); c.lineTo(5.6 + sw * 1.05, 24.6);
+        c.moveTo(3.0 + sw * 1.1, 22.3); c.lineTo(6.2 + sw * 0.95, 23.5);
+        stroke(c, '#ffffff', 0.5, 0.85);
       });
+      c.beginPath();
+      for (i = 0; i < 4; i++) {
+        c.moveTo(2.7 + i * 0.6 + sw * 1.2, 24.8 + i * 0.25); c.lineTo(2.2 + i * 0.6 + sw * 1.35, 26.0 + i * 0.25);
+      }
+      stroke(c, R.ink, 0.5);
+      c.beginPath();
+      for (i = 0; i < 4; i++) {
+        c.moveTo(2.7 + i * 0.6 + sw * 1.2, 24.8 + i * 0.25); c.lineTo(2.2 + i * 0.6 + sw * 1.35, 26.0 + i * 0.25);
+      }
+      stroke(c, R.c, 0.28);
       return;
     }
     part(c, function () {
       c.beginPath();
-      c.moveTo(8.8, 19.4);
-      c.quadraticCurveTo(14 + tx, 18.4, 19.2, 19.4);
-      c.quadraticCurveTo(19.6, 20.8, 18.8, 21.6);
-      c.quadraticCurveTo(14 + tx, 22.6, 9.2, 21.6);
-      c.quadraticCurveTo(8.4, 20.8, 8.8, 19.4);
+      c.moveTo(8.6, 19.2);
+      c.quadraticCurveTo(14 + tx, 18.2, 19.4, 19.2);
+      c.quadraticCurveTo(19.9, 20.8, 19.0, 21.8);
+      c.quadraticCurveTo(14 + tx, 22.9, 9.0, 21.8);
+      c.quadraticCurveTo(8.1, 20.8, 8.6, 19.2);
       c.closePath();
     }, R, 0.6, function () {
       c.beginPath();
-      for (var i = 0; i < 6; i++) { c.moveTo(10 + i * 1.6, 19.4); c.lineTo(10.4 + i * 1.6, 21.6); }
-      stroke(c, R.m, 0.3, 0.8);
+      for (i = 0; i < 8; i++) { c.moveTo(9.4 + i * 1.35, 19.0); c.lineTo(9.9 + i * 1.35, 22.2); }
+      stroke(c, R.m, 0.3, 0.85);
+      c.beginPath();
+      c.moveTo(8.6, 20.3); c.quadraticCurveTo(14 + tx, 21.3, 19.4, 20.3);
+      stroke(c, '#ffffff', 0.5, 0.85);
+      gloss(c, 11.2, 19.4, 1.6, 0.35, 0.05, 0.4, R.l);
     });
-    /* front tail hanging over the chest */
+    /* front tail hanging over the chest, with a fringe */
+    var fxp = 16.2 + tx + sw * 0.3;
+    c.beginPath();
+    for (i = 0; i < 4; i++) { c.moveTo(fxp + 0.2 + i * 0.6, 25.3); c.lineTo(fxp + 0.1 + i * 0.6 + sw * 0.1, 26.5); }
+    stroke(c, R.ink, 0.5);
+    c.beginPath();
+    for (i = 0; i < 4; i++) { c.moveTo(fxp + 0.2 + i * 0.6, 25.3); c.lineTo(fxp + 0.1 + i * 0.6 + sw * 0.1, 26.5); }
+    stroke(c, R.c, 0.28);
     part(c, function () {
       c.beginPath();
-      c.moveTo(15.4 + tx, 21.0);
-      c.quadraticCurveTo(16.4 + tx + sw * 0.15, 23.2, 16.2 + tx + sw * 0.3, 25.0);
-      c.lineTo(18.2 + tx + sw * 0.3, 24.8);
-      c.quadraticCurveTo(18.0 + tx + sw * 0.1, 22.8, 17.6 + tx, 20.8);
+      c.moveTo(15.2 + tx, 21.0);
+      c.quadraticCurveTo(16.2 + tx + sw * 0.15, 23.4, fxp - 0.2, 25.5);
+      c.lineTo(fxp + 2.4, 25.3);
+      c.quadraticCurveTo(18.3 + tx + sw * 0.1, 23.0, 17.8 + tx, 20.8);
       c.closePath();
     }, R, 0.5, function () {
-      c.fillStyle = R.l;
-      c.fillRect(15, 23.2, 4, 0.45);
-      c.fillRect(15, 24.1, 4, 0.45);
+      c.fillStyle = '#ffffff';
+      c.globalAlpha = 0.85;
+      c.fillRect(15, 23.3, 5, 0.5);
+      c.fillRect(15, 24.3, 5, 0.5);
+      c.globalAlpha = 1;
+    });
+    /* the knot */
+    part(c, function () { ell(c, 16.4 + tx, 21.4, 1.35, 1.15, 0.2); }, R, 0.4, function () {
+      c.beginPath(); c.moveTo(15.6 + tx, 21.0); c.quadraticCurveTo(16.4 + tx, 21.9, 17.3 + tx, 21.2);
+      stroke(c, R.d, 0.25);
     });
   }
 
+  /* Bunny backpack: a plush rabbit riding on her back, peeking round
+     her side, ears flopping on their spring. */
   function drawBackpack(c, P, Z) {
     var R = ramp(mix(P.suit.c, '#ffffff', 0.62), false), ear = Z.ear;
-    /* bunny ears poking up over her shoulder */
     for (var e = 0; e < 2; e++) {
       c.save();
-      c.translate(e ? 7.6 : 5.2, 18.6);
-      c.rotate(-0.55 + e * 0.4 + ear * 0.16);
-      part(c, function () { ell(c, 0, -2.6, 1.0, 2.9, 0); }, R, 0.5, function () {
-        ell(c, 0, -2.4, 0.45, 2.0, 0); c.fillStyle = '#ffb0c8'; c.fill();
+      c.translate(e ? 8.4 : 4.6, 18.8);
+      c.rotate(-0.6 + e * 0.5 + ear * 0.16);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-1.1, 0.4); c.bezierCurveTo(-1.9, -2.8, -1.3, -6.4, 0, -6.6); c.bezierCurveTo(1.3, -6.4, 1.9, -2.8, 1.1, 0.4);
+        c.closePath();
+      }, R, 0.6, function () {
+        ell(c, 0, -3.2, 0.55, 2.4, 0); c.fillStyle = '#ffb0c8'; c.fill();
       });
       c.restore();
     }
     part(c, function () {
       c.beginPath();
-      c.moveTo(3.2, 21.4);
-      c.quadraticCurveTo(2.8, 18.4, 6.8, 18.4);
-      c.quadraticCurveTo(10.6, 18.6, 10.6, 22.0);
-      c.lineTo(10.4, 27.4);
-      c.quadraticCurveTo(6.8, 29.0, 3.4, 27.6);
+      c.moveTo(1.8, 21.6);
+      c.quadraticCurveTo(1.4, 18.0, 6.4, 18.0);
+      c.quadraticCurveTo(11.0, 18.2, 11.0, 22.0);
+      c.lineTo(10.8, 27.8);
+      c.quadraticCurveTo(6.4, 29.8, 2.0, 28.0);
       c.closePath();
-    }, R, 0.8, function () {
-      ell(c, 4.6, 22.4, 0.36, 0.42, 0); c.fillStyle = INK; c.fill();
-      ell(c, 4.4, 23.7, 0.7, 0.4, 0); c.fillStyle = '#ffa0b8'; c.fill();
-      c.fillStyle = R.m;
-      c.fillRect(2, 25.6, 9, 0.55);
-      gloss(c, 5.2, 19.6, 1.4, 0.5, -0.2, 0.5, R.l);
+    }, R, 1.0, function () {
+      /* front pocket with a zip */
+      c.beginPath();
+      c.moveTo(1.6, 24.6); c.quadraticCurveTo(5.6, 23.8, 9.6, 24.6);
+      stroke(c, R.d, 0.5, 0.9);
+      c.beginPath();
+      c.moveTo(2.2, 25.2); c.quadraticCurveTo(5.6, 24.5, 9.2, 25.2);
+      c.setLineDash([0.45, 0.4]);
+      stroke(c, '#ffffff', 0.22, 0.9);
+      c.setLineDash([]);
+      /* sleepy bunny face */
+      c.fillStyle = INK;
+      ell(c, 3.3, 21.6, 0.42, 0.5, 0); c.fill();
+      ell(c, 6.3, 21.6, 0.42, 0.5, 0); c.fill();
+      c.fillStyle = '#ffffff';
+      ell(c, 3.2, 21.45, 0.14, 0.14, 0); c.fill();
+      ell(c, 6.2, 21.45, 0.14, 0.14, 0); c.fill();
+      c.fillStyle = '#ff8fb0';
+      ell(c, 4.8, 22.5, 0.5, 0.36, 0); c.fill();
+      c.fillStyle = 'rgba(255,120,150,0.4)';
+      ell(c, 2.6, 22.8, 0.7, 0.42, 0); c.fill();
+      ell(c, 7.2, 22.8, 0.7, 0.42, 0); c.fill();
+      c.beginPath();
+      c.moveTo(4.8, 22.9); c.lineTo(4.8, 23.4);
+      c.moveTo(4.2, 23.5); c.quadraticCurveTo(4.8, 23.9, 5.4, 23.5);
+      stroke(c, R.ink, 0.22);
+      gloss(c, 4.4, 19.2, 2.0, 0.5, -0.1, 0.55, R.l);
     });
+    /* zip pull */
+    part(c, function () { ell(c, 2.3, 25.5 + Math.abs(Z.charm) * 0.1, 0.5, 0.62, 0.2); }, GOLD, 0.2);
   }
 
+  /* Leather satchel on a cross-body strap: stitched flap, brass buckle,
+     a star charm dangling from its ring. */
   function drawSatchel(c, P, Z, front) {
-    var R = ramp('#b8743e', false), sw = Z.charm * 0.4, tx = Z.tx;
+    var R = LEATHER, F = ramp('#7e4826', false), sw = Z.charm * 0.4, tx = Z.tx;
     if (!front) {
       /* strap from her far shoulder across the chest */
       c.beginPath();
       c.moveTo(18.6, 20.8); c.lineTo(9.6 + sw * 0.2, 26.2);
-      stroke(c, R.ink, 1.05);
+      stroke(c, R.ink, 1.25);
       c.beginPath();
       c.moveTo(18.6, 20.8); c.lineTo(9.6 + sw * 0.2, 26.2);
-      stroke(c, R.c, 0.65);
+      stroke(c, R.c, 0.82);
+      c.beginPath();
+      c.moveTo(18.5, 20.6); c.lineTo(9.5 + sw * 0.2, 26.0);
+      c.setLineDash([0.5, 0.5]);
+      stroke(c, R.l, 0.16, 0.9);
+      c.setLineDash([]);
       return;
     }
-    var bx = 7.8 + sw * 0.6 + tx * 0.3, by = 26.4;
+    var bx = 7.4 + sw * 0.6 + tx * 0.3, by = 26.6;
     c.save();
     c.translate(bx, by);
     c.rotate(sw * 0.06);
     part(c, function () {
       c.beginPath();
-      c.moveTo(-2.4, -1.2); c.lineTo(2.4, -1.2); c.quadraticCurveTo(2.7, 1.8, 1.8, 2.2);
-      c.lineTo(-1.8, 2.2); c.quadraticCurveTo(-2.7, 1.8, -2.4, -1.2);
+      c.moveTo(-3.0, -1.5); c.lineTo(3.0, -1.5); c.quadraticCurveTo(3.4, 2.4, 2.3, 2.8);
+      c.lineTo(-2.3, 2.8); c.quadraticCurveTo(-3.4, 2.4, -3.0, -1.5);
       c.closePath();
-    }, R, 0.6);
+    }, R, 0.8, function () {
+      c.beginPath();
+      c.moveTo(-2.5, 2.3); c.lineTo(2.5, 2.3);
+      c.setLineDash([0.45, 0.4]);
+      stroke(c, R.l, 0.18, 0.9);
+      c.setLineDash([]);
+    });
     part(c, function () {
       c.beginPath();
-      c.moveTo(-2.5, -1.3); c.lineTo(2.5, -1.3); c.lineTo(2.3, 0.6); c.quadraticCurveTo(0, 1.3, -2.3, 0.6);
+      c.moveTo(-3.15, -1.65); c.lineTo(3.15, -1.65); c.lineTo(2.95, 0.5); c.quadraticCurveTo(0, 1.7, -2.95, 0.5);
       c.closePath();
-    }, ramp('#9a5a2c', false), 0.4, function () {
-      ell(c, 0, 0.7, 0.45, 0.4, 0); c.fillStyle = GOLD.c; c.fill();
+    }, F, 0.5, function () {
+      c.beginPath();
+      c.moveTo(-2.65, 0.2); c.quadraticCurveTo(0, 1.25, 2.65, 0.2);
+      c.setLineDash([0.45, 0.4]);
+      stroke(c, R.l, 0.18, 0.9);
+      c.setLineDash([]);
+      gloss(c, -1.4, -1.1, 1.3, 0.25, 0, 0.35, R.l);
+    });
+    /* buckle strap and brass buckle */
+    c.fillStyle = R.c;
+    c.fillRect(-0.45, -0.4, 0.9, 2.0);
+    part(c, function () { c.beginPath(); c.rect(-0.75, 0.75, 1.5, 1.2); }, GOLD, 0.3, function () {
+      c.fillStyle = F.d;
+      c.fillRect(-0.35, 1.1, 0.7, 0.5);
+      gloss(c, -0.4, 0.95, 0.3, 0.12, 0, 0.9);
     });
     /* dangling star charm on a little chain */
-    var cx = 1.9 + Z.charm * 0.5, cy = 3.6;
+    var cx = 2.6 + Z.charm * 0.5, cy = 4.6;
     c.beginPath();
-    c.moveTo(1.6, 1.8); c.lineTo(cx, cy - 0.6);
-    stroke(c, GOLD.d, 0.25);
-    c.fillStyle = '#ffd24a';
-    starPath(c, cx, cy, 0.9, 0.45); c.fill();
-    stroke(c, GOLD.ink, 0.2);
+    c.moveTo(2.3, 2.3); c.lineTo(cx, cy - 0.8);
+    stroke(c, GOLD.d, 0.28);
+    part(c, function () { starPath(c, cx, cy, 1.15, 0.48); }, GOLD, 0.3, function () {
+      gloss(c, cx - 0.3, cy - 0.35, 0.28, 0.18, 0, 0.95);
+    });
     c.restore();
+  }
+
+  /* Fairy wings: two pairs of glassy wings behind her shoulders that
+     flutter; her hair shows through them. */
+  function drawWings(c, P, Z) {
+    var W = ramp(mix(P.suit.c, '#ffffff', 0.74), false), f = 0.94 + 0.07 * Z.flut, d = Z.charm * 0.25;
+    var ga = c.globalAlpha;
+    for (var i = 0; i < 2; i++) {
+      c.save();
+      if (i) { c.translate(28, 0); c.scale(-1, 1); }
+      c.translate(12.4, 22);
+      c.scale(i ? f * 0.96 : f, 1);
+      c.translate(-12.4, -22);
+      c.globalAlpha = ga * 0.84;
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(12.2, 24.0);
+        c.bezierCurveTo(8.0, 23.4, 1.6 + d, 25.0, 0.2 + d, 29.0);
+        c.bezierCurveTo(3.0 + d, 31.4, 9.0, 28.8, 12.4, 22.6);
+        c.closePath();
+      }, W, 0.9, function () {
+        c.beginPath();
+        c.moveTo(11.6, 24.0); c.quadraticCurveTo(6.0, 25.0, 2.0 + d, 28.6);
+        c.moveTo(11.0, 24.8); c.quadraticCurveTo(7.6, 26.8, 5.2 + d, 29.2);
+        stroke(c, '#ffffff', 0.3, 0.9);
+      });
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(12.4, 21.4);
+        c.bezierCurveTo(9.0, 15.0, 2.0 + d, 9.6, -3.4 + d, 10.8);
+        c.bezierCurveTo(-6.4 + d, 14.6, -1.8, 21.4, 12.2, 23.4);
+        c.closePath();
+      }, W, 1.2, function () {
+        c.beginPath();
+        c.moveTo(11.6, 21.6); c.quadraticCurveTo(5.0, 15.0, -2.4 + d, 11.8);
+        c.moveTo(11.2, 22.2); c.quadraticCurveTo(3.6, 18.2, -3.4 + d, 14.6);
+        c.moveTo(10.6, 22.7); c.quadraticCurveTo(4.6, 21.0, -0.6 + d, 18.6);
+        stroke(c, '#ffffff', 0.34, 0.9);
+        c.fillStyle = P.suit.l;
+        c.globalAlpha = ga * 0.5;
+        ell(c, -1.6 + d, 13.2, 1.5, 1.1, 0.5); c.fill();
+        c.globalAlpha = ga;
+        c.fillStyle = '#ffffff';
+        sparklePath(c, 1.0 + d, 15.6, 0.8); c.fill();
+        sparklePath(c, 4.6, 19.8, 0.55); c.fill();
+      });
+      c.restore();
+    }
+    c.globalAlpha = ga;
+  }
+
+  /* Royal cape: back = the long drape behind her (painted before her
+     hair); front = the collar over her shoulders and a jewelled clasp. */
+  function drawCape(c, P, part2, Z, sw) {
+    var R = ramp(mix(add(P.suit.c, -26), '#5a1a6a', 0.28), false), tx = Z.tx;
+    if (part2 === 'back') {
+      var x0 = 0.4 + sw * 1.2, x1 = 27.6 + sw * 1.2;
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(8.4, 20.2);
+        c.bezierCurveTo(5.0 + sw * 0.2, 22.6, 1.4 + sw * 0.8, 27.4, x0, 32.2);
+        for (var i = 0; i < 5; i++) {
+          var a = x0 + (x1 - x0) * i / 5, b = x0 + (x1 - x0) * (i + 1) / 5;
+          c.quadraticCurveTo((a + b) / 2, 34.4 - (i === 2 ? 0.5 : 0), b, 32.2);
+        }
+        c.bezierCurveTo(26.6 + sw * 0.8, 27.4, 23.0 + sw * 0.2, 22.6, 19.6, 20.2);
+        c.closePath();
+      }, R, 1.4, function () {
+        c.fillStyle = R.m;
+        for (var i = 1; i < 5; i++) {
+          var fxx = x0 + (x1 - x0) * i / 5;
+          c.beginPath();
+          c.moveTo(14 + (fxx - 14) * 0.35, 21.5); c.lineTo(fxx - 0.9, 33.6); c.lineTo(fxx + 0.9, 33.6);
+          c.closePath(); c.fill();
+        }
+        c.beginPath();
+        c.moveTo(x0, 31.4);
+        for (i = 0; i < 5; i++) {
+          var a = x0 + (x1 - x0) * i / 5, b = x0 + (x1 - x0) * (i + 1) / 5;
+          c.quadraticCurveTo((a + b) / 2, 33.6 - (i === 2 ? 0.5 : 0), b, 31.4);
+        }
+        stroke(c, GOLD.c, 0.5);
+        c.fillStyle = GOLD.c;
+        fillStar(c, 2.6 + sw * 1.1, 29.4, 0.7);
+        fillStar(c, 25.4 + sw * 1.1, 29.4, 0.7);
+        fillStar(c, 4.2 + sw * 0.8, 26.2, 0.5);
+        fillStar(c, 23.8 + sw * 0.8, 26.2, 0.5);
+      });
+      return;
+    }
+    for (var s2 = 0; s2 < 2; s2++) {
+      var q = s2 ? -1 : 1, o = s2 ? 28 : 0;
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(o + q * (13.0 + q * tx), 20.4);
+        c.quadraticCurveTo(o + q * 9.4, 19.2, o + q * 6.6, 20.6);
+        c.quadraticCurveTo(o + q * 5.6, 22.4, o + q * 6.4, 24.0);
+        c.quadraticCurveTo(o + q * 8.2, 24.2, o + q * 9.6, 23.2);
+        c.quadraticCurveTo(o + q * 11.4, 22.8, o + q * (13.4 + q * tx), 21.6);
+        c.closePath();
+      }, R, 0.8, function () {
+        c.beginPath();
+        c.moveTo(o + q * 6.5, 23.5); c.quadraticCurveTo(o + q * 8.2, 23.7, o + q * 9.6, 22.7);
+        c.quadraticCurveTo(o + q * 11.4, 22.3, o + q * (13.3 + q * tx), 21.1);
+        stroke(c, GOLD.c, 0.42);
+        gloss(c, o + q * 8.6, 20.6, 1.5, 0.4, q * 0.1, 0.35, R.l);
+      });
+    }
+    part(c, function () { ell(c, 14 + tx, 21.0, 1.35, 1.1, 0); }, GOLD, 0.3);
+    gem(c, 14 + tx, 21.0, 0.72, '#58b8ff');
   }
 
   /* ================================================================
      HELD ITEMS
      ================================================================ */
+  var ITEM_S = 1.3;
   function drawItem(c, food, fx, fy, Z) {
     var sw = Z ? Z.charm : 0;
     if (food === 'iceCream') {
-      part(c, function () { c.beginPath(); c.moveTo(fx - 1.6, fy + 2); c.lineTo(fx + 1.6, fy + 2); c.lineTo(fx, fy + 6); c.closePath(); }, ramp('#e0b070', false), 0.4, function () {
-        c.beginPath(); c.moveTo(fx - 1, fy + 2.4); c.lineTo(fx + 0.6, fy + 4.4); c.moveTo(fx + 1, fy + 2.4); c.lineTo(fx - 0.6, fy + 4.4);
-        stroke(c, '#9a7048', 0.3);
+      /* waffle cone, two scoops, a drip and a cherry */
+      part(c, function () { c.beginPath(); c.moveTo(fx - 1.9, fy + 1.8); c.lineTo(fx + 1.9, fy + 1.8); c.lineTo(fx, fy + 6.2); c.closePath(); }, ramp('#e0b070', false), 0.4, function () {
+        c.beginPath();
+        for (var k = -2; k <= 2; k++) { c.moveTo(fx + k * 0.9 - 1.5, fy + 1.8); c.lineTo(fx + k * 0.9 + 1.5, fy + 5.6); c.moveTo(fx + k * 0.9 + 1.5, fy + 1.8); c.lineTo(fx + k * 0.9 - 1.5, fy + 5.6); }
+        stroke(c, '#9a7048', 0.22, 0.8);
       });
-      part(c, function () { ell(c, fx, fy + 0.9, 2.3, 2.1, 0); }, ramp('#ffc8d4', false), 0.6, function () {
-        gloss(c, fx - 0.8, fy + 0.1, 0.8, 0.5, -0.4, 0.7);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(fx - 2.5, fy + 1.4);
+        c.bezierCurveTo(fx - 3.0, fy - 1.6, fx + 3.0, fy - 1.6, fx + 2.5, fy + 1.4);
+        c.quadraticCurveTo(fx + 2.0, fy + 2.5, fx + 1.3, fy + 1.9);
+        c.quadraticCurveTo(fx + 0.6, fy + 3.3, fx - 0.2, fy + 2.0);
+        c.quadraticCurveTo(fx - 1.2, fy + 2.7, fx - 2.5, fy + 1.4);
+        c.closePath();
+      }, ramp('#ffc8d4', false), 0.6, function () {
+        gloss(c, fx - 1.0, fy - 0.1, 0.9, 0.5, -0.4, 0.7);
       });
-      part(c, function () { ell(c, fx, fy - 1.3, 0.75, 0.75, 0); }, ramp('#ff3355', false), 0.3);
+      part(c, function () { ell(c, fx + 0.2, fy - 1.5, 1.9, 1.7, 0); }, ramp('#fff2c8', false), 0.5, function () {
+        gloss(c, fx - 0.5, fy - 2.1, 0.7, 0.4, -0.4, 0.8);
+        c.fillStyle = '#ff7aa8'; c.fillRect(fx + 0.6, fy - 1.6, 0.5, 0.22);
+        c.fillStyle = '#6fc0ff'; c.fillRect(fx - 0.6, fy - 0.9, 0.5, 0.22);
+        c.fillStyle = '#7ad88a'; c.fillRect(fx + 0.1, fy - 2.4, 0.22, 0.5);
+      });
+      c.beginPath(); c.moveTo(fx + 0.3, fy - 3.2); c.quadraticCurveTo(fx + 0.8, fy - 4.4, fx + 1.6, fy - 4.4);
+      stroke(c, '#5a8a38', 0.3);
+      part(c, function () { ell(c, fx + 0.3, fy - 3.3, 0.8, 0.8, 0); }, ramp('#ff3355', false), 0.3, function () { gloss(c, fx, fy - 3.6, 0.25, 0.18, 0, 0.9); });
     } else if (food === 'onigiri') {
-      part(c, function () { c.beginPath(); c.moveTo(fx, fy - 1.6); c.quadraticCurveTo(fx - 3.4, fy + 2.9, fx, fy + 2.7); c.quadraticCurveTo(fx + 3.4, fy + 2.9, fx, fy - 1.6); c.closePath(); }, ramp('#ffffff', false), 0.6, function () {
-        c.fillStyle = '#2a3a2a';
-        c.fillRect(fx - 1.4, fy + 1, 2.8, 1.8);
+      /* rice ball with a nori wrap and a happy face */
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(fx, fy - 2.4);
+        c.bezierCurveTo(fx - 1.6, fy - 2.4, fx - 3.6, fy + 1.6, fx - 3.0, fy + 2.8);
+        c.quadraticCurveTo(fx, fy + 3.7, fx + 3.0, fy + 2.8);
+        c.bezierCurveTo(fx + 3.6, fy + 1.6, fx + 1.6, fy - 2.4, fx, fy - 2.4);
+        c.closePath();
+      }, ramp('#fffdf6', false), 0.7, function () {
+        c.fillStyle = '#263a2c';
+        c.beginPath();
+        c.moveTo(fx - 1.8, fy + 1.4); c.lineTo(fx + 1.8, fy + 1.4); c.lineTo(fx + 2.1, fy + 4); c.lineTo(fx - 2.1, fy + 4);
+        c.closePath(); c.fill();
+        c.fillStyle = '#3e5a44';
+        c.fillRect(fx - 1.7, fy + 1.4, 3.4, 0.4);
+        c.fillStyle = INK;
+        ell(c, fx - 0.95, fy + 0.1, 0.26, 0.32, 0); c.fill();
+        ell(c, fx + 0.95, fy + 0.1, 0.26, 0.32, 0); c.fill();
+        c.beginPath(); c.arc(fx, fy + 0.45, 0.42, 0.2, Math.PI - 0.2);
+        stroke(c, INK, 0.2);
+        c.fillStyle = 'rgba(255,120,150,0.5)';
+        ell(c, fx - 1.7, fy + 0.6, 0.45, 0.28, 0); c.fill();
+        ell(c, fx + 1.7, fy + 0.6, 0.45, 0.28, 0); c.fill();
+        gloss(c, fx - 0.8, fy - 1.4, 0.5, 0.3, -0.5, 0.9);
       });
     } else if (food === 'donut') {
       part(c, function () { ell(c, fx, fy + 1, 2.4, 2.4, 0); }, ramp('#c88858', false), 0.5, function () {
@@ -1855,9 +3495,42 @@
       ell(c, fx, fy + 1, 0.75, 0.7, 0);
       c.fillStyle = '#ffe4b0'; c.fill(); stroke(c, '#8a5a32', 0.25);
     } else if (food === 'crepe') {
-      part(c, function () { c.beginPath(); c.moveTo(fx - 2.1, fy - 2); c.lineTo(fx + 2.1, fy - 2); c.lineTo(fx, fy + 4); c.closePath(); }, ramp('#f2d8a4', false), 0.5);
-      part(c, function () { c.beginPath(); c.arc(fx, fy - 1.9, 1.5, Math.PI, 0); c.closePath(); }, ramp('#ffdceb', false), 0.3);
-      part(c, function () { ell(c, fx - 0.6, fy - 2.4, 0.6, 0.6, 0); }, ramp('#dd3355', false), 0.3);
+      /* rolled crepe in a paper sleeve: cream, strawberries, a wafer */
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(fx - 2.6, fy - 1.6); c.quadraticCurveTo(fx, fy - 0.4, fx + 2.6, fy - 1.6); c.lineTo(fx + 0.2, fy + 5.2);
+        c.closePath();
+      }, ramp('#f2d49a', false), 0.6, function () {
+        c.beginPath();
+        c.moveTo(fx - 0.6, fy - 0.9); c.quadraticCurveTo(fx + 0.4, fy + 2.0, fx + 0.2, fy + 5.0);
+        stroke(c, '#c89a58', 0.3, 0.8);
+      });
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(fx - 1.9, fy + 1.0); c.lineTo(fx + 1.9, fy + 0.6); c.lineTo(fx + 0.2, fy + 5.6);
+        c.closePath();
+      }, ramp('#ff9ec8', false), 0.4, function () {
+        c.fillStyle = '#ffffff';
+        ell(c, fx - 0.3, fy + 2.2, 0.32, 0.32, 0); c.fill();
+        ell(c, fx + 0.5, fy + 3.2, 0.28, 0.28, 0); c.fill();
+        ell(c, fx + 0.7, fy + 1.6, 0.26, 0.26, 0); c.fill();
+      });
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(fx - 2.5, fy - 1.5);
+        c.quadraticCurveTo(fx - 2.6, fy - 3.2, fx - 1.2, fy - 3.0);
+        c.quadraticCurveTo(fx - 0.4, fy - 4.2, fx + 0.6, fy - 3.2);
+        c.quadraticCurveTo(fx + 2.6, fy - 3.4, fx + 2.5, fy - 1.5);
+        c.quadraticCurveTo(fx, fy - 0.5, fx - 2.5, fy - 1.5);
+        c.closePath();
+      }, ramp('#fffaf0', false), 0.4, function () { gloss(c, fx - 1.2, fy - 2.4, 0.6, 0.3, -0.3, 0.9); });
+      part(c, function () { c.beginPath(); c.moveTo(fx + 0.6, fy - 1.8); c.lineTo(fx + 1.4, fy - 5.0); c.lineTo(fx + 2.1, fy - 4.8); c.lineTo(fx + 1.5, fy - 1.7); c.closePath(); }, ramp('#d8a060', false), 0.3);
+      part(c, function () { c.beginPath(); c.moveTo(fx - 1.9, fy - 2.6); c.quadraticCurveTo(fx - 0.9, fy - 3.9, fx + 0.1, fy - 2.5); c.quadraticCurveTo(fx - 0.9, fy - 0.9, fx - 1.9, fy - 2.6); c.closePath(); }, ramp('#e8344a', false), 0.3, function () {
+        c.fillStyle = '#fff4a8';
+        ell(c, fx - 1.1, fy - 2.5, 0.14, 0.18, 0); c.fill();
+        ell(c, fx - 0.6, fy - 2.0, 0.14, 0.18, 0); c.fill();
+        gloss(c, fx - 1.3, fy - 3.0, 0.3, 0.18, -0.4, 0.8);
+      });
     } else if (food === 'taiyaki') {
       part(c, function () {
         c.beginPath(); c.ellipse(fx, fy + 1, 3, 1.8, 0, 0, TAU);
@@ -1869,17 +3542,52 @@
       });
       ell(c, fx - 1.8, fy + 0.5, 0.32, 0.32, 0); c.fillStyle = INK; c.fill();
     } else if (food === 'parfait') {
-      part(c, function () { c.beginPath(); c.rect(fx - 1.6, fy - 1.0, 3.2, 4.6); }, ramp('#fff4dc', false), 0.4, function () {
-        c.fillStyle = '#6b3a1a'; c.fillRect(fx - 1.6, fy + 2, 3.2, 1.6);
-        c.fillStyle = '#ff6688'; c.fillRect(fx - 1.6, fy - 0.6, 3.2, 1.2);
-        c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(fx - 1.3, fy - 1, 0.5, 4.6);
+      /* layered sundae in a footed glass, cream, a wafer and a cherry */
+      c.fillStyle = 'rgba(220,240,255,0.9)';
+      c.fillRect(fx - 0.3, fy + 3.4, 0.6, 1.5);
+      part(c, function () { ell(c, fx, fy + 5.0, 1.5, 0.45, 0); }, ramp('#d8ecfa', false), 0.2);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(fx - 2.1, fy - 1.2); c.lineTo(fx + 2.1, fy - 1.2);
+        c.quadraticCurveTo(fx + 1.8, fy + 2.8, fx, fy + 3.6);
+        c.quadraticCurveTo(fx - 1.8, fy + 2.8, fx - 2.1, fy - 1.2);
+        c.closePath();
+      }, ramp('#fff4dc', false), 0.5, function () {
+        c.fillStyle = '#7a4420'; c.fillRect(fx - 3, fy + 1.7, 6, 2.2);
+        c.fillStyle = '#ffd24a'; c.fillRect(fx - 3, fy + 0.9, 6, 0.8);
+        c.fillStyle = '#ff6688'; c.fillRect(fx - 3, fy - 0.3, 6, 1.2);
+        c.fillStyle = 'rgba(255,255,255,0.55)';
+        c.beginPath(); c.moveTo(fx - 1.6, fy - 1.0); c.lineTo(fx - 1.1, fy - 1.0); c.lineTo(fx - 0.7, fy + 2.6); c.lineTo(fx - 1.1, fy + 2.4); c.closePath(); c.fill();
       });
-      part(c, function () { c.beginPath(); c.arc(fx, fy - 1.1, 1.5, Math.PI, 0); c.closePath(); }, ramp('#ffffff', false), 0.3);
-      part(c, function () { ell(c, fx + 0.6, fy - 2.6, 0.55, 0.55, 0); }, ramp('#dd2244', false), 0.3);
+      part(c, function () { c.beginPath(); c.moveTo(fx + 0.5, fy - 1.4); c.lineTo(fx + 1.5, fy - 4.6); c.lineTo(fx + 2.2, fy - 4.4); c.lineTo(fx + 1.5, fy - 1.3); c.closePath(); }, ramp('#d8a060', false), 0.3);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(fx - 2.2, fy - 1.1);
+        c.quadraticCurveTo(fx - 2.2, fy - 2.6, fx - 0.9, fy - 2.5);
+        c.quadraticCurveTo(fx - 0.2, fy - 3.8, fx + 0.8, fy - 2.6);
+        c.quadraticCurveTo(fx + 2.3, fy - 2.6, fx + 2.2, fy - 1.1);
+        c.closePath();
+      }, ramp('#ffffff', false), 0.4, function () { gloss(c, fx - 1.0, fy - 2.0, 0.6, 0.3, -0.3, 0.9); });
+      part(c, function () { ell(c, fx - 0.3, fy - 3.5, 0.7, 0.7, 0); }, ramp('#dd2244', false), 0.3, function () { gloss(c, fx - 0.55, fy - 3.75, 0.22, 0.16, 0, 0.9); });
     } else if (food === 'macaron') {
-      part(c, function () { ell(c, fx, fy - 0.8, 2.4, 1.1, 0); }, ramp('#ffbadb', false), 0.4, function () { gloss(c, fx - 0.8, fy - 1.1, 1, 0.3, 0, 0.5); });
-      c.fillStyle = '#ffffff'; c.fillRect(fx - 2.2, fy - 0.1, 4.4, 0.9);
-      part(c, function () { ell(c, fx, fy + 1.3, 2.4, 1.1, 0); }, ramp('#ff9ac2', false), 0.4);
+      /* a little stack of two macarons with ruffled feet */
+      for (var mk = 0; mk < 2; mk++) {
+        var my = fy + 1.6 - mk * 2.7, mx = fx + (mk ? 0.5 : 0), MC = ramp(mk ? '#bfe6c8' : '#ffb0d2', false);
+        part(c, function () { ell(c, mx, my + 0.75, 2.5, 0.95, 0); }, MC, 0.4);
+        c.fillStyle = mk ? '#fff6e0' : '#ffffff';
+        c.beginPath();
+        c.moveTo(mx - 2.5, my - 0.25);
+        for (var mf = 0; mf < 6; mf++) c.arc(mx - 2.08 + mf * 0.83, my + 0.3, 0.42, Math.PI, 0, true);
+        c.lineTo(mx + 2.5, my - 0.25);
+        c.closePath(); c.fill();
+        stroke(c, MC.ink, LW * 0.6, 0.7);
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(mx - 2.5, my); c.bezierCurveTo(mx - 2.6, my - 1.8, mx + 2.6, my - 1.8, mx + 2.5, my);
+          c.quadraticCurveTo(mx, my + 0.5, mx - 2.5, my);
+          c.closePath();
+        }, MC, 0.5, function () { gloss(c, mx - 0.9, my - 0.85, 1.0, 0.28, -0.1, 0.7); });
+      }
     } else if (food === 'strawberry') {
       part(c, function () { c.beginPath(); c.moveTo(fx - 2.1, fy - 1); c.quadraticCurveTo(fx - 1.6, fy + 3.2, fx, fy + 3.4); c.quadraticCurveTo(fx + 1.6, fy + 3.2, fx + 2.1, fy - 1); c.closePath(); }, ramp('#e8344a', false), 0.5, function () {
         c.fillStyle = '#fff4a8';
@@ -1943,6 +3651,203 @@
         ell(c, fx, fy - 1.35, 0.3, 0.2, 0); c.fill();
       });
       drawBow(c, ramp('#ff6f9e', false), fx, fy - 0.1, 0.4, false);
+    } else if (food === 'roomKey') {
+      /* a big brass room key with a numbered fob swinging from its ring */
+      c.save();
+      c.translate(fx, fy + 1.0);
+      c.rotate(0.12);
+      part(c, function () {
+        c.beginPath();
+        c.rect(-0.45, -0.6, 0.9, 5.6);
+        c.rect(0.45, 3.0, 1.5, 0.75);
+        c.rect(0.45, 4.2, 1.1, 0.75);
+      }, GOLD, 0.3);
+      part(c, function () {
+        c.beginPath();
+        c.arc(0, -2.6, 2.3, 0, TAU);
+        c.moveTo(1.05, -2.6); c.arc(0, -2.6, 1.05, 0, TAU, true);
+      }, GOLD, 0.6, function () {
+        c.beginPath();
+        c.arc(0, -2.6, 1.7, Math.PI * 1.05, Math.PI * 1.6);
+        stroke(c, '#fff6c8', 0.38, 0.95);
+      });
+      part(c, function () { ell(c, 0, -0.5, 0.75, 0.5, 0); }, GOLD, 0.3);
+      c.restore();
+      var kx = fx - 2.2 + sw * 0.5, ky = fy + 1.8;
+      c.beginPath(); c.moveTo(fx - 1.6, fy - 1.0); c.lineTo(kx + 0.4, ky - 1.2);
+      stroke(c, GOLD.d, 0.28);
+      c.save();
+      c.translate(kx, ky);
+      c.rotate(-0.3 - sw * 0.08);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-1.3, -1.3); c.lineTo(1.3, -1.3); c.lineTo(1.3, 1.3); c.quadraticCurveTo(0, 2.3, -1.3, 1.3);
+        c.closePath();
+      }, CAP_RED, 0.4, function () {
+        c.fillStyle = GOLD.c;
+        fillStar(c, 0, 0.3, 0.8);
+        ell(c, 0, -0.85, 0.24, 0.24, 0); c.fillStyle = '#fff6e0'; c.fill();
+      });
+      c.restore();
+    } else if (food === 'deskBell') {
+      /* the front-desk call bell on her palm */
+      part(c, function () { ell(c, fx, fy + 2.9, 3.3, 0.95, 0); }, ramp('#5a2a3a', false), 0.4);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(fx - 2.9, fy + 2.5);
+        c.bezierCurveTo(fx - 2.9, fy - 1.9, fx + 2.9, fy - 1.9, fx + 2.9, fy + 2.5);
+        c.quadraticCurveTo(fx, fy + 3.5, fx - 2.9, fy + 2.5);
+        c.closePath();
+      }, GOLD, 0.9, function () {
+        c.beginPath();
+        c.moveTo(fx - 2.9, fy + 1.7); c.quadraticCurveTo(fx, fy + 2.7, fx + 2.9, fy + 1.7);
+        stroke(c, GOLD.d, 0.3);
+        c.beginPath();
+        c.arc(fx, fy + 2.2, 2.3, Math.PI * 1.12, Math.PI * 1.45);
+        stroke(c, '#fff6c8', 0.6, 0.95);
+        gloss(c, fx + 1.0, fy + 0.2, 0.3, 0.5, 0.5, 0.5, '#fff6c8');
+      });
+      c.fillStyle = GOLD.d;
+      c.fillRect(fx - 0.25, fy - 1.9, 0.5, 1.0);
+      part(c, function () { ell(c, fx, fy - 2.1, 0.85, 0.55, 0); }, GOLD, 0.3, function () { gloss(c, fx - 0.25, fy - 2.3, 0.3, 0.14, 0, 0.95); });
+      c.beginPath();
+      c.moveTo(fx + 2.8, fy - 2.0); c.lineTo(fx + 3.8, fy - 3.0);
+      c.moveTo(fx + 3.3, fy - 0.6); c.lineTo(fx + 4.6, fy - 0.9);
+      c.moveTo(fx + 1.6, fy - 2.9); c.lineTo(fx + 2.0, fy - 4.2);
+      stroke(c, '#fff0a0', 0.34, 0.95);
+    } else if (food === 'suitcase') {
+      /* a little travel case carried by its handle: straps, corner caps,
+         a luggage tag and a heart sticker */
+      var CS = ramp('#58b8c8', false);
+      c.save();
+      c.translate(fx, fy);
+      c.rotate(-sw * 0.05);
+      c.scale(0.8, 0.8);
+      c.beginPath();
+      c.moveTo(-1.5, 1.4); c.lineTo(-1.5, 0.2); c.quadraticCurveTo(0, -0.7, 1.5, 0.2); c.lineTo(1.5, 1.4);
+      stroke(c, LEATHER.ink, 1.0);
+      c.beginPath();
+      c.moveTo(-1.5, 1.4); c.lineTo(-1.5, 0.2); c.quadraticCurveTo(0, -0.7, 1.5, 0.2); c.lineTo(1.5, 1.4);
+      stroke(c, LEATHER.c, 0.55);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(-3.3, 1.3); c.lineTo(3.3, 1.3); c.quadraticCurveTo(4.0, 1.3, 4.0, 2.0);
+        c.lineTo(4.0, 6.0); c.quadraticCurveTo(4.0, 6.7, 3.3, 6.7); c.lineTo(-3.3, 6.7);
+        c.quadraticCurveTo(-4.0, 6.7, -4.0, 6.0); c.lineTo(-4.0, 2.0); c.quadraticCurveTo(-4.0, 1.3, -3.3, 1.3);
+        c.closePath();
+      }, CS, 0.9, function () {
+        c.fillStyle = LEATHER.c;
+        c.fillRect(-2.6, 1, 0.8, 6); c.fillRect(1.8, 1, 0.8, 6);
+        c.fillStyle = GOLD.c;
+        c.fillRect(-2.7, 3.2, 1.0, 0.75); c.fillRect(1.7, 3.2, 1.0, 0.75);
+        c.fillStyle = CS.d;
+        c.fillRect(-4.2, 3.9, 8.4, 0.25);
+        c.fillStyle = LEATHER.d;
+        c.beginPath();
+        c.moveTo(-4.1, 1.2); c.lineTo(-3.0, 1.2); c.lineTo(-4.1, 2.3);
+        c.moveTo(4.1, 1.2); c.lineTo(3.0, 1.2); c.lineTo(4.1, 2.3);
+        c.moveTo(-4.1, 6.8); c.lineTo(-3.0, 6.8); c.lineTo(-4.1, 5.7);
+        c.moveTo(4.1, 6.8); c.lineTo(3.0, 6.8); c.lineTo(4.1, 5.7);
+        c.fill();
+        c.fillStyle = '#ff6f8e';
+        heartPath(c, 0, 5.3, 0.8); c.fill();
+        c.fillStyle = '#ffe27a';
+        fillStar(c, 0.1, 2.6, 0.62);
+        gloss(c, -0.6, 1.8, 1.0, 0.2, 0, 0.5, CS.l);
+      });
+      c.restore();
+    } else if (food === 'bouquet') {
+      /* posy in a paper wrap tied with a ribbon */
+      var LF = ramp('#6cbc58', false);
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(fx - 2.6, fy - 0.6); c.quadraticCurveTo(fx - 1.0, fy - 2.2, fx - 0.2, fy - 0.4);
+        c.moveTo(fx + 2.8, fy - 0.8); c.quadraticCurveTo(fx + 1.2, fy - 2.4, fx + 0.4, fy - 0.4);
+        c.lineTo(fx + 2.8, fy - 0.8);
+        c.moveTo(fx - 2.6, fy - 0.6); c.lineTo(fx - 0.2, fy - 0.4);
+      }, LF, 0.3);
+      var bq = [-1.7, -1.8, '#ff8fb8', 1.3, 1.6, -2.1, '#fff0a0', 1.25, 0, -3.4, '#c0a4ff', 1.35, -0.1, -1.2, '#ffffff', 1.1];
+      for (var bi = 0; bi < bq.length; bi += 4) {
+        var bxx = fx + bq[bi], byy = fy + bq[bi + 1], br = bq[bi + 3] * 0.52;
+        part(c, function () {
+          c.beginPath();
+          for (var k = 0; k < 5; k++) {
+            var b = k * TAU / 5 + bi;
+            c.moveTo(bxx + Math.cos(b) * br * 1.1 + br, byy + Math.sin(b) * br * 1.1);
+            c.arc(bxx + Math.cos(b) * br * 1.1, byy + Math.sin(b) * br * 1.1, br, 0, TAU);
+          }
+        }, ramp(bq[bi + 2], false), 0.4);
+        ell(c, bxx, byy, br * 0.6, br * 0.6, 0); c.fillStyle = '#ffb83a'; c.fill();
+      }
+      part(c, function () {
+        c.beginPath();
+        c.moveTo(fx - 2.9, fy - 0.3); c.quadraticCurveTo(fx, fy + 1.1, fx + 3.1, fy - 0.5);
+        c.lineTo(fx + 0.5, fy + 5.8); c.lineTo(fx - 0.3, fy + 5.8);
+        c.closePath();
+      }, ramp('#fff4e0', false), 0.6, function () {
+        c.beginPath();
+        c.moveTo(fx + 0.4, fy + 0.6); c.lineTo(fx + 0.2, fy + 5.6);
+        stroke(c, '#e0c8a0', 0.3);
+        c.fillStyle = '#ffd0e2';
+        c.beginPath(); c.moveTo(fx - 2.9, fy - 0.3); c.lineTo(fx - 0.6, fy + 0.5); c.lineTo(fx - 1.0, fy + 2.6); c.closePath(); c.fill();
+      });
+      drawBow(c, ramp('#ff6f9e', false), fx + 0.1, fy + 3.5, 0.5, false, sw * 0.3);
+    } else if (food === 'starWand') {
+      /* star wand with streaming ribbons and a few sparkles */
+      c.beginPath(); c.moveTo(fx + 0.7, fy + 5.8); c.lineTo(fx - 0.4, fy - 0.4);
+      stroke(c, '#a85a8a', 1.05);
+      c.beginPath(); c.moveTo(fx + 0.7, fy + 5.8); c.lineTo(fx - 0.4, fy - 0.4);
+      stroke(c, '#ffb0d8', 0.6);
+      for (var rk = 0; rk < 2; rk++) {
+        var rx = sw * (0.6 + rk * 0.3), ry = rk * 1.3;
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(fx - 0.3, fy + 0.1);
+          c.bezierCurveTo(fx - 2.4 + rx * 0.4, fy + 0.4 + ry, fx - 0.8 + rx * 0.7, fy + 2.6 + ry, fx - 3.2 + rx, fy + 3.6 + ry);
+          c.lineTo(fx - 2.6 + rx, fy + 4.5 + ry);
+          c.bezierCurveTo(fx + 0.2 + rx * 0.7, fy + 3.4 + ry, fx - 1.4 + rx * 0.4, fy + 1.4 + ry, fx + 0.1, fy + 1.0);
+          c.closePath();
+        }, ramp(rk ? '#8fd8ff' : '#ff8fc0', false), 0.3);
+      }
+      c.save();
+      c.translate(fx - 0.6, fy - 2.4);
+      c.rotate(-0.15);
+      part(c, function () { starPath(c, 0, 0, 3.1, 0.5); }, GOLD, 0.7, function () {
+        starPath(c, 0, 0.1, 1.7, 0.5); c.fillStyle = '#fff6c8'; c.fill();
+        gloss(c, -1.0, -1.2, 0.5, 0.3, -0.5, 0.95);
+      });
+      c.restore();
+      c.fillStyle = '#ffffff';
+      sparklePath(c, fx + 2.6, fy - 3.8, 0.9); c.fill();
+      sparklePath(c, fx - 3.4, fy - 0.8, 0.6); c.fill();
+      sparklePath(c, fx + 2.0, fy - 0.4, 0.5); c.fill();
+    } else if (food === 'pinwheel') {
+      /* paper windmill that spins as she goes */
+      c.beginPath(); c.moveTo(fx + 0.6, fy + 5.8); c.lineTo(fx - 0.3, fy - 2.2);
+      stroke(c, '#8a6a4a', 1.0);
+      c.beginPath(); c.moveTo(fx + 0.6, fy + 5.8); c.lineTo(fx - 0.3, fy - 2.2);
+      stroke(c, '#f0dcb8', 0.55);
+      var vc = ['#ff7aa8', '#ffd24a', '#6fc8ff', '#8ad88a'];
+      c.save();
+      c.translate(fx - 0.3, fy - 2.2);
+      c.rotate((Z && Z.t ? Z.t : 0) * 5 + 0.3);
+      for (var pv = 0; pv < 4; pv++) {
+        var V = ramp(vc[pv], false);
+        part(c, function () {
+          c.beginPath();
+          c.moveTo(0, 0);
+          c.bezierCurveTo(0.4, -2.8, 3.2, -3.8, 4.6, -1.7);
+          c.bezierCurveTo(3.2, -1.6, 1.5, -0.7, 0, 0);
+          c.closePath();
+        }, V, 0.6, function () {
+          c.beginPath();
+          c.moveTo(0.4, -0.6); c.quadraticCurveTo(1.6, -2.6, 3.6, -2.4);
+          stroke(c, V.l, 0.4, 0.8);
+        });
+        c.rotate(Math.PI / 2);
+      }
+      part(c, function () { ell(c, 0, 0, 0.6, 0.6, 0); }, GOLD, 0.2, function () { gloss(c, -0.2, -0.2, 0.2, 0.14, 0, 0.95); });
+      c.restore();
     } else if (food === 'balloon') {
       /* the balloon floats up and back on its string, lagging her moves */
       var bx = fx - 3.6 + sw * 1.1, by = fy - 13.6 + Math.abs(sw) * 0.3 + (Z ? Z.bob * 0.4 : 0);
@@ -2009,7 +3914,8 @@
   /* ================================================================
      PAINT
      ================================================================ */
-  var Z = { fx: 0, tx: 0, look: 0, ex1: 10.3, ex2: 17.7, ey: 13.2, open: 1, gx: 0, gy: 0, expr: 'open', charm: 0, ear: 0, bob: 0 };
+  var Z = { fx: 0, tx: 0, look: 0, ex1: 10.3, ex2: 17.7, ey: 13.2, open: 1, gx: 0, gy: 0, expr: 'open', charm: 0, ear: 0, bob: 0,
+            face: 'none', flut: 0, hood: null, t: 0 };
 
   function paint(c, sx, sy, cust, Q) {
     var P = paletteFor(cust);
@@ -2019,6 +3925,7 @@
     var food = pick('food', cust && cust.food);
     var hat = pick('hat', cust && cust.hat);
     var extra = pick('extra', cust && cust.extra);
+    var face = pick('face', cust && cust.face);
     var pajama = !!PJ[outfit];
     var dressR = P.suit;
 
@@ -2079,6 +3986,7 @@
     Z.ex1 = 10.3 + fx * 1.15; Z.ex2 = 17.7 + fx * 0.85; Z.ey = 13.2;
     Z.open = Q.open; Z.gx = Q.gx + look * 0.35; Z.gy = Q.gy; Z.expr = expr;
     Z.charm = Q.charm; Z.ear = Q.ear; Z.bob = bob;
+    Z.face = face; Z.flut = Q.flut; Z.hood = pajama ? PJ[outfit] : null; Z.t = t;
 
     c.save();
     c.translate(sx, sy);
@@ -2146,6 +4054,7 @@
       var hw = 1 - (act === 'pose' ? ae : 0);
       if (food === 'balloon') { nA1 += (-1.75 - nA1) * hw; nA2 += (0.35 - nA2) * hw; }
       else if (food === 'teddy') { nA1 += (0.55 - nA1) * hw; nA2 += (1.45 - nA2) * hw; }
+      else if (food === 'suitcase') { nA1 += (-0.22 - nA1) * hw; nA2 += (0.12 - nA2) * hw; }
       else { nA1 += (-0.55 - nA1) * hw; nA2 += (-0.95 - nA2) * hw; }
       nA1 += Math.sin(Q.ph) * 0.05 * walk;
       nH = 'fist';
@@ -2162,18 +4071,19 @@
     if (pajama) { sleeveR = pjLimb(outfit, P); sleeveR = { c: sleeveR.c, m: sleeveR.m, d: sleeveR.d, l: sleeveR.l, ink: sleeveR.ink, cuff: ramp(mix(sleeveR.c, '#ffffff', 0.35), false) }; puff = false; }
     else if (outfit === 'bellhop') { sleeveR = { c: dressR.c, m: dressR.m, d: dressR.d, l: dressR.l, ink: dressR.ink, cuff: GOLD }; puff = false; }
     else if (outfit === 'kimono') { wide = { wide: { c: dressR.c, m: dressR.m, d: dressR.d, l: dressR.l, ink: dressR.ink, dots: true } }; puff = false; }
-    var puffR = outfit === 'overalls' ? P.white : dressR;
+    else if (outfit === 'tutu') puff = false;
+    var puffR = outfit === 'overalls' ? P.white : outfit === 'zookeeper' ? KHAKI : dressR;
+    var frillC = outfit === 'frillyDress' || outfit === 'maid' ? P.white.c : outfit === 'princess' ? GOLD.c : null;
     var sleeveArg = wide || sleeveR;
     var farBehind = look > 0.35 && !floss && act !== 'pet' && act !== 'wave' && act !== 'cheer';
     var shN = [8.7 + tx * 0.3, 21.4], shF = [19.3 - tx * 0.5, 21.4];
 
     /* ---------------- back layers ---------------- */
-    if (extra === 'backpack') {
-      c.save(); upper(); drawBackpack(c, P, Z); c.restore();
-    }
+    if (extra === 'cape') { c.save(); upper(); drawCape(c, P, 'back', Z, Q.skirt * 0.6 + hs * 0.25); c.restore(); }
     c.save();
     upper();
     headXf();
+    drawHatBack(c, P, hat, Z.hood, Z);
     c.translate(-look * 0.8, 0);
     var w = Q.flut;
     if (hairStyle === 'longBraids') {
@@ -2197,19 +4107,37 @@
       }
     } else if (hairStyle === 'ponytail') {
       drawPonytail(c, P, hs * 1.15, w, hy);
-    } else if (hairStyle === 'longHair') {
+    } else if (hairStyle === 'longHair' || hairStyle === 'hime') {
       drawLongHair(c, P, hs * 0.9, w);
+    } else if (hairStyle === 'wavy') {
+      drawWavy(c, P, hs * 0.9, w);
     } else if (hairStyle === 'twinTails') {
       c.save();
       c.translate(0, 4.6); c.scale(1, 1 - hy * 0.035); c.translate(0, -4.6);
       drawTail(c, P, hs, w);
       c.save(); c.translate(28, 0); c.scale(-1, 1); drawTail(c, P, -hs * 0.85, -w); c.restore();
       c.restore();
+    } else if (hairStyle === 'sideTail') {
+      /* one big tail, a size up, rooted on the side of the crown */
+      c.save();
+      c.translate(5.6, 4.8); c.scale(1.22, 1.16 - hy * 0.04); c.translate(-6.2, -4.6);
+      drawTail(c, P, hs * 0.9, w);
+      c.restore();
+    } else if (hairStyle === 'lowTails') {
+      drawLowTail(c, P, hs * 0.7, w);
+      c.save(); c.translate(28, 0); c.scale(-1, 1); drawLowTail(c, P, -hs * 0.6, -w); c.restore();
+    } else if (hairStyle === 'curls') {
+      drawRinglet(c, P, hs * 0.8, w);
+      c.save(); c.translate(28, 0); c.scale(-1, 1); drawRinglet(c, P, -hs * 0.7, -w); c.restore();
     }
     if (hairStyle === 'bob') part(c, function () { bobPath(c, hs * 0.25); }, P.nape, 1.2);
+    else if (hairStyle === 'pixie') part(c, function () { pixiePath(c, hs * 0.2); }, P.hair, 1.2);
     else part(c, function () { backHairPath(c); }, P.nape, 1);
     c.restore();
 
+    /* worn on her back, over the hair that falls there */
+    if (extra === 'backpack') { c.save(); upper(); drawBackpack(c, P, Z); c.restore(); }
+    if (extra === 'wings') { c.save(); upper(); drawWings(c, P, Z); c.restore(); }
     if (extra === 'scarf') { c.save(); upper(); drawScarf(c, P, 'back', Z); c.restore(); }
     if (pajama) { c.save(); upper(); drawOnesieTail(c, P, outfit, hs * 0.6, w); c.restore(); }
 
@@ -2224,7 +4152,8 @@
     var hipY = 27.6 - bob - breath * 0.4;
     var legs = [[11.6 + hip, feet[0], feet[1], feet[2]], [16.4 + hip, feet[3], feet[4], feet[5]]];
     var legR = pajama ? pjLimb(outfit, P) : P.skin;
-    var sockR = pajama || shoes === 'flipper' || shoes === 'highBoot' ? null : P.white;
+    var sockR = pajama || shoes === 'flipper' || shoes === 'highBoot' || shoes === 'ballet' || shoes === 'sandal' || shoes === 'paw'
+              ? null : P.white;
     var tl = 0.25 + 0.75 * look;
     for (var li = 1; li >= 0; li--) {
       var L = legs[li];
@@ -2247,32 +4176,58 @@
       drawSkirt(c, P, outfit, floss ? -hip * 0.3 : Q.skirt, flare, dressR);
       drawBodice(c, P, outfit, dressR, tx);
     }
+    if (extra === 'apron') drawApron(c, P, Z, pajama ? 0 : Q.skirt);
     if (extra === 'satchel') drawSatchel(c, P, Z, false);
     if (extra === 'nameBadge') drawBadge(c, tx);
+    if (extra === 'necklace') drawNecklace(c, Z);
     if (extra === 'scarf') drawScarf(c, P, 'front', Z);
     if (extra === 'backpack') {
-      c.beginPath();
-      c.moveTo(9.6, 20.8); c.quadraticCurveTo(10.6, 22.6, 10.0, 24.6);
-      stroke(c, ramp(mix(P.suit.c, '#ffffff', 0.62), false).ink, 0.9);
-      c.beginPath();
-      c.moveTo(9.6, 20.8); c.quadraticCurveTo(10.6, 22.6, 10.0, 24.6);
-      stroke(c, mix(P.suit.c, '#ffffff', 0.5), 0.5);
+      /* a strap over each shoulder */
+      var strapR = ramp(mix(P.suit.c, '#ffffff', 0.62), false);
+      for (var st = 0; st < 2; st++) {
+        c.beginPath();
+        if (st) { c.moveTo(18.4, 20.8); c.quadraticCurveTo(17.4, 22.6, 18.0, 24.6); }
+        else { c.moveTo(9.6, 20.8); c.quadraticCurveTo(10.6, 22.6, 10.0, 24.6); }
+        stroke(c, strapR.ink, 1.0);
+        c.beginPath();
+        if (st) { c.moveTo(18.4, 20.8); c.quadraticCurveTo(17.4, 22.6, 18.0, 24.6); }
+        else { c.moveTo(9.6, 20.8); c.quadraticCurveTo(10.6, 22.6, 10.0, 24.6); }
+        stroke(c, strapR.c, 0.58);
+      }
     }
 
     /* ---------------- arms ---------------- */
     if (!farBehind) drawArm(c, P, shF[0], shF[1], fA1, fA2, fH, -1, sleeveArg, Q.skirt);
-    if (puff) drawSleeve(c, shF[0] + 0.1, 21.4, puffR, outfit === 'frillyDress' ? P.white.c : null);
-    if (food === 'teddy' && act !== 'cheer') drawItem(c, 'teddy', 11.6 + tx * 0.5, 24.2, Z);
+    if (puff) drawSleeve(c, shF[0] + 0.1, 21.4, puffR, frillC);
+    if (food === 'teddy' && act !== 'cheer') {
+      c.save();
+      c.translate(11.6 + tx * 0.5, 25.4);
+      c.scale(1.2, 1.2);
+      drawItem(c, 'teddy', 0, -1.2, Z);
+      c.restore();
+    }
     var g = drawArm(c, P, shN[0], shN[1], nA1, nA2, nH, -1, sleeveArg, Q.skirt);
-    if (puff) drawSleeve(c, shN[0] - 0.1, 21.4, puffR, outfit === 'frillyDress' ? P.white.c : null);
+    if (puff) drawSleeve(c, shN[0] - 0.1, 21.4, puffR, frillC);
     if (hasItem && food !== 'teddy') {
       var ix = g.wx + Math.cos(g.ang) * 1.1, iy = g.wy + Math.sin(g.ang) * 1.1;
       if (food === 'balloon') drawItem(c, food, ix, iy, Z);
-      else drawItem(c, food, ix - 0.6, iy - 2.4, Z);
+      else {
+        /* drawn a size up about her grip, so it reads at corridor scale */
+        var lw0 = LW;
+        LW = lw0 / ITEM_S;
+        c.save();
+        c.translate(ix, iy);
+        c.scale(ITEM_S, ITEM_S);
+        if (food === 'suitcase') drawItem(c, food, 0, -0.4, Z);
+        else drawItem(c, food, -0.5, -2.2, Z);
+        c.restore();
+        LW = lw0;
+      }
     } else if (food === 'teddy' && act === 'cheer') {
       drawItem(c, 'teddy', g.wx, g.wy - 3, Z);
     }
     if (extra === 'satchel') drawSatchel(c, P, Z, true);
+    if (extra === 'cape') drawCape(c, P, 'front', Z, 0);
 
     /* ---------------- head ---------------- */
     headXf();
@@ -2284,11 +4239,12 @@
       c.fillRect(12, 17.6, 4, 2.6);
     }, true);
     drawFace(c, P, Z);
-    if (extra === 'glasses' || extra === 'heartGlasses') drawGlasses(c, Z, extra);
-    if (hairStyle === 'bob') {
-      part(c, function () { bobLockPath(c, hs * 0.2); }, P.hair, 1);
+    if (extra === 'glasses' || extra === 'heartGlasses' || extra === 'starShades') drawGlasses(c, Z, extra);
+    if (hairStyle === 'bob' || hairStyle === 'hime') {
+      var lockPath = hairStyle === 'bob' ? bobLockPath : himeLockPath;
+      part(c, function () { lockPath(c, hs * 0.2); }, P.hair, 1);
       c.save(); c.translate(28, 0); c.scale(-1, 1);
-      part(c, function () { bobLockPath(c, -hs * 0.2); }, P.hair, 1);
+      part(c, function () { lockPath(c, -hs * 0.2); }, P.hair, 1);
       c.restore();
     }
     drawCap(c, P, Q.ear * 0.8, fx, hs);
@@ -2299,17 +4255,23 @@
       if (!pajama) drawBuns(c, P);
       drawBow(c, P.suit, 8.4, 5.2, 0.6, false, bowTw);
       drawBow(c, P.suit, 19.6, 5.2, 0.6, true, -bowTw);
-    } else if (hairStyle === 'twinTails' && !pajama) {
+    } else if ((hairStyle === 'twinTails' || hairStyle === 'curls') && !pajama) {
       drawBow(c, P.suit, 5.6 - look * 0.8, 5.2, 0.75, false, bowTw);
       drawBow(c, P.suit, 22.4 - look * 0.8, 5.2, 0.75, true, -bowTw);
-    } else if (hairStyle === 'twinTails') {
+    } else if (hairStyle === 'twinTails' || hairStyle === 'curls') {
       drawBow(c, P.suit, 4.6, 12.6, 0.6, false, bowTw);
       drawBow(c, P.suit, 23.4, 12.6, 0.6, true, -bowTw);
+    } else if (hairStyle === 'sideTail') {
+      if (pajama) drawBow(c, P.suit, 4.6, 12.6, 0.7, false, bowTw);
+      else drawBow(c, P.suit, 5.2 - look * 0.8, 5.0, 1.0, false, bowTw);
+    } else if (hairStyle === 'lowTails') {
+      drawBobbles(c, P.suit, 5.6 - look * 0.5, 14.0);
+      c.save(); c.translate(28, 0); c.scale(-1, 1); drawBobbles(c, P.suit, 5.6 + look * 0.5, 14.0); c.restore();
     } else if (hairStyle === 'longBraids' && !pajama) {
       drawBow(c, P.suit, 5.0 - look * 0.6, 7.6, 0.5, false, bowTw);
       drawBow(c, P.suit, 23.0 - look * 0.6, 7.6, 0.5, true, -bowTw);
     }
-    if (hat !== 'none') drawHat(c, P, hat, pajama, Z);
+    if (hat !== 'none') drawHat(c, P, hat, Z.hood, Z);
     c.restore();
 
     c.restore();
@@ -2636,7 +4598,8 @@
     return s;
   }
   function custKey(cu) {
-    return cu.hair + cu.suit + cu.skin + cu.flipper + cu.hairStyle + cu.outfit + cu.shoes + cu.food + cu.hat + cu.extra;
+    return cu.hair + cu.suit + cu.skin + cu.flipper + cu.hairStyle + cu.outfit + cu.shoes + cu.food + cu.hat + cu.extra +
+           cu.face + cu.eyes;
   }
   function blit(c, s, m, sx, sy) {
     c.save();
@@ -2712,18 +4675,45 @@
     return cv;
   }
 
-  /* A held item on its own, for the customize tile icons. */
+  /* A held item on its own, for the customize tile icons: (x, y) is the
+     floor under it, s the scale of a full-height item (short ones are
+     shown a little bigger). */
+  var ICON_BOX = {           /* top and bottom of each item about its anchor */
+    iceCream: [-4.2, 6.2], onigiri: [-2.4, 3.5], donut: [-1.4, 3.4], crepe: [-5.0, 5.6], taiyaki: [-0.8, 2.8],
+    parfait: [-4.6, 5.4], macaron: [-2.2, 3.4], strawberry: [-2.6, 3.4], lollipop: [-3.1, 5.4], dango: [-4.4, 5.6],
+    cupcake: [-3.2, 3.8], teddy: [-4.3, 3.9], roomKey: [-3.9, 6.0], deskBell: [-2.7, 3.9], suitcase: [-0.5, 5.4],
+    bouquet: [-4.2, 5.8], starWand: [-5.5, 5.8], pinwheel: [-6.2, 5.8], balloon: [-16.6, 0.6]
+  };
   function drawItemIcon(c, food, x, y, s) {
+    var B = ICON_BOX[food];
+    if (!B) return;
+    var hgt = B[1] - B[0];
+    s = Math.min(s * (food === 'balloon' ? 0.62 : 1.3), s * 11.6 / hgt);
     var u = 2;
     if (c.getTransform) { var m = c.getTransform(); u = Math.sqrt(m.a * m.a + m.b * m.b) * s || 2; }
     LW = Math.max(0.9, Math.min(3.0, u * 0.3)) / u;
     c.save();
     c.translate(x, y);
     c.scale(s, s);
-    var Zi = { charm: 0, bob: 0 };
-    if (food === 'balloon') drawItem(c, food, 1.2, 6.6, Zi);
-    else if (food === 'teddy') drawItem(c, food, 0, 0.4, Zi);
-    else drawItem(c, food, 0, -0.8, Zi);
+    drawItem(c, food, food === 'balloon' ? 1.8 : 0, -B[1], { charm: 0, bob: 0, t: 0.1 });
+    c.restore();
+  }
+
+  /* A pair of shoes on their own (ankles and socks included), side on,
+     for the customize tiles: (x, y) is the floor between them. */
+  function drawShoeIcon(c, cust, style, x, y, s) {
+    var P = paletteFor(cust), u = 2;
+    if (c.getTransform) { var m = c.getTransform(); u = Math.sqrt(m.a * m.a + m.b * m.b) * s || 2; }
+    LW = Math.max(0.9, Math.min(3.0, u * 0.3)) / u;
+    var sockR = style === 'maryJane' || style === 'sneaker' || style === 'slipper' || style === 'roller' ? P.white : null;
+    c.save();
+    c.translate(x, y);
+    c.scale(s, s);
+    for (var i = 1; i >= 0; i--) {
+      var ax = i ? 2.0 : -3.4, ay = -1.5 - i * 0.6;
+      drawLeg(c, P.skin, ax, ay - LEG - 0.4, ax, ay, 1, false, sockR, true);
+      drawShoe(c, P, pick('shoes', style), ax - 0.2, ay, 1, 0, 0.3);
+    }
     c.restore();
   }
 
@@ -2734,6 +4724,7 @@
     trail: trail,
     renderCrop: renderCrop,
     drawItemIcon: drawItemIcon,
+    drawShoeIcon: drawShoeIcon,
     options: OPT,
     defaults: DEF,
     /* Her cel shading for companions painted in the same style (the pet

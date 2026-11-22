@@ -756,7 +756,12 @@
       }
       return null;
     }
-    if (hitButton(mx, my, W / 2 - 130, 196, 260, 60)) { Game.audio.play('select'); return 'play'; }
+    if (hitButton(mx, my, W / 2 - 130, 196, 260, 60)) {
+      Game.audio.play('select');
+      /* the customize screen opens on the page that holds her current choice */
+      selectTab(customSelection.tab);
+      return 'play';
+    }
     if (hitButton(mx, my, W / 2 - 90, 276, 180, 36)) { Game.audio.play('select'); showInstructions = true; return null; }
     if (hitButton(mx, my, W / 2 - 90, 322, 180, 36)) { Game.audio.play('select'); Game.i18n.toggleLanguage(); return null; }
     if (hitButton(mx, my, W / 2 - 90, 368, 180, 36)) { Game.audio.toggleMute(); return null; }
@@ -1198,75 +1203,124 @@
   }
 
   /* ---- Customization Screen ----
-     Layout matches the sketch the user's daughter drew:
+     Layout follows the sketch the user's daughter drew:
        - Title at top
-       - Momoko preview on the left side (live, updates on every change)
-       - Tab bar along the top-right, one tab per category
-       - a 4 x 2 grid of option tiles below the tabs, each a real render
-         of Momoko (or the item) from momoko.js; categories with more than
-         eight options get page arrows
-       - Color swatches below the grid when the current tab has a color
-       - Start button at the bottom */
-  var hairColors = ['#e06088', '#4a3728', '#f5d060', '#4488ff', '#222222', '#cc3333', '#a070d0', '#5cc8a8', '#e8e4f0'];
-  var suitColors = ['#e06088', '#3366aa', '#cc3333', '#7733aa', '#228844', '#dd7722', '#ff9ec8', '#40b0c0', '#f0c040'];
-  var shoeColors = ['#ff99cc', '#33bb77', '#ffcc44', '#66aaff', '#ffffff', '#552211', '#aa66ee', '#ff6644'];
-  var skinTones  = ['#ffe0c0', '#ddb896', '#c68c5a', '#8d6e4c', '#5c3d2e'];
+       - Momoko preview on the left (live, updates on every change), with
+         the Start button under her feet
+       - Two rows of category tabs along the top of the option panel
+       - a 4 x 2 grid of picture tiles, each a real render from momoko.js
+         or pet.js in her current colours: a close crop of her wearing the
+         option, or the shoe / held item / dog on its own. Categories with
+         more than eight options turn pages.
+       - Colour swatches under the grid, drawn as the thing they colour */
+  var hairColors = ['#e06088', '#4a3728', '#f5d060', '#4488ff', '#222222', '#cc3333', '#a070d0', '#5cc8a8', '#e8e4f0',
+                    '#f08a3c', '#ffa8cf', '#8a5a36'];
+  var suitColors = ['#e06088', '#3366aa', '#cc3333', '#7733aa', '#228844', '#dd7722', '#ff9ec8', '#40b0c0', '#f0c040',
+                    '#f6f2fa', '#3a3550', '#9ad27a'];
+  var shoeColors = ['#ff99cc', '#33bb77', '#ffcc44', '#66aaff', '#ffffff', '#552211', '#aa66ee', '#ff6644', '#2a2836', '#e06088'];
+  var eyeColors  = ['#7c3452', '#8a5a2a', '#3a8ad0', '#2f9a6a', '#8a5ad0', '#d0484a', '#d8962a', '#30a8a8', '#e060a0', '#5a5a6c'];
+  var skinTones  = ['#ffe0c0', '#f2c9a0', '#ddb896', '#c68c5a', '#8d6e4c', '#5c3d2e'];
+  var HAIR_ROW = { field: 'hair', label: 'hairColor', colors: hairColors, kind: 'hair' };
+  var SUIT_ROW = { field: 'suit', label: 'suitColor', colors: suitColors, kind: 'cloth' };
+  var SHOE_ROW = { field: 'flipper', label: 'shoeColor', colors: shoeColors, kind: 'shoe' };
+  var EYE_ROW  = { field: 'eyes', label: 'eyeColor', colors: eyeColors, kind: 'eye' };
+  var SKIN_ROW = { field: 'skin', label: 'skinTone', colors: skinTones, kind: 'skin' };
 
   /* Tab definitions. `field` is the key inside Game.customization this
-     tab writes to; `colorField` (optional) adds a swatch row; `crop` is
-     the part of her (sprite units [x, y, w, h]) the tiles show. */
+     tab writes to; `rows` are its colour swatch rows; `crop` is the part
+     of her (sprite units [x, y, w, h]) the tiles show, or `icon` names
+     what is drawn on its own instead ('shoe', 'item', 'pet', 'wear'). */
   function V(id, label, crop) { return { id: id, label: label, crop: crop }; }
-  var CROP_HEAD = [-4, -3, 36, 27], CROP_BODY = [-1, 14, 30, 19], CROP_HOOD = [-4, -8, 36, 32],
-      CROP_FEET = [5, 28.5, 18, 7], CROP_HAT = [-2, -7.5, 32, 27];
+  var CROP_HAIR = [-2, -3, 32, 28.6], CROP_FACE = [5.2, 7.2, 17.6, 15.7], CROP_BODY = [1, 17.6, 26, 17.6],
+      CROP_HOOD = [-5, -10.5, 38, 34], CROP_HAT = [1.5, -11, 25, 27.7], CROP_WIDE = [0, -10.5, 28, 31],
+      CROP_EYES = [4.5, 4.5, 19, 21], CROP_CHEST = [7.8, 15, 13, 14.4];
   var customTabs = [
-    { id: 'hair',  label: 'tabHair',  field: 'hairStyle', colorField: 'hair',    colors: hairColors, crop: CROP_HEAD,
+    { id: 'hair',  label: 'tabHair',  field: 'hairStyle', rows: [HAIR_ROW], crop: CROP_HAIR,
       variants: [V('twinTails', 'varTwinTails'), V('longBraids', 'varLongBraids'), V('buns', 'varBuns'),
-                 V('ponytail', 'varPonytail'), V('bob', 'varBob'), V('longHair', 'varLongHair')] },
-    { id: 'dress', label: 'tabDress', field: 'outfit',    colorField: 'suit',    colors: suitColors, crop: CROP_BODY,
+                 V('ponytail', 'varPonytail'), V('bob', 'varBob'), V('longHair', 'varLongHair'),
+                 V('sideTail', 'varSideTail'), V('lowTails', 'varLowTails'), V('curls', 'varCurls'),
+                 V('wavy', 'varWavy'), V('hime', 'varHime'), V('pixie', 'varPixie')] },
+    { id: 'face',  label: 'tabFace',  field: 'face',      rows: [EYE_ROW, SKIN_ROW], crop: CROP_FACE,
+      variants: [V('none', 'varStarEyes'), V('heartEyes', 'varHeartEyes'), V('sparkleEyes', 'varSparkleEyes'),
+                 V('freckles', 'varFreckles'), V('heartCheeks', 'varHeartCheeks'), V('starSticker', 'varStarSticker'),
+                 V('whiskers', 'varWhiskers'), V('bandage', 'varBandage')] },
+    { id: 'dress', label: 'tabDress', field: 'outfit',    rows: [SUIT_ROW], crop: CROP_BODY,
       variants: [V('frillyDress', 'varFrillyDress'), V('sailorDress', 'varSailorDress'), V('starDress', 'varStarDress'),
-                 V('bellhop', 'varBellhop'), V('overalls', 'varOveralls'), V('kimono', 'varKimono')] },
-    { id: 'swim',  label: 'tabSwim',  field: 'outfit',    colorField: 'suit',    colors: suitColors, crop: CROP_HOOD,
+                 V('bellhop', 'varBellhop'), V('overalls', 'varOveralls'), V('kimono', 'varKimono'),
+                 V('maid', 'varMaid'), V('princess', 'varPrincess'), V('tutu', 'varTutu'),
+                 V('zookeeper', 'varZookeeper')] },
+    { id: 'swim',  label: 'tabSwim',  field: 'outfit',    rows: [SUIT_ROW], crop: CROP_HOOD,
       variants: [V('sailorSwimsuit', 'varSailorSwimsuit'), V('onePiece', 'varOnePiece'), V('frillyBikini', 'varFrillyBikini'),
-                 V('catPjs', 'varCatPjs'), V('bearPjs', 'varBearPjs'), V('frogPjs', 'varFrogPjs'), V('penguinPjs', 'varPenguinPjs')] },
-    { id: 'shoes', label: 'tabShoes', field: 'shoes',     colorField: 'flipper', colors: shoeColors, crop: CROP_FEET,
+                 V('catPjs', 'varCatPjs'), V('bearPjs', 'varBearPjs'), V('frogPjs', 'varFrogPjs'), V('penguinPjs', 'varPenguinPjs'),
+                 V('dinoPjs', 'varDinoPjs'), V('foxPjs', 'varFoxPjs'), V('lionPjs', 'varLionPjs'), V('sharkPjs', 'varSharkPjs')] },
+    { id: 'shoes', label: 'tabShoes', field: 'shoes',     rows: [SHOE_ROW], icon: 'shoe',
       variants: [V('maryJane', 'varMaryJane'), V('sneaker', 'varSneaker'), V('flipper', 'varFlipper'),
-                 V('slipper', 'varSlipper'), V('highBoot', 'varHighBoot')] },
-    { id: 'hat',   label: 'tabHat',   field: 'hat',       colorField: null, colors: null, crop: CROP_HAT,
+                 V('slipper', 'varSlipper'), V('highBoot', 'varHighBoot'), V('ballet', 'varBallet'),
+                 V('sandal', 'varSandal'), V('roller', 'varRoller'), V('paw', 'varPaw')] },
+    { id: 'hat',   label: 'tabHat',   field: 'hat',       rows: [], crop: CROP_HAT,
       variants: [V('none', 'varNone'), V('hotelCap', 'varHotelCap'), V('bigBow', 'varBigBow'), V('hairClips', 'varHairClips'),
-                 V('flowerCrown', 'varFlowerCrown'), V('catEars', 'varCatEars'), V('tiara', 'varTiara')] },
-    { id: 'extra', label: 'tabExtra', field: 'extra',     colorField: null, colors: null, crop: [-2, 2, 32, 30],
-      variants: [V('none', 'varNone'), V('glasses', 'varGlasses', [2, 4, 24, 16]), V('heartGlasses', 'varHeartGlasses', [2, 4, 24, 16]),
-                 V('nameBadge', 'varNameBadge', [5, 15, 18, 12]), V('satchel', 'varSatchel', [0, 16, 28, 16]),
-                 V('backpack', 'varBackpack', [-1, 10, 30, 20]), V('scarf', 'varScarf', [0, 11, 28, 18])] },
-    { id: 'food',  label: 'tabFood',  field: 'food',      colorField: null, colors: null, item: true,
+                 V('flowerCrown', 'varFlowerCrown'), V('catEars', 'varCatEars'), V('tiara', 'varTiara'),
+                 V('crown', 'varCrown'), V('beret', 'varBeret', CROP_WIDE), V('strawHat', 'varStrawHat', CROP_WIDE),
+                 V('chefHat', 'varChefHat'), V('partyHat', 'varPartyHat'), V('safariHat', 'varSafariHat', CROP_WIDE)] },
+    { id: 'extra', label: 'tabExtra', field: 'extra',     rows: [], crop: CROP_EYES,
+      variants: [V('none', 'varNone'), V('glasses', 'varGlasses'), V('heartGlasses', 'varHeartGlasses'),
+                 V('starShades', 'varStarShades'), V('nameBadge', 'varNameBadge', CROP_CHEST),
+                 V('necklace', 'varNecklace', CROP_CHEST), V('satchel', 'varSatchel', [0.5, 13.2, 20, 22.1]),
+                 V('backpack', 'varBackpack', [-3, 8.6, 20, 22.1]), V('scarf', 'varScarf', [0.5, 10.4, 20, 22.1]),
+                 V('apron', 'varApron', [3, 11.2, 22, 24.3]), V('wings', 'varWings', [-7.5, 6, 25, 27.7]),
+                 V('cape', 'varCape', [-2, 12.3, 21, 23.2])] },
+    { id: 'food',  label: 'tabFood',  field: 'food',      rows: [], icon: 'item',
       variants: [V('none', 'varNone'), V('iceCream', 'varIceCream'), V('onigiri', 'varOnigiri'), V('donut', 'varDonut'),
                  V('crepe', 'varCrepe'), V('taiyaki', 'varTaiyaki'), V('parfait', 'varParfait'), V('macaron', 'varMacaron'),
                  V('strawberry', 'varStrawberry'), V('lollipop', 'varLollipop'), V('dango', 'varDango'), V('cupcake', 'varCupcake'),
-                 V('balloon', 'varBalloon'), V('teddy', 'varTeddy')] },
-    { id: 'crab',  label: 'tabCrab',  field: 'crab',      colorField: null, colors: null, pet: true,
-      variants: [V('none', 'varNone'), V('red', 'varCrabRed'), V('blue', 'varCrabBlue'), V('gold', 'varCrabGold')] },
+                 V('balloon', 'varBalloon'), V('teddy', 'varTeddy'), V('roomKey', 'varRoomKey'), V('deskBell', 'varDeskBell'),
+                 V('suitcase', 'varSuitcase'), V('bouquet', 'varBouquet'), V('starWand', 'varStarWand'), V('pinwheel', 'varPinwheel')] },
+    { id: 'crab',  label: 'tabCrab',  field: 'crab',      rows: [], icon: 'pet',
+      variants: [V('none', 'varNone'), V('red', 'varCrabRed'), V('blue', 'varCrabBlue'), V('gold', 'varCrabGold'),
+                 V('shiba', 'varDogShiba'), V('husky', 'varDogHusky'), V('poodle', 'varDogPoodle'), V('scottie', 'varDogScottie')] },
+    { id: 'wear',  label: 'tabPetWear', field: 'petWear', rows: [], icon: 'wear',
+      variants: [V('none', 'varNone'), V('bow', 'varWearBow'), V('bandana', 'varWearBandana'), V('bell', 'varWearBell'),
+                 V('flowers', 'varWearFlowers'), V('sweater', 'varWearSweater'), V('partyHat', 'varWearPartyHat'),
+                 V('crown', 'varWearCrown')] }
   ];
 
   var customSelection = { tab: 'hair', page: 0 };
 
   /* ---- Layout constants (shared by draw + hit-test) ---- */
-  var TAB_X = 320, TAB_Y = 58, TAB_W = 54, TAB_H = 32, TAB_GAP = 4;
-  var GRID_X = 320, GRID_Y = 98, GRID_COLS = 4, GRID_ROWS = 2, GRID_TILE_W = 109, GRID_TILE_H = 86, GRID_GAP = 8;
+  var TAB_X = 312, TAB_Y = 52, TAB_W = 92, TAB_H = 34, TAB_GAP = 4, TAB_COLS = 5;
+  var GRID_X = 314, GRID_Y = 136, GRID_COLS = 4, GRID_ROWS = 2, GRID_TILE_W = 113, GRID_GAP = 8;
   var PER_PAGE = GRID_COLS * GRID_ROWS;
-  var COLOR_X = 320, COLOR_Y = 312, SKIN_Y = 360, COLOR_STEP = 34, SWATCH_R = 13;
-  var PAGE_Y = 284, PAGE_PREV_X = 682, PAGE_NEXT_X = 750, PAGE_W = 30, PAGE_H = 26;
+  var PAGE_PREV_X = 314, PAGE_NEXT_X = 698, PAGE_W = 88, PAGE_H = 32;
+  var ROW_X = 380, ROW_STEP = 33, SWATCH_R = 14;
   var START_BTN_W = 200, START_BTN_H = 46;
-  var START_BTN_X = W / 2 - START_BTN_W / 2 + 150;
-  var START_BTN_Y = 420;
+  var START_BTN_X = 60;
+  var START_BTN_Y = 404;
 
   function getTab(id) {
     for (var i = 0; i < customTabs.length; i++) if (customTabs[i].id === id) return customTabs[i];
     return customTabs[0];
   }
   function pageCount(tab) { return Math.ceil(tab.variants.length / PER_PAGE); }
-  function tileRect(i) {
+  function tabRect(i) {
+    return { x: TAB_X + (i % TAB_COLS) * (TAB_W + TAB_GAP), y: TAB_Y + Math.floor(i / TAB_COLS) * (TAB_H + TAB_GAP) };
+  }
+  /* Tabs without colour rows spend the room on taller picture tiles.
+     Returns the tile height, where the page arrows sit and the centre
+     line of each swatch row. */
+  var LAY = { tileH: 0, pageY: 0, rowY: [0, 0] };
+  function layoutFor(tab) {
+    var L = LAY;
+    L.tileH = tab.rows.length ? 122 : 144;
+    var y = GRID_Y + GRID_ROWS * L.tileH + (GRID_ROWS - 1) * GRID_GAP + 4;
+    L.pageY = y;
+    if (pageCount(tab) > 1) y += PAGE_H + 6;
+    L.rowY[0] = y + 20;
+    L.rowY[1] = y + 56;
+    return L;
+  }
+  function tileRect(tab, i) {
     var k = i % PER_PAGE, col = k % GRID_COLS, row = Math.floor(k / GRID_COLS);
-    return { x: GRID_X + col * (GRID_TILE_W + GRID_GAP), y: GRID_Y + row * (GRID_TILE_H + GRID_GAP) };
+    return { x: GRID_X + col * (GRID_TILE_W + GRID_GAP), y: GRID_Y + row * (layoutFor(tab).tileH + GRID_GAP) };
   }
   /* Open a tab on the page that holds her current choice. */
   function selectTab(id) {
@@ -1286,24 +1340,47 @@
     return tileCust;
   }
 
+  /* "Nothing": a brass ring with a slash, the same on every tab. */
+  function drawNoneGlyph(c, cx, cy) {
+    c.lineCap = 'round';
+    c.strokeStyle = 'rgba(40, 10, 40, 0.5)';
+    c.lineWidth = 6;
+    c.beginPath(); c.arc(cx, cy + 1.5, 20, 0, Math.PI * 2); c.stroke();
+    var g = c.createLinearGradient(0, cy - 22, 0, cy + 22);
+    g.addColorStop(0, '#fff0b8');
+    g.addColorStop(1, '#d89a3c');
+    c.strokeStyle = g;
+    c.lineWidth = 4.5;
+    c.beginPath(); c.arc(cx, cy, 20, 0, Math.PI * 2); c.stroke();
+    c.beginPath(); c.moveTo(cx - 14.1, cy + 14.1); c.lineTo(cx + 14.1, cy - 14.1); c.stroke();
+    c.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    c.lineWidth = 1.2;
+    c.beginPath(); c.arc(cx, cy, 21, Math.PI * 1.1, Math.PI * 1.5); c.stroke();
+    c.lineCap = 'butt';
+  }
+
   /* What a tile shows: a crop of Momoko wearing the option, rendered by
-     the real renderer at the tile's device resolution, or the held item
-     / pet on its own. */
+     the real renderer at the tile's device resolution, or the shoes /
+     held item / dog on their own, standing on a little lit floor. */
   function drawTilePreview(c, tab, v, x, y, w, h) {
     c.save();
     c.beginPath();
     c.rect(x, y, w, h);
     c.clip();
-    var cx = x + w / 2, cy = y + h / 2;
-    if (v.id === 'none' && (tab.item || tab.pet)) {
-      c.strokeStyle = 'rgba(255, 221, 136, 0.55)';
-      c.lineWidth = 2.5;
-      c.beginPath(); c.arc(cx, cy, 15, 0, Math.PI * 2); c.stroke();
-      c.beginPath(); c.moveTo(cx - 10.6, cy + 10.6); c.lineTo(cx + 10.6, cy - 10.6); c.stroke();
-    } else if (tab.item) {
-      Game.momoko.drawItemIcon(c, v.id, cx, cy + (v.id === 'balloon' ? 12 : 2), v.id === 'balloon' ? 3.4 : 6.2);
-    } else if (tab.pet) {
-      if (Game.pet) Game.pet.drawIcon(c, cx, cy + 22, v.id, 2.6);
+    var cx = x + w / 2, cy = y + h / 2, cu = Game.customization;
+    if (v.label === 'varNone') {
+      drawNoneGlyph(c, cx, cy);
+    } else if (tab.icon) {
+      Game.fx.shadow(c, cx, y + h - 10, tab.icon === 'item' ? 24 : 40, 5, '20,4,24', 0.7);
+      if (tab.icon === 'item') {
+        Game.momoko.drawItemIcon(c, v.id, cx, y + h - 12, 8.4);
+      } else if (tab.icon === 'shoe') {
+        Game.momoko.drawShoeIcon(c, cu, v.id, cx, y + h - 11, 9.4);
+      } else if (tab.icon === 'pet') {
+        Game.pet.drawIcon(c, cx + 1, y + h - 10, v.id, 3.6, cu.petWear);
+      } else {
+        Game.pet.drawIcon(c, cx + 1, y + h - 10, Game.pet.coat(cu.crab) ? cu.crab : 'red', 3.6, v.id);
+      }
     } else {
       var crop = v.crop || tab.crop;
       var s = Math.min(w / crop[2], h / crop[3]);
@@ -1317,6 +1394,8 @@
   }
 
   function drawCheckBadge(c, x, y) {
+    c.fillStyle = 'rgba(40, 10, 40, 0.45)';
+    c.beginPath(); c.arc(x, y + 1, 9, 0, Math.PI * 2); c.fill();
     c.fillStyle = '#ffd24a';
     c.beginPath(); c.arc(x, y, 8, 0, Math.PI * 2); c.fill();
     c.strokeStyle = '#8a5a14';
@@ -1330,186 +1409,322 @@
     c.lineCap = 'butt';
   }
 
-  function drawSwatch(c, x, y, colr, selected, hot) {
-    if (selected) {
-      c.strokeStyle = 'rgba(255, 210, 120, 0.3)';
-      c.lineWidth = 7;
-      c.beginPath(); c.arc(x, y, SWATCH_R + 3.5, 0, Math.PI * 2); c.stroke();
-      c.strokeStyle = '#ffdd88';
-      c.lineWidth = 3;
-      c.stroke();
+  /* A colour swatch drawn as what it colours: a lock of hair, a square
+     of stitched cloth, a shoe, a cheek, an eye. */
+  function swatchPath(c, kind, x, y, r) {
+    c.beginPath();
+    if (kind === 'hair') {
+      c.moveTo(x - r * 0.75, y - r * 0.9);
+      c.bezierCurveTo(x + r * 0.5, y - r * 1.25, x + r * 1.2, y - r * 0.2, x + r * 0.75, y + r * 0.55);
+      c.quadraticCurveTo(x + r * 0.45, y + r * 1.0, x + r * 0.05, y + r * 1.1);
+      c.quadraticCurveTo(x + r * 0.2, y + r * 0.6, x - r * 0.1, y + r * 0.45);
+      c.quadraticCurveTo(x - r * 0.3, y + r * 0.95, x - r * 0.8, y + r * 0.95);
+      c.bezierCurveTo(x - r * 0.45, y + r * 0.3, x - r * 1.15, y - r * 0.1, x - r * 0.75, y - r * 0.9);
+    } else if (kind === 'cloth') {
+      roundRect(c, x - r * 0.92, y - r * 0.92, r * 1.84, r * 1.84, r * 0.3);
+      return;
+    } else if (kind === 'shoe') {
+      c.moveTo(x - r * 0.95, y + r * 0.7);
+      c.quadraticCurveTo(x - r * 1.15, y - r * 0.7, x - r * 0.35, y - r * 0.75);
+      c.quadraticCurveTo(x + r * 0.5, y - r * 0.75, x + r * 1.0, y + r * 0.05);
+      c.quadraticCurveTo(x + r * 1.15, y + r * 0.7, x + r * 0.75, y + r * 0.7);
+    } else {
+      c.arc(x, y, r, 0, Math.PI * 2);
+      return;
     }
-    var g = c.createRadialGradient(x - SWATCH_R * 0.35, y - SWATCH_R * 0.4, 1, x, y, SWATCH_R);
-    g.addColorStop(0, 'rgba(255,255,255,0.55)');
-    g.addColorStop(0.35, 'rgba(255,255,255,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.28)');
+    c.closePath();
+  }
+  function drawSwatch(c, x, y, colr, kind, selected, hot) {
+    var R = Game.momoko.kit.ramp(colr), r = SWATCH_R;
+    if (selected) {
+      c.fillStyle = 'rgba(255, 210, 120, 0.22)';
+      c.beginPath(); c.arc(x, y, r + 5, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = '#ffdd88';
+      c.lineWidth = 2;
+      c.beginPath(); c.arc(x, y, r + 3.5, 0, Math.PI * 2); c.stroke();
+    } else if (hot) {
+      c.strokeStyle = 'rgba(255, 236, 200, 0.55)';
+      c.lineWidth = 1.5;
+      c.beginPath(); c.arc(x, y, r + 3.5, 0, Math.PI * 2); c.stroke();
+    }
+    if (kind === 'eye') {
+      /* an iris: dark lid side, bright bounce, pupil and her star */
+      c.fillStyle = '#fffdfb';
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+      var ig = c.createLinearGradient(0, y - r, 0, y + r);
+      ig.addColorStop(0, R.d); ig.addColorStop(0.5, colr); ig.addColorStop(1, R.l);
+      c.fillStyle = ig;
+      c.beginPath(); c.arc(x, y, r - 2.5, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#1a0612';
+      c.beginPath(); c.ellipse(x, y + 0.5, r * 0.3, r * 0.4, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ffffff';
+      c.beginPath();
+      for (var i = 0; i < 10; i++) {
+        var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 1.9 : 4.4;
+        c.lineTo(x - 3 + Math.cos(a) * rr, y - 3.5 + Math.sin(a) * rr);
+      }
+      c.closePath(); c.fill();
+      c.strokeStyle = R.ink;
+      c.lineWidth = 1.3;
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.stroke();
+      return;
+    }
+    c.save();
+    swatchPath(c, kind, x, y, r);
     c.fillStyle = colr;
-    c.beginPath(); c.arc(x, y, SWATCH_R, 0, Math.PI * 2); c.fill();
-    c.fillStyle = g;
     c.fill();
-    c.strokeStyle = hot ? 'rgba(255, 236, 200, 0.9)' : 'rgba(30, 10, 30, 0.55)';
-    c.lineWidth = 1.2;
+    c.clip();
+    /* cel bands on the side away from the light, like her own shading */
+    c.fillStyle = R.m;
+    c.beginPath(); c.ellipse(x + r * 0.55, y + r * 0.7, r * 1.25, r * 0.95, -0.5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = R.d;
+    c.beginPath(); c.ellipse(x + r * 0.9, y + r * 1.05, r * 1.1, r * 0.8, -0.5, 0, Math.PI * 2); c.fill();
+    if (kind === 'hair') {
+      c.strokeStyle = R.d;
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(x - r * 0.2, y - r * 0.9); c.quadraticCurveTo(x + r * 0.5, y - r * 0.1, x + r * 0.25, y + r * 0.8);
+      c.moveTo(x - r * 0.6, y - r * 0.7); c.quadraticCurveTo(x - r * 0.2, y, x - r * 0.45, y + r * 0.8);
+      c.stroke();
+      c.strokeStyle = 'rgba(255,255,255,0.6)';
+      c.lineWidth = 2.6;
+      c.lineCap = 'round';
+      c.beginPath(); c.moveTo(x - r * 0.5, y - r * 0.38); c.quadraticCurveTo(x + r * 0.1, y - r * 0.68, x + r * 0.6, y - r * 0.3); c.stroke();
+      c.lineCap = 'butt';
+    } else if (kind === 'cloth') {
+      c.fillStyle = R.l;
+      c.globalAlpha = 0.55;
+      c.beginPath(); c.moveTo(x - r, y - r); c.lineTo(x + r * 0.1, y - r); c.lineTo(x - r, y + r * 0.1); c.closePath(); c.fill();
+      c.globalAlpha = 1;
+      c.strokeStyle = 'rgba(255,255,255,0.75)';
+      c.lineWidth = 1;
+      c.setLineDash([2.4, 2]);
+      roundRect(c, x - r * 0.64, y - r * 0.64, r * 1.28, r * 1.28, r * 0.16);
+      c.stroke();
+      c.setLineDash([]);
+    } else if (kind === 'shoe') {
+      c.fillStyle = R.d;
+      c.fillRect(x - r * 1.2, y + r * 0.42, r * 2.4, r * 0.4);
+      c.fillStyle = 'rgba(255,255,255,0.7)';
+      c.beginPath(); c.ellipse(x + r * 0.35, y - r * 0.2, r * 0.36, r * 0.14, 0.5, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = R.ink;
+      c.lineWidth = 1.6;
+      c.beginPath(); c.moveTo(x - r * 0.8, y - r * 0.4); c.quadraticCurveTo(x - r * 0.3, y - r * 0.2, x + r * 0.1, y - r * 0.62); c.stroke();
+      c.fillStyle = '#ffe07a';
+      c.beginPath(); c.arc(x + r * 0.1, y - r * 0.6, 1.8, 0, Math.PI * 2); c.fill();
+    } else {
+      /* skin: a cheek with a blush and a soft light */
+      c.fillStyle = 'rgba(255, 110, 140, 0.4)';
+      c.beginPath(); c.ellipse(x - r * 0.2, y + r * 0.3, r * 0.5, r * 0.3, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.45)';
+      c.beginPath(); c.ellipse(x - r * 0.38, y - r * 0.45, r * 0.34, r * 0.2, -0.5, 0, Math.PI * 2); c.fill();
+    }
+    c.restore();
+    swatchPath(c, kind, x, y, r);
+    c.strokeStyle = R.ink;
+    c.lineWidth = 1.3;
+    c.lineJoin = 'round';
     c.stroke();
   }
 
-  function drawPageButton(c, x, label, enabled, hot) {
+  function drawPageButton(c, x, y, dir, enabled, hot, pressed) {
     hot = enabled && hot;
-    c.fillStyle = !enabled ? 'rgba(46, 22, 64, 0.5)' : hot ? '#6a3490' : '#3e1e56';
-    roundRect(c, x, PAGE_Y, PAGE_W, PAGE_H, 7);
+    var oy = hot && pressed ? 1.5 : 0;
+    if (enabled && !oy) {
+      c.fillStyle = 'rgba(0, 0, 0, 0.32)';
+      roundRect(c, x, y + 2.5, PAGE_W, PAGE_H, 10);
+      c.fill();
+    }
+    var g = c.createLinearGradient(0, y + oy, 0, y + oy + PAGE_H);
+    g.addColorStop(0, !enabled ? 'rgba(60, 30, 80, 0.5)' : hot ? '#8a52c4' : '#6c3a9c');
+    g.addColorStop(1, !enabled ? 'rgba(40, 18, 56, 0.5)' : hot ? '#55268a' : '#3e1a64');
+    c.fillStyle = g;
+    roundRect(c, x, y + oy, PAGE_W, PAGE_H, 10);
     c.fill();
-    c.strokeStyle = enabled ? 'rgba(255, 221, 136, 0.7)' : 'rgba(255, 221, 136, 0.2)';
+    c.strokeStyle = enabled ? (hot ? '#ffffff' : '#e8b860') : 'rgba(255, 221, 136, 0.2)';
     c.lineWidth = 1.5;
     c.stroke();
     c.fillStyle = enabled ? '#ffe8b0' : 'rgba(255, 232, 176, 0.3)';
     c.beginPath();
-    var mx = x + PAGE_W / 2, my = PAGE_Y + PAGE_H / 2, d = label === '<' ? -1 : 1;
-    c.moveTo(mx + d * 5, my); c.lineTo(mx - d * 3.5, my - 6); c.lineTo(mx - d * 3.5, my + 6);
+    var mx = x + PAGE_W / 2, my = y + oy + PAGE_H / 2;
+    c.moveTo(mx + dir * 8, my); c.lineTo(mx - dir * 5, my - 8.5); c.lineTo(mx - dir * 5, my + 8.5);
     c.closePath();
     c.fill();
   }
 
   /* Which panel control the pointer is over (index, or -1), worked out
      against the live canvas so the baked panel can show hover states. */
-  var custHot = { tab: -1, tile: -1, color: -1, skin: -1, prev: false, next: false };
+  var custHot = { tab: -1, tile: -1, row: -1, color: -1, prev: false, next: false, down: false };
   function updateCustHot(c, tab) {
-    var h = custHot, i;
-    h.tab = h.tile = h.color = h.skin = -1;
-    for (i = 0; i < customTabs.length; i++) if (pointerOver(c, TAB_X + i * (TAB_W + TAB_GAP), TAB_Y, TAB_W, TAB_H)) h.tab = i;
+    var h = custHot, L = layoutFor(tab), i, j, r;
+    h.tab = h.tile = h.row = h.color = -1;
+    for (i = 0; i < customTabs.length; i++) { r = tabRect(i); if (pointerOver(c, r.x, r.y, TAB_W, TAB_H)) h.tab = i; }
     var first = customSelection.page * PER_PAGE, last = Math.min(tab.variants.length, first + PER_PAGE);
-    for (i = first; i < last; i++) { var r = tileRect(i); if (pointerOver(c, r.x, r.y, GRID_TILE_W, GRID_TILE_H)) h.tile = i; }
-    var n = tab.colors ? tab.colors.length : 0;
-    for (i = 0; i < n; i++) if (pointerOver(c, COLOR_X + i * COLOR_STEP + 16 - SWATCH_R, COLOR_Y - SWATCH_R, SWATCH_R * 2, SWATCH_R * 2)) h.color = i;
-    for (i = 0; i < skinTones.length; i++) if (pointerOver(c, COLOR_X + i * COLOR_STEP + 16 - SWATCH_R, SKIN_Y - SWATCH_R, SWATCH_R * 2, SWATCH_R * 2)) h.skin = i;
-    h.prev = pointerOver(c, PAGE_PREV_X, PAGE_Y, PAGE_W, PAGE_H);
-    h.next = pointerOver(c, PAGE_NEXT_X, PAGE_Y, PAGE_W, PAGE_H);
+    for (i = first; i < last; i++) { r = tileRect(tab, i); if (pointerOver(c, r.x, r.y, GRID_TILE_W, L.tileH)) h.tile = i; }
+    for (j = 0; j < tab.rows.length; j++) {
+      for (i = 0; i < tab.rows[j].colors.length; i++) {
+        if (pointerOver(c, ROW_X + i * ROW_STEP - ROW_STEP / 2, L.rowY[j] - 17, ROW_STEP, 34)) { h.row = j; h.color = i; }
+      }
+    }
+    h.prev = pointerOver(c, PAGE_PREV_X, L.pageY, PAGE_W, PAGE_H);
+    h.next = pointerOver(c, PAGE_NEXT_X, L.pageY, PAGE_W, PAGE_H);
+    h.down = !!Game.input.pointer.down;
   }
 
   /* The option panel (tabs, tiles, page arrows, swatches) is static
      between taps, so it is baked into a layer and only repainted when the
      tab, page, her outfit, the language or the hover target changes. */
-  var PANEL_X = 300, PANEL_Y = 48, PANEL_W = 500, PANEL_H = 338;
+  var PANEL_X = 300, PANEL_Y = 44, PANEL_W = 500, PANEL_H = 432;
   function paintCustomPanel(c) {
     c.translate(-PANEL_X, -PANEL_Y);
-    var activeTab = getTab(customSelection.tab), hot = custHot;
-    c.fillStyle = 'rgba(30, 12, 42, 0.55)';
-    roundRect(c, GRID_X - 6, TAB_Y + TAB_H - 2, 472, 380 - (TAB_Y + TAB_H - 2), 10);
+    var activeTab = getTab(customSelection.tab), hot = custHot, T = Game.i18n.t;
+    var bodyY = TAB_Y + 2 * TAB_H + TAB_GAP - 2;
+    var pg = c.createLinearGradient(0, bodyY, 0, 472);
+    pg.addColorStop(0, 'rgba(44, 18, 60, 0.72)');
+    pg.addColorStop(1, 'rgba(24, 8, 36, 0.72)');
+    c.fillStyle = pg;
+    roundRect(c, GRID_X - 8, bodyY, 492, 472 - bodyY, 12);
     c.fill();
-    c.strokeStyle = 'rgba(232, 184, 96, 0.35)';
+    c.strokeStyle = 'rgba(232, 184, 96, 0.4)';
     c.lineWidth = 1;
     c.stroke();
     for (var ti = 0; ti < customTabs.length; ti++) {
-      var tx = TAB_X + ti * (TAB_W + TAB_GAP);
+      var tr = tabRect(ti), tx = tr.x, ty = tr.y;
       var tab = customTabs[ti];
       var active = activeTab === tab;
       var tabHot = hot.tab === ti;
-      var tg = c.createLinearGradient(0, TAB_Y, 0, TAB_Y + TAB_H);
-      tg.addColorStop(0, active ? '#a058d0' : tabHot ? '#62307e' : '#46225c');
+      var toy = tabHot && hot.down && !active ? 1 : 0;
+      var tg = c.createLinearGradient(0, ty + toy, 0, ty + toy + TAB_H);
+      tg.addColorStop(0, active ? '#b468e0' : tabHot ? '#6a3488' : '#4c2664');
       tg.addColorStop(1, active ? '#7a3aa8' : tabHot ? '#4a2264' : '#331848');
       c.fillStyle = tg;
-      roundRect(c, tx, TAB_Y, TAB_W, TAB_H, 7);
+      roundRect(c, tx, ty + toy, TAB_W, TAB_H, 9);
       c.fill();
-      c.strokeStyle = active ? '#ffdd88' : 'rgba(255, 221, 136, 0.22)';
+      c.fillStyle = active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.07)';
+      roundRect(c, tx + 3, ty + toy + 2, TAB_W - 6, TAB_H * 0.42, 6);
+      c.fill();
+      c.strokeStyle = active ? '#ffdd88' : tabHot ? 'rgba(255, 221, 136, 0.6)' : 'rgba(255, 221, 136, 0.25)';
       c.lineWidth = active ? 2 : 1;
+      roundRect(c, tx, ty + toy, TAB_W, TAB_H, 9);
       c.stroke();
-      c.fillStyle = active ? '#ffffff' : '#dcc4e4';
-      fitFont(c, Game.i18n.t(tab.label), TAB_W - 6, 12, 'bold');
+      c.fillStyle = active ? '#ffffff' : '#e4cdea';
+      fitFont(c, T(tab.label), TAB_W - 10, 14, 'bold');
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      c.fillText(Game.i18n.t(tab.label), tx + TAB_W / 2, TAB_Y + TAB_H / 2 + 1);
+      c.fillText(T(tab.label), tx + TAB_W / 2, ty + toy + TAB_H / 2 + 1);
     }
     c.textBaseline = 'alphabetic';
 
     /* Option tiles for the active tab, one page at a time */
-    var pages = pageCount(activeTab);
+    var pages = pageCount(activeTab), L = layoutFor(activeTab), TH = L.tileH;
     var currentVariantId = Game.customization[activeTab.field];
     var first = customSelection.page * PER_PAGE;
     var last = Math.min(activeTab.variants.length, first + PER_PAGE);
     for (var vi = first; vi < last; vi++) {
-      var r = tileRect(vi), gx = r.x, gy = r.y;
+      var r = tileRect(activeTab, vi), gx = r.x, gy = r.y;
       var v = activeTab.variants[vi];
       var selected = v.id === currentVariantId;
       var tileHot = hot.tile === vi;
+      if (tileHot && hot.down) gy += 1.5;
+      else {
+        /* drop shadow lifts the tile off the panel */
+        c.fillStyle = 'rgba(8, 0, 16, 0.34)';
+        roundRect(c, gx + 1, gy + 3, GRID_TILE_W - 2, TH, 12);
+        c.fill();
+      }
       if (selected) {
         /* soft gold halo, built from strokes */
         c.strokeStyle = 'rgba(255, 200, 110, 0.18)';
         c.lineWidth = 9;
-        roundRect(c, gx, gy, GRID_TILE_W, GRID_TILE_H, 10);
+        roundRect(c, gx, gy, GRID_TILE_W, TH, 12);
         c.stroke();
         c.strokeStyle = 'rgba(255, 210, 130, 0.3)';
         c.lineWidth = 5;
         c.stroke();
       }
-      var bg = c.createLinearGradient(0, gy, 0, gy + GRID_TILE_H);
-      bg.addColorStop(0, selected ? '#7e40ac' : tileHot ? '#4e2868' : '#3a1c50');
+      var bg = c.createLinearGradient(0, gy, 0, gy + TH);
+      bg.addColorStop(0, selected ? '#8a48b8' : tileHot ? '#5a2e76' : '#43205a');
       bg.addColorStop(1, selected ? '#4c2070' : tileHot ? '#381a4c' : '#26102f');
       c.fillStyle = bg;
-      roundRect(c, gx, gy, GRID_TILE_W, GRID_TILE_H, 10);
+      roundRect(c, gx, gy, GRID_TILE_W, TH, 12);
       c.fill();
-      /* soft spotlight behind the render */
-      var sp = c.createRadialGradient(gx + GRID_TILE_W / 2, gy + 34, 4, gx + GRID_TILE_W / 2, gy + 34, 52);
-      sp.addColorStop(0, selected ? 'rgba(255, 210, 236, 0.32)' : 'rgba(255, 190, 230, 0.13)');
-      sp.addColorStop(1, 'rgba(255, 190, 230, 0)');
+      /* picture well: a lit alcove with a soft spotlight from above */
+      var wx = gx + 5, wy = gy + 5, ww = GRID_TILE_W - 10, wh = TH - 30;
+      c.save();
+      roundRect(c, wx, wy, ww, wh, 8);
+      c.clip();
+      var wg = c.createLinearGradient(0, wy, 0, wy + wh);
+      wg.addColorStop(0, selected ? '#b77fd6' : '#7c5296');
+      wg.addColorStop(1, selected ? '#6c3a92' : '#472860');
+      c.fillStyle = wg;
+      c.fillRect(wx, wy, ww, wh);
+      var sp = c.createRadialGradient(gx + GRID_TILE_W / 2, wy + wh * 0.42, 4, gx + GRID_TILE_W / 2, wy + wh * 0.42, 62);
+      sp.addColorStop(0, selected ? 'rgba(255, 232, 246, 0.5)' : 'rgba(255, 214, 240, 0.3)');
+      sp.addColorStop(1, 'rgba(255, 200, 236, 0)');
       c.fillStyle = sp;
-      roundRect(c, gx + 3, gy + 3, GRID_TILE_W - 6, GRID_TILE_H - 22, 8);
-      c.fill();
-      drawTilePreview(c, activeTab, v, gx + 6, gy + 5, GRID_TILE_W - 12, GRID_TILE_H - 24);
-      /* name band */
-      c.fillStyle = selected ? 'rgba(255, 221, 136, 0.2)' : 'rgba(0, 0, 0, 0.22)';
-      c.fillRect(gx + 2, gy + GRID_TILE_H - 19, GRID_TILE_W - 4, 17);
+      c.fillRect(wx, wy, ww, wh);
+      if (activeTab.icon) {
+        /* a strip of floor for things shown on their own */
+        var fg = c.createLinearGradient(0, wy + wh - 16, 0, wy + wh);
+        fg.addColorStop(0, 'rgba(50, 16, 60, 0.0)');
+        fg.addColorStop(0.2, 'rgba(50, 16, 60, 0.42)');
+        fg.addColorStop(1, 'rgba(30, 8, 40, 0.6)');
+        c.fillStyle = fg;
+        c.fillRect(wx, wy + wh - 16, ww, 16);
+      }
+      c.restore();
+      drawTilePreview(c, activeTab, v, wx, wy, ww, wh);
+      c.strokeStyle = 'rgba(20, 4, 30, 0.45)';
+      c.lineWidth = 1;
+      roundRect(c, wx, wy, ww, wh, 8);
+      c.stroke();
+      /* name */
       c.fillStyle = selected ? '#fff4d4' : '#f0dcef';
-      fitFont(c, Game.i18n.t(v.label), GRID_TILE_W - 12, 12, 'bold');
+      fitFont(c, T(v.label), GRID_TILE_W - 10, 13, 'bold');
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      c.fillText(Game.i18n.t(v.label), gx + GRID_TILE_W / 2, gy + GRID_TILE_H - 10);
-      c.strokeStyle = selected ? '#ffdd88' : tileHot ? 'rgba(255, 221, 136, 0.55)' : 'rgba(255, 221, 136, 0.18)';
+      c.fillText(T(v.label), gx + GRID_TILE_W / 2, gy + TH - 12);
+      c.strokeStyle = selected ? '#ffdd88' : tileHot ? 'rgba(255, 221, 136, 0.7)' : 'rgba(255, 221, 136, 0.22)';
       c.lineWidth = selected ? 2.5 : 1;
-      roundRect(c, gx, gy, GRID_TILE_W, GRID_TILE_H, 10);
+      roundRect(c, gx, gy, GRID_TILE_W, TH, 12);
       c.stroke();
-      if (selected) drawCheckBadge(c, gx + GRID_TILE_W - 9, gy + 9);
+      if (selected) drawCheckBadge(c, gx + GRID_TILE_W - 10, gy + 10);
     }
     c.textBaseline = 'alphabetic';
 
-    /* Page arrows when a category has more than one page */
+    /* Page arrows and dots when a category has more than one page */
     if (pages > 1) {
-      drawPageButton(c, PAGE_PREV_X, '<', customSelection.page > 0, hot.prev);
-      drawPageButton(c, PAGE_NEXT_X, '>', customSelection.page < pages - 1, hot.next);
-      c.fillStyle = '#e8c890';
-      c.font = 'bold 12px ' + FONT;
-      c.textAlign = 'center';
-      c.textBaseline = 'middle';
-      c.fillText((customSelection.page + 1) + ' / ' + pages, (PAGE_PREV_X + PAGE_NEXT_X + PAGE_W) / 2, PAGE_Y + PAGE_H / 2 + 1);
-      c.textBaseline = 'alphabetic';
-    }
-
-    /* Color swatches (when the active tab has a color dimension) */
-    if (activeTab.colorField && activeTab.colors) {
-      var labelKey = activeTab.colorField === 'hair' ? 'hairColor'
-                   : activeTab.colorField === 'suit' ? 'suitColor'
-                   : 'shoeColor';
-      c.fillStyle = '#e8c890';
-      c.font = 'bold 13px ' + FONT;
-      c.textAlign = 'left';
-      c.fillText(Game.i18n.t(labelKey), COLOR_X, COLOR_Y - 18);
-      var selColor = Game.customization[activeTab.colorField];
-      for (var ci = 0; ci < activeTab.colors.length; ci++) {
-        drawSwatch(c, COLOR_X + ci * COLOR_STEP + 16, COLOR_Y, activeTab.colors[ci], activeTab.colors[ci] === selColor, hot.color === ci);
+      drawPageButton(c, PAGE_PREV_X, L.pageY, -1, customSelection.page > 0, hot.prev, hot.down);
+      drawPageButton(c, PAGE_NEXT_X, L.pageY, 1, customSelection.page < pages - 1, hot.next, hot.down);
+      var mid = (PAGE_PREV_X + PAGE_NEXT_X + PAGE_W) / 2;
+      for (var pi = 0; pi < pages; pi++) {
+        var on = pi === customSelection.page;
+        c.fillStyle = on ? '#ffdd88' : 'rgba(255, 221, 136, 0.28)';
+        c.beginPath(); c.arc(mid + (pi - (pages - 1) / 2) * 20, L.pageY + PAGE_H / 2, on ? 5.5 : 4, 0, Math.PI * 2); c.fill();
       }
     }
 
-    /* Skin tones – always visible regardless of tab */
-    c.fillStyle = '#e8c890';
-    c.font = 'bold 13px ' + FONT;
-    c.textAlign = 'left';
-    c.fillText(Game.i18n.t('skinTone'), COLOR_X, SKIN_Y - 18);
-    for (var ki = 0; ki < skinTones.length; ki++) {
-      drawSwatch(c, COLOR_X + ki * COLOR_STEP + 16, SKIN_Y, skinTones[ki], skinTones[ki] === Game.customization.skin, hot.skin === ki);
+    /* Colour swatches for the active tab */
+    for (var ri = 0; ri < activeTab.rows.length; ri++) {
+      var row = activeTab.rows[ri], ry = L.rowY[ri];
+      c.fillStyle = '#f0d4a0';
+      fitFont(c, T(row.label), 46, 14, 'bold');
+      c.textAlign = 'left';
+      c.textBaseline = 'middle';
+      c.fillText(T(row.label), GRID_X, ry + 1);
+      c.textBaseline = 'alphabetic';
+      var selColor = Game.customization[row.field];
+      for (var ci = 0; ci < row.colors.length; ci++) {
+        var sel = row.colors[ci] === selColor;
+        drawSwatch(c, ROW_X + ci * ROW_STEP, ry, row.colors[ci], row.kind, sel, hot.row === ri && hot.color === ci);
+      }
     }
   }
 
   function drawCustomizeScreen(c) {
     drawDuskBackdrop(c, 0.45);
     clipGame(c);
-    drawHotelHeading(c, Game.i18n.t('customize'), 30, 26);
+    drawHotelHeading(c, Game.i18n.t('customize'), 28, 26);
 
     /* Preview stage – a spotlight beam onto a round velvet fitting-room
        pedestal with brass trim, like a mirror stand in the hotel boutique.
@@ -1527,23 +1742,22 @@
     if (customSelection.page >= pageCount(activeTab)) customSelection.page = 0;
     updateCustHot(c, activeTab);
     var cu = Game.customization, h = custHot;
-    var key = [customSelection.tab, customSelection.page, cu.hair, cu.suit, cu.skin, cu.flipper, cu.hairStyle, cu.outfit,
-               cu.shoes, cu.crab, cu.food, cu.hat, cu.extra, Game.i18n.lang, h.tab, h.tile, h.color, h.skin,
-               h.prev, h.next, Game.fx.key(), document.fonts ? document.fonts.status : ''].join('|');
+    var key = [customSelection.tab, customSelection.page, cu.hair, cu.suit, cu.skin, cu.flipper, cu.eyes, cu.hairStyle, cu.outfit,
+               cu.shoes, cu.crab, cu.petWear, cu.food, cu.hat, cu.extra, cu.face, Game.i18n.lang, h.tab, h.tile, h.row, h.color,
+               h.prev, h.next, h.down, Game.fx.key(), document.fonts ? document.fonts.status : ''].join('|');
     Game.fx.bake(c, 'custPanel', key, PANEL_X, PANEL_Y, PANEL_W, PANEL_H, paintCustomPanel);
 
-    /* Start button */
+    /* Start button, under her pedestal */
     drawPrimaryButton(c, Game.i18n.t('startGame'), START_BTN_X, START_BTN_Y, START_BTN_W, START_BTN_H, titleAnimTimer++);
 
-    /* Keyboard hint so kids on a laptop don't have to reach for the mouse.
-       Sits above the Start button to stay within the 480-tall canvas. */
+    /* Keyboard hint so kids on a laptop don't have to reach for the mouse. */
     c.fillStyle = '#dcc4e4';
-    c.font = '11px ' + FONT;
+    c.font = '12px ' + FONT;
     c.textAlign = 'center';
     c.fillText(
       Game.i18n.t(Game.input.isTouch() ? 'customizeTouchHint' : 'customizeKbHint'),
       START_BTN_X + START_BTN_W / 2,
-      START_BTN_Y - 8
+      START_BTN_Y + START_BTN_H + 18
     );
   }
 
@@ -1625,7 +1839,7 @@
   var PREVIEW_PET_X = 74, PREVIEW_PET_Y = 328, PREVIEW_PET_S = 3.7;
   var previewPetV = null;
   function previewPetPaint(a) {
-    Game.pet.draw(a, 16, 22, previewPetV, Game.pet.rig('preview', { scale: PREVIEW_PET_S, gap: 0 }).P, 1);
+    Game.pet.draw(a, 16, 22, previewPetV, Game.pet.rig('preview', { scale: PREVIEW_PET_S, gap: 0 }).P, 1, Game.customization.petWear);
   }
   function drawPreviewPet(c) {
     var v = Game.customization.crab;
@@ -1652,10 +1866,11 @@
   }
 
   function handleCustomizeClick(mx, my) {
+    var i, j, r;
     /* Tab bar */
     for (var ti = 0; ti < customTabs.length; ti++) {
-      var tx = TAB_X + ti * (TAB_W + TAB_GAP);
-      if (hitButton(mx, my, tx, TAB_Y, TAB_W, TAB_H)) {
+      r = tabRect(ti);
+      if (hitButton(mx, my, r.x, r.y, TAB_W, TAB_H)) {
         selectTab(customTabs[ti].id);
         Game.audio.play('select');
         return null;
@@ -1663,16 +1878,16 @@
     }
 
     var activeTab = getTab(customSelection.tab);
-    var pages = pageCount(activeTab);
+    var pages = pageCount(activeTab), L = layoutFor(activeTab);
 
     /* Page arrows */
     if (pages > 1) {
-      if (customSelection.page > 0 && hitButton(mx, my, PAGE_PREV_X - 4, PAGE_Y - 4, PAGE_W + 8, PAGE_H + 8)) {
+      if (customSelection.page > 0 && hitButton(mx, my, PAGE_PREV_X - 4, L.pageY - 4, PAGE_W + 8, PAGE_H + 8)) {
         customSelection.page--;
         Game.audio.play('select');
         return null;
       }
-      if (customSelection.page < pages - 1 && hitButton(mx, my, PAGE_NEXT_X - 4, PAGE_Y - 4, PAGE_W + 8, PAGE_H + 8)) {
+      if (customSelection.page < pages - 1 && hitButton(mx, my, PAGE_NEXT_X - 4, L.pageY - 4, PAGE_W + 8, PAGE_H + 8)) {
         customSelection.page++;
         Game.audio.play('select');
         return null;
@@ -1683,34 +1898,27 @@
     var first = customSelection.page * PER_PAGE;
     var last = Math.min(activeTab.variants.length, first + PER_PAGE);
     for (var vi = first; vi < last; vi++) {
-      var r = tileRect(vi);
-      if (hitButton(mx, my, r.x, r.y, GRID_TILE_W, GRID_TILE_H)) {
-        Game.customization[activeTab.field] = activeTab.variants[vi].id;
+      r = tileRect(activeTab, vi);
+      if (hitButton(mx, my, r.x, r.y, GRID_TILE_W, L.tileH)) {
+        var cu = Game.customization;
+        cu[activeTab.field] = activeTab.variants[vi].id;
+        /* dressing the dog brings a dog along to wear it */
+        if (activeTab.field === 'petWear' && cu.petWear !== 'none' && !Game.pet.coat(cu.crab)) cu.crab = 'red';
         Game.audio.play('select');
         if (Game.momoko) Game.momoko.rig('preview').play('pose');
         return null;
       }
     }
 
-    /* Tab color swatches */
-    if (activeTab.colorField && activeTab.colors) {
-      for (var ci = 0; ci < activeTab.colors.length; ci++) {
-        var dx = mx - (COLOR_X + ci * COLOR_STEP + 16), dy = my - COLOR_Y;
-        if (dx * dx + dy * dy < (SWATCH_R + 4) * (SWATCH_R + 4)) {
-          Game.customization[activeTab.colorField] = activeTab.colors[ci];
+    /* Colour swatches */
+    for (j = 0; j < activeTab.rows.length; j++) {
+      var row = activeTab.rows[j];
+      for (i = 0; i < row.colors.length; i++) {
+        if (hitButton(mx, my, ROW_X + i * ROW_STEP - ROW_STEP / 2, L.rowY[j] - 18, ROW_STEP, 36)) {
+          Game.customization[row.field] = row.colors[i];
           Game.audio.play('select');
           return null;
         }
-      }
-    }
-
-    /* Skin tone swatches (always shown) */
-    for (var ki = 0; ki < skinTones.length; ki++) {
-      var kdx = mx - (COLOR_X + ki * COLOR_STEP + 16), kdy = my - SKIN_Y;
-      if (kdx * kdx + kdy * kdy < (SWATCH_R + 4) * (SWATCH_R + 4)) {
-        Game.customization.skin = skinTones[ki];
-        Game.audio.play('select');
-        return null;
       }
     }
 
@@ -2538,7 +2746,7 @@
       }
       /* Pet dog trails behind her opposite facing direction */
       if (Game.pet && Game.pet.coat(Game.customization.crab)) {
-        Game.pet.drawIcon(c, -26, 0, Game.customization.crab, 1);
+        Game.pet.drawIcon(c, -26, 0, Game.customization.crab, 1, Game.customization.petWear);
       }
       c.restore();
     }
