@@ -422,8 +422,16 @@
     this.P = newPose();
     this.reset();
   }
+  /* Swing: when she turns, the dog swings round behind her on a shallow
+     ellipse instead of mirroring flat. th runs 0 (behind her left, she
+     faces right) to PI (behind her right); sin(th) is its depth, which
+     shrinks and lifts it (P.depth, applied by the caller). It narrows
+     toward a front view and swaps its facing at the far point, where
+     she hides it. Same timing and depth constants in every Momoko game. */
+  var SWING_T = 0.3, SWING_NARROW = 0.5;
   Rig.prototype.reset = function () {
-    this.x = null; this.vx = 0; this.face = 1; this.turnFrom = 1; this.turnT = 1;
+    this.x = null; this.bx = 0; this.vx = 0; this.face = 1; this.turnFrom = 1; this.turnT = 1;
+    this.th = 0; this.thFrom = 0; this.thTo = 0; this.thU = 1;
     this.ph = 0; this.gait = 0; this.bound = 0; this.sit = 0; this.idle = 0; this.t = 0; this.last = 0;
     this.earX = 0; this.earV = 0; this.prevBob = 0; this.wagPh = 0; this.excite = 0.5;
     this.pant = 0; this.pantHold = 0; this.headUp = 0; this.ownerX = null; this.ownerS = 0;
@@ -443,10 +451,19 @@
     }
     var P = this.P, t = (this.t += dt);
     var air = (o && o.air) ? 1 : 0;
-    var target = ownerX - ownerFacing * this.gap;
-    if (this.x === null || Math.abs(target - this.x) > 260) {
-      this.x = target; this.vx = 0; this.face = ownerFacing; this.turnFrom = ownerFacing; this.turnT = 1;
+    var thTo = ownerFacing > 0 ? 0 : Math.PI;
+    if (this.x === null || Math.abs(ownerX - this.bx) > 260) {
+      this.bx = ownerX; this.vx = 0; this.face = ownerFacing; this.turnFrom = ownerFacing; this.turnT = 1;
+      this.th = this.thFrom = this.thTo = thTo; this.thU = 1;
     }
+    /* swing round behind her to the side she now trails */
+    if (thTo !== this.thTo) { this.thFrom = this.th; this.thTo = thTo; this.thU = 0; this.earV += 5; }
+    var th0 = this.th;
+    if (this.thU < 1) {
+      this.thU = Math.min(1, this.thU + dt / SWING_T);
+      this.th = this.thFrom + (this.thTo - this.thFrom) * smooth(this.thU);
+    }
+    var co = Math.cos(this.th), swingV = this.gap * Math.abs(co - Math.cos(th0)) / dt;
     var ownerV = this.ownerX === null ? 0 : (ownerX - this.ownerX) / dt;
     this.ownerX = ownerX;
     /* her turbo (up to 2x her top speed) raises its follow gain and speed
@@ -455,18 +472,24 @@
     var keep = clamp(this.ownerS / this.vmax, 1, 2);
 
     /* follow: ease toward the spot behind her, with a little dead zone */
-    var dx = target - this.x, dead = 5, lim = this.vmax * 1.35 * keep;
+    var dx = ownerX - this.bx, dead = 5, lim = this.vmax * 1.35 * keep;
     var want = Math.abs(dx) < dead ? 0 : clamp((dx - (dx > 0 ? dead : -dead)) * 6 * keep, -lim, lim);
     this.vx += (want - this.vx) * Math.min(1, dt * 8);
-    this.x += this.vx * dt;
-    var spd = Math.abs(this.vx), moving = spd > 12;
+    this.bx += this.vx * dt;
+    this.x = this.bx - co * this.gap;
+    /* the swing walks it round at a trot */
+    var spd = Math.max(Math.abs(this.vx), Math.min(swingV, 110)), moving = spd > 12;
 
-    /* facing: the way it runs, or toward her when it stops */
-    var wf = moving ? (this.vx > 0 ? 1 : -1) : (Math.abs(ownerX - this.x) > 8 ? (ownerX > this.x ? 1 : -1) : this.face);
+    /* facing: toward her (she is ahead of it), else the way it runs; it
+       faces her all through a swing, swapping at the far point */
+    var wf = Math.abs(ownerX - this.x) > 8 ? (ownerX > this.x ? 1 : -1) : moving ? (this.vx > 0 ? 1 : -1) : this.face;
+    if (this.thU < 1) { wf = co < 0 ? -1 : 1; this.face = wf; this.turnT = 1; }
     if (wf !== this.face && this.turnT >= 1) { this.turnFrom = this.face; this.face = wf; this.turnT = 0; this.earV += 5; }
     this.turnT = Math.min(1, this.turnT + dt / 0.2);
     var tu = this.turnT, tm = Math.max(0.55, Math.abs(Math.cos(Math.PI * tu)));
     P.sx = (tu < 0.5 ? this.turnFrom : this.face) * tm;
+    if (this.thU < 1) P.sx = wf * (SWING_NARROW + (1 - SWING_NARROW) * Math.abs(co));
+    P.depth = Math.sin(this.th);
 
     /* gait: a trot whose feet stay planted, blending into a bound
        (front and hind pairs together, a little flight) at her run */

@@ -66,10 +66,6 @@
       { type: 'roomDoorFrame', x: 1130, y: 388, color: '#a86a30' },
       { type: 'roomDoorFrame', x: 1310, y: 388, color: '#88ddff' },
 
-      /* Peekers — cat + fox stalking Momoko from behind columns */
-      { type: 'peeker', x: 600,  y: 200, species: 'cat', side: 1 },
-      { type: 'peeker', x: 1260, y: 200, species: 'fox', side: -1 },
-
       /* Elevator shaft + stairs */
       { type: 'elevatorShaft', x: 1446, y: 440 },
       { type: 'stairwellDoor', x: 1520, y: 440 },

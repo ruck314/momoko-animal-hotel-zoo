@@ -1734,6 +1734,7 @@
     Game.fx.shadow(c, stageCX, 323, 40, 7, '40,8,30', 0.75);
 
     /* Momoko preview */
+    stepPreviewRig();
     Game.fx.lit(c, 'preview', stageCX - 70, stageCY - 85, 28, 36, 5, 12, previewPaint, PREVIEW_LIGHT);
     drawPreviewPet(c);
 
@@ -1831,7 +1832,67 @@
 
   function drawMomokoPreview(c, cust) {
     if (!Game.entities) return;
-    if (Game.entities.drawMomokoSprite) Game.entities.drawMomokoSprite(c, 0, 0, cust, 0, { rig: idleRig('preview') });
+    if (Game.entities.drawMomokoSprite) Game.entities.drawMomokoSprite(c, 0, 0, cust, 0, { rig: Game.momoko.rig('preview') });
+  }
+
+  /* Preview pacing, shared by every Momoko game: a pick sets off a cute
+     reaction for PREVIEW_REACT s, then she settles nearly still so the
+     outfit is easy to see, with one short moment (PREVIEW_MOMENT s) every
+     PREVIEW_GAP_MIN..PREVIEW_GAP_MAX s. `calm` eases toward 1 while
+     settled and 0 during a reaction or moment (time constant PREVIEW_EASE)
+     and damps her idle sway (and the dog's wag) by up to PREVIEW_DAMP. */
+  var PREVIEW_REACT = 2, PREVIEW_MOMENT = 1.2, PREVIEW_GAP_MIN = 6, PREVIEW_GAP_MAX = 12;
+  var PREVIEW_EASE = 0.3, PREVIEW_DAMP = 0.85;
+  var pace = { act: '', age: 0, len: 0, gap: 0, calm: 1, cue: -1, next: null, last: 0 };
+  function pickOf(list) { return list[Math.floor(Math.random() * list.length)]; }
+  /* one rig action; a new one waits for the current to finish, so a hop
+     is never cut off mid-air */
+  function previewPlay(kind, dur) { pace.next = [kind, dur]; }
+  function previewAct(kind, len) {
+    pace.act = kind; pace.age = 0; pace.len = len; pace.cue = -1;
+    var R = Game.momoko.rig('preview');
+    if (kind === 'cheer') { previewPlay('cheer'); pace.cue = 1.2; }
+    else if (kind === 'wave') previewPlay('wave', len === PREVIEW_REACT ? 1.8 : 1.2);
+    else if (kind === 'twirl') { previewPlay('pose'); pace.cue = 1.0; }
+    else if (kind === 'pose') previewPlay('pose');
+    else if (kind === 'look' && R.glanceT < 0) { R.glanceT = 0; R.glX = Math.random() < 0.5 ? -1 : 1; R.glY = -0.8; }
+    /* the dog joins in: a wag and a head tilt */
+    var D = Game.pet && Game.pet.rig('preview', { scale: PREVIEW_PET_S, gap: 0 });
+    if (D) {
+      if (len === PREVIEW_REACT) D.excite = Math.max(D.excite, 0.8);
+      if (D.tiltT < 0) { D.tiltT = 0; D.tiltDir = -D.tiltDir; }
+    }
+  }
+  function previewPick() { previewAct(pickOf(['cheer', 'wave', 'twirl']), PREVIEW_REACT); }
+  function stepPreviewRig() {
+    if (!Game.momoko) return;
+    var R = Game.momoko.rig('preview'), now = performance.now();
+    var fresh = !pace.last || now - pace.last > 500;
+    var dt = fresh ? 1 / 60 : Math.min(0.05, (now - pace.last) / 1000);
+    pace.last = now;
+    if (fresh) previewPick();                              /* she says hello */
+    var a = pace.act, u = pace.age;
+    if (pace.cue >= 0 && u >= pace.cue) { pace.cue = -1; previewPlay('pose'); }
+    if (pace.next && !R.act) { R.play(pace.next[0], pace.next[1]); pace.next = null; }
+    if (!a) { R.nextShift = Math.max(R.nextShift, R.time + 1); R.nextGlance = Math.max(R.nextGlance, R.time + 1); }
+    var t0 = R.time;
+    var Q = R.update(0, 0, (a === 'twirl' || a === 'turn') && u < (a === 'twirl' ? 0.5 : 0.6) ? -1 : 1);
+    pace.calm += ((a ? 0 : 1) - pace.calm) * (1 - Math.exp(-dt / PREVIEW_EASE));
+    if (R.time !== t0) {                                   /* posed this frame */
+      var k = 1 - PREVIEW_DAMP * pace.calm;
+      Q.hip *= k;
+      Q.tilt *= k;
+      Q.hair *= k;
+      Q.ear *= k;
+      Q.charm *= k;
+      Q.flut *= k;
+    }
+    if (a) {
+      pace.age += dt;
+      if (pace.age >= pace.len) { pace.act = ''; pace.gap = PREVIEW_GAP_MIN + Math.random() * (PREVIEW_GAP_MAX - PREVIEW_GAP_MIN); }
+    } else if ((pace.gap -= dt) <= 0) {
+      previewAct(pickOf(['pose', 'wave', 'turn', 'look']), PREVIEW_MOMENT);
+    }
   }
 
   /* The pet dog she picked sits on the pedestal beside her, on its own
@@ -1845,7 +1906,11 @@
     var v = Game.customization.crab;
     if (!Game.pet || !Game.pet.coat(v)) return;
     previewPetV = v;
-    Game.pet.rig('preview', { scale: PREVIEW_PET_S, gap: 0 }).update(PREVIEW_PET_X + 80, 1);
+    var D = Game.pet.rig('preview', { scale: PREVIEW_PET_S, gap: 0 }), dt0 = D.t;
+    /* settled, it only tilts its head with her moments, and wags softly */
+    if (!pace.act) D.nextTilt = Math.max(D.nextTilt, D.t + 1);
+    var DP = D.update(PREVIEW_PET_X + 80, 1);
+    if (D.t !== dt0) DP.wag *= 1 - PREVIEW_DAMP * pace.calm;
     Game.fx.shadow(c, PREVIEW_PET_X, PREVIEW_PET_Y + 1, 30, 5, '40,8,30', 0.5);
     Game.fx.lit(c, 'previewPet', PREVIEW_PET_X - 16 * PREVIEW_PET_S, PREVIEW_PET_Y - 22 * PREVIEW_PET_S,
                 32, 24, PREVIEW_PET_S, 4, previewPetPaint, PREVIEW_LIGHT);
@@ -1905,7 +1970,7 @@
         /* dressing the dog brings a dog along to wear it */
         if (activeTab.field === 'petWear' && cu.petWear !== 'none' && !Game.pet.coat(cu.crab)) cu.crab = 'red';
         Game.audio.play('select');
-        if (Game.momoko) Game.momoko.rig('preview').play('pose');
+        previewPick();
         return null;
       }
     }
@@ -1916,6 +1981,7 @@
       for (i = 0; i < row.colors.length; i++) {
         if (hitButton(mx, my, ROW_X + i * ROW_STEP - ROW_STEP / 2, L.rowY[j] - 18, ROW_STEP, 36)) {
           Game.customization[row.field] = row.colors[i];
+          previewPick();
           Game.audio.play('select');
           return null;
         }

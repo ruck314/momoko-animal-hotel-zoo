@@ -28,7 +28,7 @@
   /* Version stamp shown on the title screen and pause menu. Bump manually
      at release time and tag the matching git release (`git tag vX.Y.Z`)
      so the in-game stamp lines up with the git tag for debugging. */
-  Game.VERSION = 'v0.29.0';
+  Game.VERSION = 'v0.30.0';
   Game.BUILD = '';
   var canvas, ctx;
 
@@ -2167,7 +2167,14 @@
      follows, turns and sits by itself), drawn in the same light before
      her so it passes behind when she turns round. */
   var petRig = null, petVariant = null;
-  function petPaint(a) { Game.pet.draw(a, 16, 22, petVariant, petRig.P, 1, Game.customization.petWear); }
+  /* While it swings round behind her (P.depth 0..1) it shrinks, rises up
+     the floor and dims a little. */
+  var PET_SWING_SHRINK = 0.18, PET_SWING_LIFT = 3;
+  var petLight = {};
+  function petPaint(a) {
+    var z = petRig.P.depth || 0;
+    Game.pet.draw(a, 16, 22 - PET_SWING_LIFT * z, petVariant, petRig.P, 1 - PET_SWING_SHRINK * z, Game.customization.petWear);
+  }
   function drawPet(mid, floorY, lift) {
     var v = Game.customization && Game.customization.crab;
     if (!Game.pet || !Game.pet.coat(v)) return;
@@ -2176,9 +2183,13 @@
     petRig.update(mid, player.facing, { air: lift > 6 });
     var px = petRig.x - camera.x;
     if (px < -60 || px > W + 60) return;
-    Game.fx.shadow(ctx, px, floorY + 2, 10.5 * HERO_SCALE, 2.6 * HERO_SCALE, '24,8,26', 0.5);
+    var z = petRig.P.depth || 0, dk = 1 - PET_SWING_SHRINK * z;
+    for (var lk in heroLight) petLight[lk] = heroLight[lk];
+    petLight.key = heroLight.key * (1 - 0.5 * z);
+    petLight.dark = heroLight.dark + 0.2 * z;
+    Game.fx.shadow(ctx, px, floorY + 2 - PET_SWING_LIFT * HERO_SCALE * z, 10.5 * HERO_SCALE * dk, 2.6 * HERO_SCALE * dk, '24,8,26', 0.5);
     Game.fx.lit(ctx, 'pet', Math.round(px - 16 * HERO_SCALE), Math.round(floorY - 22 * HERO_SCALE),
-                32, 24, HERO_SCALE, 4, petPaint, heroLight);
+                32, 24, HERO_SCALE, 4, petPaint, petLight);
   }
   function drawHero() {
     var wl = WING_LIGHT[(level && level.wing) || 'lobby'] || WING_LIGHT.lobby;
@@ -3504,20 +3515,17 @@
         var px = dx + slide;
         var py = dy + bob + pkDuck * 14;
         ctx.save();
-        /* Wall pilaster to peek from behind (the lobby peekers hide
-           behind its marble columns instead) */
-        if (level.wing !== 'lobby') {
-          var pkTh = wingTheme();
-          ctx.fillStyle = 'rgba(0,0,0,0.18)';
-          ctx.fillRect(dx - 6, WALL_Y, 18, RAIL_Y - WALL_Y);
-          ctx.fillStyle = pkTh.trim;
-          ctx.fillRect(dx - 8, WALL_Y, 16, RAIL_Y - WALL_Y);
-          ctx.fillStyle = pkTh.trimHi;
-          ctx.fillRect(dx - 6, WALL_Y, 2, RAIL_Y - WALL_Y);
-          ctx.fillStyle = pkTh.trimLo;
-          ctx.fillRect(dx - 11, WALL_Y, 22, 6);
-          ctx.fillRect(dx - 11, RAIL_Y - 6, 22, 6);
-        }
+        /* Wall pilaster to peek from behind */
+        var pkTh = wingTheme();
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.fillRect(dx - 6, WALL_Y, 18, RAIL_Y - WALL_Y);
+        ctx.fillStyle = pkTh.trim;
+        ctx.fillRect(dx - 8, WALL_Y, 16, RAIL_Y - WALL_Y);
+        ctx.fillStyle = pkTh.trimHi;
+        ctx.fillRect(dx - 6, WALL_Y, 2, RAIL_Y - WALL_Y);
+        ctx.fillStyle = pkTh.trimLo;
+        ctx.fillRect(dx - 11, WALL_Y, 22, 6);
+        ctx.fillRect(dx - 11, RAIL_Y - 6, 22, 6);
         /* Top of head */
         ctx.fillStyle = pp.body;
         ctx.beginPath();
@@ -3531,13 +3539,7 @@
         ctx.beginPath(); ctx.arc(px + side * 3.6, py - 1.4, 0.6, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(px + side * 8.6, py - 1.4, 0.6, 0, Math.PI * 2); ctx.fill();
         /* Species-specific top accent (ears / hat) */
-        if (d.species === 'cat' || d.species === 'fox') {
-          ctx.fillStyle = pp.body;
-          ctx.beginPath();
-          ctx.moveTo(px + side * 3, py - 8); ctx.lineTo(px + side * 5, py - 14); ctx.lineTo(px + side * 7, py - 8); ctx.closePath(); ctx.fill();
-          ctx.beginPath();
-          ctx.moveTo(px + side * 8, py - 8); ctx.lineTo(px + side * 10, py - 14); ctx.lineTo(px + side * 12, py - 8); ctx.closePath(); ctx.fill();
-        } else if (d.species === 'monkey') {
+        if (d.species === 'monkey') {
           ctx.fillStyle = pp.body;
           ctx.beginPath(); ctx.arc(px + side * 1.5, py - 5, 2.5, 0, Math.PI * 2); ctx.fill();
           ctx.beginPath(); ctx.arc(px + side * 13, py - 5, 2.5, 0, Math.PI * 2); ctx.fill();
